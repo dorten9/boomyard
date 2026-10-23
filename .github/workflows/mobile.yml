@@ -1,0 +1,150 @@
+# Builds the phone apps: Android (installable APK, or a signed App Bundle for Google Play once the upload
+# key is in the repository secrets) and iOS (an Xcode project to archive and sign on a Mac).
+# The results are downloadable artifacts of the run; nothing is published anywhere.
+# Optional secrets for a Play-ready bundle: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASS,
+# ANDROID_KEYALIAS_NAME, ANDROID_KEYALIAS_PASS. Skipped without the Unity secrets.
+name: Mobile build
+
+on:
+  push:
+    branches: [main, 'claude/mobile*']
+    paths-ignore: ['Tools/**', '*.md', '.github/workflows/web.yml', '.github/workflows/check.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      ok: ${{ steps.s.outputs.ok }}
+    steps:
+      - id: s
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        run: |
+          if [ -n "$UNITY_LICENSE" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"; else echo "::notice::UNITY_LICENSE is not set; skipping the Unity build."; fi
+
+  build:
+    needs: gate
+    if: needs.gate.outputs.ok == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Android
+            method: BoomYard.EditorTools.MobileBuild.BuildAndroid
+          - platform: iOS
+            method: BoomYard.EditorTools.MobileBuild.BuildIOS
+    steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          # The Android editor image and its IL2CPP build need much more disk than WebGL.
+          large-packages: true
+          docker-images: true
+
+      # Swap on the runner's second disk (as in Overlane: a 14 GB swap on the root disk lost the Android runner).
+      - name: Add swap
+        run: |
+          sudo swapoff -a || true
+          sudo rm -f /mnt/swapfile /swapfile
+          sudo fallocate -l 10G /mnt/swapfile
+          sudo chmod 600 /mnt/swapfile
+          sudo mkswap /mnt/swapfile
+          sudo swapon /mnt/swapfile
+          free -m
+          df -h / /mnt
+
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ matrix.platform }}-${{ hashFiles('Packages/manifest.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: Library-${{ matrix.platform }}-
+
+      - name: Build ${{ matrix.platform }}
+        id: build
+        continue-on-error: true
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: ${{ matrix.platform }}
+          buildMethod: ${{ matrix.method }}
+          allowDirtyBuild: true
+          dockerMemoryLimit: 20g
+          versioning: Custom
+          version: 0.1.${{ github.run_number }}
+          androidVersionCode: ${{ github.run_number }}
+          androidExportType: androidAppBundle
+          androidKeystoreName: upload.keystore
+          androidKeystoreBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          androidKeystorePass: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          androidKeyaliasName: ${{ secrets.ANDROID_KEYALIAS_NAME }}
+          androidKeyaliasPass: ${{ secrets.ANDROID_KEYALIAS_PASS }}
+
+      # One retry when the editor is OOM-killed, from a clean checkout and cache (see web.yml).
+      - name: Clean up before the retry
+        if: steps.build.outcome == 'failure'
+        run: |
+          docker ps -q | xargs -r docker kill || true
+          sync && echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null
+          sudo rm -rf build Library
+          sudo git -c safe.directory='*' reset -q --hard HEAD
+          sudo git -c safe.directory='*' clean -ffdxq -e Library
+
+      - name: Restore Library for the retry
+        if: steps.build.outcome == 'failure'
+        uses: actions/cache/restore@v4
+        with:
+          path: Library
+          key: Library-${{ matrix.platform }}-${{ hashFiles('Packages/manifest.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: Library-${{ matrix.platform }}-
+
+      - name: Build ${{ matrix.platform }} (retry)
+        if: steps.build.outcome == 'failure'
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: ${{ matrix.platform }}
+          buildMethod: ${{ matrix.method }}
+          allowDirtyBuild: true
+          dockerMemoryLimit: 20g
+          versioning: Custom
+          version: 0.1.${{ github.run_number }}
+          androidVersionCode: ${{ github.run_number }}
+          androidExportType: androidAppBundle
+          androidKeystoreName: upload.keystore
+          androidKeystoreBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          androidKeystorePass: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          androidKeyaliasName: ${{ secrets.ANDROID_KEYALIAS_NAME }}
+          androidKeyaliasPass: ${{ secrets.ANDROID_KEYALIAS_PASS }}
+
+      - name: List the output
+        run: |
+          sudo chown -R "$USER" build
+          find build -maxdepth 3 | head -40
+          test -n "$(ls build/${{ matrix.platform }} 2>/dev/null)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BoomYard-${{ matrix.platform }}-${{ github.run_number }}
+          path: build/${{ matrix.platform }}
+          retention-days: 14

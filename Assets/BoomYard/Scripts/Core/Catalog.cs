@@ -1,0 +1,194 @@
+using System.Collections.Generic;
+
+namespace BoomYard.Core
+{
+    public enum Material { Glass, Wood, Plastic, Metal, Concrete, Carbon, Aluminium, Cardboard, Acrylic }
+
+    /// <summary>What an object does to its surroundings when it is destroyed (spec §06). Flags: a van both explodes and burns.</summary>
+    [System.Flags]
+    public enum Reaction
+    {
+        None = 0,
+        Explode = 1,     // secondary blast after a short burn (fuel)
+        Launch = 2,      // flies as a rigid body; mass x speed damages what it hits
+        Burn = 4,        // spreads fire to flammables within 2 m every 0.8 s
+        Shatter = 8,     // breaks from the blast wave, not just the hit
+        Collapse = 16,   // whatever stands on it falls and counts
+        Douse = 32,      // water puts fire out around it
+        Contain = 64,    // an explosive placed inside/under it gets the containment multiplier
+    }
+
+    public enum Family { Blast, Push, Fire, Timed }
+
+    /// <summary>How the explosive got to where it went off (spec §07 PlacementMult).</summary>
+    public enum Placement { Thrown, Placed, Contained, Airburst }
+
+    /// <summary>One item of the arsenal (spec §08). Times are real game seconds and shown to the player.</summary>
+    public sealed class ExplosiveDef
+    {
+        public string Id, NameHe, NameEn;
+        public Family Family;
+        public float Fuse;          // seconds from catching to detonation (0 = on contact)
+        public float Damage;        // per unit
+        public int Units = 1;       // sub-charges (string of 50, cake of 36, cluster of 8)
+        public float UnitInterval;  // seconds between sub-charges
+        public float Radius;        // metres
+        public int Price;           // shekels per unit in the shop (0 = free each round)
+        public int FreePerRound;
+        public int UnlockArena;     // 1-based; 0 = from the start
+        public int UnlockStars;     // stars needed in UnlockArena (0 = just reach it)
+        public bool Throwable = true;
+        public bool BreaksConcrete;
+        public float BurnSeconds;   // fire left behind
+        public float ShrapnelRadius;
+        public bool Rolls;
+        public float Mass = 0.08f;  // kg, for throwing
+        public string Note;
+    }
+
+    /// <summary>One destructible object (spec §09).</summary>
+    public sealed class ObjectDef
+    {
+        public string Id, NameHe, NameEn;
+        public float Hp;
+        public int Value;           // shekels at full destruction; partial damage pays a share
+        public Material Material;
+        public Reaction Reaction;
+        public float BlastRadius;   // for Explode
+        public float BlastDamage;
+        public float BlastDelay;    // burn time before the secondary blast
+        public float BurnSeconds;   // for Burn
+        public int ShopPrice;       // 0 = not sold (arena only)
+        public bool ThermiteOnly;
+        public float Mass = 50f;
+    }
+
+    public sealed class LighterDef
+    {
+        public string Id, NameHe, NameEn;
+        public float CatchTime;     // seconds the flame must touch the fuse
+        public float WindBlowout;   // chance per ignition attempt outdoors, facing the wind
+        public int Flames = 1;      // turbo lights two fuses at once
+        public int GemPrice;
+        public float BreakChance;   // matches: 1 in 3 snaps
+    }
+
+    public sealed class ArenaDef
+    {
+        public int Number;
+        public string Id, NameHe, NameEn, TeachesHe, TeachesEn;
+        public long ThreeStars;     // shekels for ★★★
+        public int UnlockStars;     // total stars needed to open
+        public float EchoMult = 1f; // enclosed spaces strengthen the blast wave
+        public bool Outdoors = true;
+    }
+
+    /// <summary>All game data from the spec in one place. A new item is a new entry here.</summary>
+    public static class Catalog
+    {
+        public static readonly ExplosiveDef[] Explosives =
+        {
+            new ExplosiveDef { Id = "blackcat", NameHe = "נפץ קטן", NameEn = "Black Cat", Family = Family.Blast, Fuse = 2.5f, Damage = 60, Radius = 0.8f, Price = 0, FreePerRound = 4, Note = "The basics. Windows, bins, containment in a mailbox." },
+            new ExplosiveDef { Id = "string50", NameHe = "מחרוזת 50", NameEn = "Firecracker string", Family = Family.Blast, Fuse = 1.5f, Damage = 20, Units = 50, UnitInterval = 0.1f, Radius = 0.5f, Price = 900, Note = "5 seconds of bangs along a line." },
+            new ExplosiveDef { Id = "sparkler", NameHe = "חזיז", NameEn = "Sparkler bomb", Family = Family.Fire, Fuse = 3f, Damage = 40, Radius = 1f, Price = 400, BurnSeconds = 8f, Note = "Burns 8 s in place, lights anything flammable." },
+            new ExplosiveDef { Id = "rocket", NameHe = "רקטה", NameEn = "Bottle rocket", Family = Family.Push, Fuse = 1f, Damage = 120, Radius = 1.2f, Price = 350, UnlockArena = 1, UnlockStars = 2, Throwable = false, Note = "Set it in a bottle or pipe; flies where it points." },
+            new ExplosiveDef { Id = "m80", NameHe = "M-80", NameEn = "M-80", Family = Family.Blast, Fuse = 3f, Damage = 400, Radius = 2f, Price = 1800, UnlockArena = 2, Mass = 0.12f, Note = "First item that pops a fuel tank. Best placed under a car." },
+            new ExplosiveDef { Id = "cherry", NameHe = "Cherry bomb", NameEn = "Cherry bomb", Family = Family.Blast, Fuse = 2f, Damage = 250, Radius = 1.5f, Price = 1100, UnlockArena = 2, Rolls = true, Note = "Round, rolls down slopes to where it is needed." },
+            new ExplosiveDef { Id = "cake36", NameHe = "עוגת זיקוקים 36", NameEn = "Cake 36", Family = Family.Push, Fuse = 2f, Damage = 50, Units = 36, UnitInterval = 6f / 36f, Radius = 10f, Price = 2400, UnlockArena = 3, Throwable = false, Mass = 1.5f, Note = "Planned chaos. Tip it over for horizontal fire." },
+            new ExplosiveDef { Id = "molotov", NameHe = "מולוטוב", NameEn = "Molotov", Family = Family.Fire, Fuse = 0f, Damage = 60, Radius = 2.5f, Price = 600, UnlockArena = 3, BurnSeconds = 8f, Mass = 0.6f, Note = "Light the rag and throw at once: 8 s fire puddle." },
+            new ExplosiveDef { Id = "keg", NameHe = "חבית אבק", NameEn = "Powder keg", Family = Family.Blast, Fuse = 6f, Damage = 1500, Radius = 4f, Price = 6500, UnlockArena = 3, UnlockStars = 3, Throwable = false, Mass = 25f, Note = "Roll it, light it, run. 6 s to set up a chain." },
+            new ExplosiveDef { Id = "cluster", NameHe = "Cluster (ענב)", NameEn = "Cluster", Family = Family.Blast, Fuse = 2f, Damage = 100, Units = 8, UnitInterval = 0.5f, Radius = 1f, Price = 3200, UnlockArena = 4, Note = "Splits into 8 in the air." },
+            new ExplosiveDef { Id = "dynamite", NameHe = "דינמיט", NameEn = "Dynamite", Family = Family.Blast, Fuse = 4f, Damage = 2500, Radius = 3.5f, Price = 9000, UnlockArena = 4, BreaksConcrete = true, Mass = 0.25f, Note = "The only thing that breaks concrete at full radius." },
+            new ExplosiveDef { Id = "pipe", NameHe = "פצצת צינור", NameEn = "Pipe bomb", Family = Family.Blast, Fuse = 5f, Damage = 1800, Radius = 2.5f, ShrapnelRadius = 8f, Price = 7000, UnlockArena = 5, Mass = 0.8f, Note = "Shrapnel shatters glass in a huge radius." },
+            new ExplosiveDef { Id = "detcord", NameHe = "Det cord", NameEn = "Det cord", Family = Family.Timed, Fuse = 0f, Damage = 300, Radius = 0.6f, Price = 4000, UnlockArena = 5, Throwable = false, Note = "String it between objects, light one end: all at once." },
+            new ExplosiveDef { Id = "thermite", NameHe = "Thermite", NameEn = "Thermite", Family = Family.Fire, Fuse = 3f, Damage = 80, Units = 12, UnitInterval = 1f, Radius = 0.5f, Price = 5500, UnlockArena = 6, Throwable = false, Note = "Burns through metal: opens tanks, lights engines." },
+        };
+
+        public static readonly ObjectDef[] Objects =
+        {
+            new ObjectDef { Id = "window", NameHe = "חלון", NameEn = "Window", Hp = 5, Value = 350, Material = Material.Glass, Reaction = Reaction.Shatter, Mass = 8 },
+            new ObjectDef { Id = "bin", NameHe = "פח אשפה", NameEn = "Trash bin", Hp = 25, Value = 600, Material = Material.Metal, Reaction = Reaction.Launch | Reaction.Contain, Mass = 15 },
+            new ObjectDef { Id = "mailbox", NameHe = "תא דואר", NameEn = "Mailbox", Hp = 15, Value = 900, Material = Material.Metal, Reaction = Reaction.Contain | Reaction.Launch, Mass = 10 },
+            new ObjectDef { Id = "fence", NameHe = "גדר רשת", NameEn = "Chain-link fence", Hp = 40, Value = 1200, Material = Material.Metal, Reaction = Reaction.None, Mass = 30 },
+            new ObjectDef { Id = "pallets", NameHe = "משטחי עץ ×6", NameEn = "Wood pallets x6", Hp = 20, Value = 480, Material = Material.Wood, Reaction = Reaction.Burn, BurnSeconds = 12f, Mass = 40 },
+            new ObjectDef { Id = "bicycle", NameHe = "אופניים", NameEn = "Bicycle", Hp = 30, Value = 2800, Material = Material.Metal, Reaction = Reaction.Launch, Mass = 14 },
+            new ObjectDef { Id = "billboard", NameHe = "שלט חוצות", NameEn = "Billboard", Hp = 90, Value = 14000, Material = Material.Metal, Reaction = Reaction.Collapse, Mass = 400 },
+            new ObjectDef { Id = "acunit", NameHe = "מזגן חיצוני", NameEn = "AC unit", Hp = 40, Value = 3900, Material = Material.Metal, Reaction = Reaction.Explode, BlastRadius = 1.5f, BlastDamage = 120, BlastDelay = 0.4f, ShopPrice = 3000, Mass = 45 },
+            new ObjectDef { Id = "gascyl", NameHe = "בלון גז 12ק\"ג", NameEn = "Gas cylinder 12kg", Hp = 35, Value = 420, Material = Material.Metal, Reaction = Reaction.Explode | Reaction.Launch, BlastRadius = 5f, BlastDamage = 600, BlastDelay = 0.8f, ShopPrice = 800, Mass = 25 },
+            new ObjectDef { Id = "motorbike", NameHe = "אופנוע", NameEn = "Motorbike", Hp = 120, Value = 22000, Material = Material.Metal, Reaction = Reaction.Launch | Reaction.Explode, BlastRadius = 3f, BlastDamage = 500, BlastDelay = 1.2f, ShopPrice = 9000, Mass = 180 },
+            new ObjectDef { Id = "van", NameHe = "טרנזיט ישן", NameEn = "Old van", Hp = 300, Value = 18000, Material = Material.Metal, Reaction = Reaction.Explode | Reaction.Burn | Reaction.Contain, BlastRadius = 5f, BlastDamage = 900, BlastDelay = 1.5f, BurnSeconds = 20f, ShopPrice = 12000, Mass = 1800 },
+            new ObjectDef { Id = "sedan", NameHe = "סדאן משפחתי", NameEn = "Family sedan", Hp = 280, Value = 65000, Material = Material.Metal, Reaction = Reaction.Explode | Reaction.Burn | Reaction.Contain, BlastRadius = 5f, BlastDamage = 900, BlastDelay = 1.5f, BurnSeconds = 20f, ShopPrice = 20000, Mass = 1400 },
+            new ObjectDef { Id = "sportscar", NameHe = "רכב ספורט", NameEn = "Sports car", Hp = 260, Value = 380000, Material = Material.Carbon, Reaction = Reaction.Explode | Reaction.Burn | Reaction.Contain, BlastRadius = 5f, BlastDamage = 900, BlastDelay = 0.5f, BurnSeconds = 15f, ShopPrice = 60000, Mass = 1300 },
+            new ObjectDef { Id = "caravan", NameHe = "קרוואן", NameEn = "Caravan", Hp = 350, Value = 90000, Material = Material.Aluminium, Reaction = Reaction.Explode | Reaction.Burn, BlastRadius = 5f, BlastDamage = 700, BlastDelay = 2f, BurnSeconds = 25f, ShopPrice = 28000, Mass = 1500 },
+            new ObjectDef { Id = "generator", NameHe = "גנרטור דיזל", NameEn = "Diesel generator", Hp = 150, Value = 26000, Material = Material.Metal, Reaction = Reaction.Explode, BlastRadius = 4f, BlastDamage = 700, BlastDelay = 1.2f, Mass = 600 },
+            new ObjectDef { Id = "fuelpump", NameHe = "משאבת דלק", NameEn = "Fuel pump", Hp = 140, Value = 95000, Material = Material.Metal, Reaction = Reaction.Explode | Reaction.Burn, BlastRadius = 8f, BlastDamage = 1500, BlastDelay = 1f, BurnSeconds = 20f, Mass = 500 },
+            new ObjectDef { Id = "fueltruck", NameHe = "משאית דלק", NameEn = "Fuel truck", Hp = 800, Value = 450000, Material = Material.Metal, Reaction = Reaction.Explode | Reaction.Burn, BlastRadius = 12f, BlastDamage = 3000, BlastDelay = 2f, BurnSeconds = 30f, Mass = 12000 },
+            new ObjectDef { Id = "solarpanel", NameHe = "פאנל סולארי", NameEn = "Solar panel", Hp = 8, Value = 4200, Material = Material.Glass, Reaction = Reaction.Shatter, ShopPrice = 25000, Mass = 20 },
+            new ObjectDef { Id = "storefront", NameHe = "לוח ויטרינה", NameEn = "Storefront pane", Hp = 10, Value = 6000, Material = Material.Glass, Reaction = Reaction.Shatter, Mass = 60 },
+            new ObjectDef { Id = "warehouse", NameHe = "מחסן סחורה", NameEn = "Warehouse", Hp = 500, Value = 120000, Material = Material.Cardboard, Reaction = Reaction.Burn | Reaction.Collapse, BurnSeconds = 40f, Mass = 5000 },
+            new ObjectDef { Id = "scaffold", NameHe = "פיגומים 3 קומות", NameEn = "Scaffolding", Hp = 60, Value = 38000, Material = Material.Metal, Reaction = Reaction.Collapse, Mass = 800 },
+            new ObjectDef { Id = "barrier", NameHe = "בטונדות", NameEn = "Concrete barrier", Hp = 400, Value = 3500, Material = Material.Concrete, Reaction = Reaction.None, Mass = 1000 },
+            new ObjectDef { Id = "watertank", NameHe = "מיכל מים 10 קוב", NameEn = "Water tank", Hp = 200, Value = 15000, Material = Material.Plastic, Reaction = Reaction.Douse, BlastRadius = 4f, Mass = 300 },
+            new ObjectDef { Id = "jacuzzi", NameHe = "ג'קוזי", NameEn = "Jacuzzi", Hp = 100, Value = 32000, Material = Material.Acrylic, Reaction = Reaction.Douse, BlastRadius = 3f, ShopPrice = 11000, Mass = 400 },
+            new ObjectDef { Id = "container", NameHe = "מכולת שילוח", NameEn = "Shipping container", Hp = 500, Value = 9000, Material = Material.Metal, Reaction = Reaction.Launch | Reaction.Contain, Mass = 3800 },
+            new ObjectDef { Id = "foodcart", NameHe = "עגלת מזון", NameEn = "Food cart", Hp = 90, Value = 45000, Material = Material.Metal, Reaction = Reaction.Explode | Reaction.Burn, BlastRadius = 4f, BlastDamage = 600, BlastDelay = 1f, BurnSeconds = 15f, ShopPrice = 14000, Mass = 350 },
+            new ObjectDef { Id = "fireworkstand", NameHe = "מתקן זיקוקים", NameEn = "Firework stand", Hp = 60, Value = 30000, Material = Material.Cardboard, Reaction = Reaction.Explode | Reaction.Burn, BlastRadius = 6f, BlastDamage = 300, BlastDelay = 0.5f, BurnSeconds = 10f, ShopPrice = 18000, Mass = 120 },
+            new ObjectDef { Id = "industrialtank", NameHe = "מיכל תעשייתי 50 קוב", NameEn = "Industrial tank", Hp = 900, Value = 900000, Material = Material.Metal, Reaction = Reaction.Explode, BlastRadius = 15f, BlastDamage = 5000, BlastDelay = 2f, ThermiteOnly = true, Mass = 20000 },
+        };
+
+        public static readonly LighterDef[] Lighters =
+        {
+            new LighterDef { Id = "basic", NameHe = "מצית רגיל", NameEn = "Lighter", CatchTime = 0.6f, WindBlowout = 0.3f },
+            new LighterDef { Id = "zippo", NameHe = "Zippo", NameEn = "Zippo", CatchTime = 0.4f, WindBlowout = 0f, GemPrice = 20 },
+            new LighterDef { Id = "turbo", NameHe = "מצית טורבו", NameEn = "Turbo lighter", CatchTime = 0f, WindBlowout = 0f, Flames = 2, GemPrice = 45 },
+            new LighterDef { Id = "matches", NameHe = "גפרורים", NameEn = "Matches", CatchTime = 0.6f, WindBlowout = 0.3f, BreakChance = 1f / 3f },
+        };
+
+        public static readonly ArenaDef[] Arenas =
+        {
+            new ArenaDef { Number = 1, Id = "backyard", NameHe = "חצר אחורית", NameEn = "Backyard", TeachesHe = "הדלקה, פתיל, Containment", TeachesEn = "Lighting, fuses, containment", ThreeStars = 60000 },
+            new ArenaDef { Number = 2, Id = "junkyard", NameHe = "מגרש גרוטאות", NameEn = "Junkyard", TeachesHe = "שרשרת רכבים, כיבוי", TeachesEn = "Car chains, dousing", ThreeStars = 180000 },
+            new ArenaDef { Number = 3, Id = "garage", NameHe = "חניון תת-קרקעי", NameEn = "Underground garage", TeachesHe = "הד: גל הדף ×1.4 בחלל סגור", TeachesEn = "Echo: x1.4 blast wave indoors", ThreeStars = 400000, EchoMult = 1.4f, Outdoors = false },
+            new ArenaDef { Number = 4, Id = "gasstation", NameHe = "תחנת דלק נטושה", NameEn = "Abandoned gas station", TeachesHe = "תזמון לפני הפיצוץ הגדול", TeachesEn = "Timing before the big one", ThreeStars = 900000 },
+            new ArenaDef { Number = 5, Id = "construction", NameHe = "אתר בנייה", NameEn = "Construction site", TeachesHe = "דינמיט, Det cord, התמוטטות", TeachesEn = "Dynamite, det cord, collapse", ThreeStars = 1600000, UnlockStars = 12 },
+            new ArenaDef { Number = 6, Id = "industrial", NameHe = "מתחם תעשייה", NameEn = "Industrial complex", TeachesHe = "Thermite, finale של 10+ חוליות", TeachesEn = "Thermite, 10+ link finale", ThreeStars = 3500000, UnlockStars = 16 },
+        };
+
+        static Dictionary<string, ExplosiveDef> explosiveById;
+        static Dictionary<string, ObjectDef> objectById;
+
+        public static ExplosiveDef Explosive(string id)
+        {
+            if (explosiveById == null)
+            {
+                explosiveById = new Dictionary<string, ExplosiveDef>();
+                foreach (var e in Explosives) explosiveById[e.Id] = e;
+            }
+            ExplosiveDef d;
+            return explosiveById.TryGetValue(id, out d) ? d : null;
+        }
+
+        public static ObjectDef Object(string id)
+        {
+            if (objectById == null)
+            {
+                objectById = new Dictionary<string, ObjectDef>();
+                foreach (var o in Objects) objectById[o.Id] = o;
+            }
+            ObjectDef d;
+            return objectById.TryGetValue(id, out d) ? d : null;
+        }
+
+        public static LighterDef Lighter(string id)
+        {
+            foreach (var l in Lighters) if (l.Id == id) return l;
+            return Lighters[0];
+        }
+
+        public static ArenaDef Arena(int number)
+        {
+            foreach (var a in Arenas) if (a.Number == number) return a;
+            return Arenas[0];
+        }
+    }
+}
