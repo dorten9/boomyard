@@ -1,14 +1,12 @@
 # Builds the phone apps: Android (installable APK, or a signed App Bundle for Google Play once the upload
 # key is in the repository secrets) and iOS (an Xcode project to archive and sign on a Mac).
 # The results are downloadable artifacts of the run; nothing is published anywhere.
+# Manual only (Actions → Mobile build → Run workflow): the iOS job runs on macOS, which costs 10× the minutes.
 # Optional secrets for a Play-ready bundle: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASS,
 # ANDROID_KEYALIAS_NAME, ANDROID_KEYALIAS_PASS. Skipped without the Unity secrets.
 name: Mobile build
 
 on:
-  push:
-    branches: [main, 'claude/mobile*']
-    paths-ignore: ['Tools/**', '*.md', '.github/workflows/web.yml', '.github/workflows/check.yml']
   workflow_dispatch:
 
 concurrency:
