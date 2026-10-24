@@ -83,9 +83,13 @@ namespace BoomYard.EditorTools
             if (!System.IO.File.Exists(ScenePath))
             {
                 System.IO.Directory.CreateDirectory("Assets/BoomYard/Scenes");
-                var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+                // Unity refuses an additive new scene while the open one is untitled (always the case in batch
+                // builds), so replace an untitled, unchanged scene; otherwise add one and close it again.
+                var open = EditorSceneManager.GetActiveScene();
+                bool replace = string.IsNullOrEmpty(open.path) && !open.isDirty;
+                var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, replace ? NewSceneMode.Single : NewSceneMode.Additive);
                 EditorSceneManager.SaveScene(scene, ScenePath);
-                EditorSceneManager.CloseScene(scene, true);
+                if (!replace) EditorSceneManager.CloseScene(scene, true);
                 AssetDatabase.Refresh();
             }
 
