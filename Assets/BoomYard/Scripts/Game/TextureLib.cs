@@ -38,6 +38,11 @@ namespace BoomYard.Game
             return s;
         }
 
+        /// <summary>Resolution scale: 0.5 on the Low tier (web), so generating the surfaces does not stall loading.</summary>
+        public static float Scale = 1f;
+
+        static int Res(int n) { return System.Math.Max(64, (int)(n * Scale)); }
+
         public static readonly string[] Names = { "asphalt", "concrete", "brick", "plaster", "wood", "paint", "rust", "grass", "tyre", "chainlink", "roof" };
 
         public static RawSurface Generate(string name)
@@ -63,7 +68,7 @@ namespace BoomYard.Game
 
         static RawSurface Asphalt()
         {
-            const int n = 512;
+            int n = Res(512);
             var h = new float[n * n];
             var c = new Color[n * n];
             for (int y = 0; y < n; y++)
@@ -89,7 +94,7 @@ namespace BoomYard.Game
 
         static RawSurface Concrete()
         {
-            const int n = 512;
+            int n = Res(512);
             var h = new float[n * n];
             var c = new Color[n * n];
             for (int y = 0; y < n; y++)
@@ -113,7 +118,7 @@ namespace BoomYard.Game
         /// <summary>Running-bond brick, 21.5 × 6.5 cm with 1 cm mortar; one texture is 4 bricks wide.</summary>
         static RawSurface Brick()
         {
-            const int n = 512;
+            int n = Res(512);
             var h = new float[n * n];
             var c = new Color[n * n];
             const int cols = 4, rows = 13;
@@ -146,7 +151,7 @@ namespace BoomYard.Game
 
         static RawSurface Plaster()
         {
-            const int n = 512;
+            int n = Res(512);
             var h = new float[n * n];
             var c = new Color[n * n];
             for (int y = 0; y < n; y++)
@@ -165,7 +170,7 @@ namespace BoomYard.Game
 
         static RawSurface Wood()
         {
-            const int n = 256;
+            int n = Res(256);
             var h = new float[n * n];
             var c = new Color[n * n];
             for (int y = 0; y < n; y++)
@@ -193,7 +198,7 @@ namespace BoomYard.Game
         /// <summary>Painted metal: near-white so _BaseColor tints it, with dust, scuffs and a few scratches.</summary>
         static RawSurface Paint()
         {
-            const int n = 256;
+            int n = Res(256);
             var h = new float[n * n];
             var c = new Color[n * n];
             for (int y = 0; y < n; y++)
@@ -212,7 +217,7 @@ namespace BoomYard.Game
 
         static RawSurface Rust()
         {
-            const int n = 256;
+            int n = Res(256);
             var h = new float[n * n];
             var c = new Color[n * n];
             for (int y = 0; y < n; y++)
@@ -233,7 +238,7 @@ namespace BoomYard.Game
 
         static RawSurface Grass()
         {
-            const int n = 512;
+            int n = Res(512);
             var h = new float[n * n];
             var c = new Color[n * n];
             for (int y = 0; y < n; y++)
@@ -256,7 +261,7 @@ namespace BoomYard.Game
         /// <summary>Tyre rubber with tread blocks running around (u) and across (v) the tread.</summary>
         static RawSurface Tyre()
         {
-            const int n = 256;
+            int n = Res(256);
             var h = new float[n * n];
             var c = new Color[n * n];
             for (int y = 0; y < n; y++)
@@ -277,7 +282,7 @@ namespace BoomYard.Game
         /// <summary>Galvanised chain-link: diamond wire mesh in alpha (used with the transparent template).</summary>
         static RawSurface ChainLink()
         {
-            const int n = 256;
+            int n = Res(256);
             var h = new float[n * n];
             var c = new Color[n * n];
             for (int y = 0; y < n; y++)
@@ -296,7 +301,7 @@ namespace BoomYard.Game
 
         static RawSurface Roof()
         {
-            const int n = 256;
+            int n = Res(256);
             var h = new float[n * n];
             var c = new Color[n * n];
             for (int y = 0; y < n; y++)

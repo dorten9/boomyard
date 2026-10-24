@@ -144,7 +144,55 @@ namespace BoomYard.Game
 
         public static Material ParticleAdd { get { return Particle("BoomYard/ParticleAdd", Soft); } }
         public static Material ParticleAlpha { get { return Particle("BoomYard/ParticleAlpha", Soft); } }
-        public static Material Fireball { get { return Particle("BoomYard/ParticleAdd", FireTexture, "fire"); } }
+        /// <summary>Fire with HDR brightness so it blooms.</summary>
+        public static Material FireballHDR { get { return Tinted("BoomYard/ParticleAdd", FireTexture, "fireHDR", new Color(3.2f, 2.3f, 1.6f, 1f)); } }
+        public static Material EmberHDR { get { return Tinted("BoomYard/ParticleAdd", Soft, "emberHDR", new Color(4f, 2.2f, 1f, 1f)); } }
+        public static Material Paper { get { return Tinted("BoomYard/ParticleAlpha", Square, "paper", Color.white); } }
+        public static Material ShockRing { get { return Tinted("BoomYard/ParticleAdd", RingTexture, "shock", new Color(1f, 0.9f, 0.8f, 0.5f)); } }
+        public static Material Scorch { get { return Tinted("BoomYard/ParticleAlpha", ScorchTexture, "scorch", new Color(0.05f, 0.04f, 0.035f, 0.85f)); } }
+
+        static Material Tinted(string shader, Texture2D tex, string key, Color tint)
+        {
+            Material m;
+            if (cache.TryGetValue(key, out m)) return m;
+            m = Particle(shader, tex, key);
+            m.SetColor("_Tint", tint);
+            return m;
+        }
+
+        static Texture2D square, ringTex, scorchTex;
+
+        static Texture2D Square
+        {
+            get
+            {
+                if (square == null) square = Radial(16, (d, x, y) => 1f);
+                return square;
+            }
+        }
+
+        static Texture2D RingTexture
+        {
+            get
+            {
+                if (ringTex == null) ringTex = Radial(128, (d, x, y) => Mathf.Clamp01(1f - Mathf.Abs(d - 0.85f) / 0.12f) * (d < 1f ? 1f : 0f));
+                return ringTex;
+            }
+        }
+
+        static Texture2D ScorchTexture
+        {
+            get
+            {
+                if (scorchTex == null)
+                    scorchTex = Radial(128, (d, x, y) =>
+                    {
+                        float n = Mathf.PerlinNoise(x * 6f + 2f, y * 6f + 9f);
+                        return Mathf.Clamp01((1f - d) * 1.8f * (0.4f + n));
+                    });
+                return scorchTex;
+            }
+        }
 
         static Material Particle(string shader, Texture2D tex, string key = null)
         {

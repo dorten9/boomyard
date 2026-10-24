@@ -24,7 +24,7 @@ namespace BoomYard.UI
         public static readonly Color Scrim = new Color(0.04f, 0.035f, 0.04f, 0.86f);
 
         static Font text, display;
-        static Sprite rounded, circle, ring, glow, vignette, star, arrow, diamond, flame, play;
+        static Sprite rounded, circle, ring, glow, vignette, star, arrow, diamond, flame, play, coin, gear, back, gift, lockIcon, drop, check, pill;
 
         public static Font Text
         {
@@ -110,7 +110,249 @@ namespace BoomYard.UI
             return b;
         }
 
+        /// <summary>Horizontal slider (0..1 mapped to min..max) with a label on the left and the value on the right.</summary>
+        public static Slider SliderRow(Transform parent, string label, float min, float max, float value, Action<float> changed, Func<float, string> format)
+        {
+            var row = Rect(parent, label);
+            var l = Label(row, "Label", label, 26, Fg, TextAnchor.MiddleLeft);
+            l.rectTransform.anchorMin = new Vector2(0f, 0f); l.rectTransform.anchorMax = new Vector2(0.42f, 1f);
+            l.rectTransform.offsetMin = l.rectTransform.offsetMax = Vector2.zero;
+            var v = Label(row, "Value", format(value), 24, Muted, TextAnchor.MiddleRight);
+            v.rectTransform.anchorMin = new Vector2(0.86f, 0f); v.rectTransform.anchorMax = new Vector2(1f, 1f);
+            v.rectTransform.offsetMin = v.rectTransform.offsetMax = Vector2.zero;
+
+            var area = Rect(row, "Slider");
+            area.anchorMin = new Vector2(0.44f, 0.5f); area.anchorMax = new Vector2(0.84f, 0.5f);
+            area.sizeDelta = new Vector2(0f, 40f);
+            area.anchoredPosition = Vector2.zero;
+            var bg = Image(area, "Track", Line, Rounded);
+            bg.rectTransform.anchorMin = new Vector2(0f, 0.5f); bg.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+            bg.rectTransform.sizeDelta = new Vector2(0f, 10f);
+            var fillArea = Rect(area, "FillArea");
+            fillArea.anchorMin = new Vector2(0f, 0.5f); fillArea.anchorMax = new Vector2(1f, 0.5f);
+            fillArea.sizeDelta = new Vector2(0f, 10f);
+            var fill = Image(fillArea, "Fill", Ember, Rounded);
+            fill.rectTransform.sizeDelta = Vector2.zero;
+            var handleArea = Rect(area, "HandleArea");
+            Stretch(handleArea);
+            var handle = Image(handleArea, "Handle", Fg, Circle);
+            handle.rectTransform.sizeDelta = new Vector2(36f, 36f);
+            handle.raycastTarget = true;
+            bg.raycastTarget = true;
+            var s = area.gameObject.AddComponent<Slider>();
+            s.fillRect = fill.rectTransform;
+            s.handleRect = handle.rectTransform;
+            s.targetGraphic = handle;
+            s.minValue = min;
+            s.maxValue = max;
+            s.value = value;
+            s.onValueChanged.AddListener(x => { v.text = format(x); changed(x); });
+            return s;
+        }
+
+        /// <summary>A labelled on/off switch.</summary>
+        public static Button ToggleRow(Transform parent, string label, string hint, bool value, Action<bool> changed)
+        {
+            var row = Rect(parent, label);
+            var l = Label(row, "Label", label, 26, Fg, TextAnchor.MiddleLeft);
+            l.rectTransform.anchorMin = new Vector2(0f, 0.45f); l.rectTransform.anchorMax = new Vector2(0.8f, 1f);
+            l.rectTransform.offsetMin = l.rectTransform.offsetMax = Vector2.zero;
+            if (!string.IsNullOrEmpty(hint))
+            {
+                var h = Label(row, "Hint", hint, 19, Muted, TextAnchor.MiddleLeft);
+                h.rectTransform.anchorMin = new Vector2(0f, 0f); h.rectTransform.anchorMax = new Vector2(0.8f, 0.48f);
+                h.rectTransform.offsetMin = h.rectTransform.offsetMax = Vector2.zero;
+            }
+            else l.rectTransform.anchorMin = new Vector2(0f, 0f);
+            var track = Image(row, "Switch", value ? Ember : Line, Pill);
+            track.rectTransform.anchorMin = track.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+            track.rectTransform.pivot = new Vector2(1f, 0.5f);
+            track.rectTransform.sizeDelta = new Vector2(86f, 44f);
+            track.raycastTarget = true;
+            var knob = Image(track.transform, "Knob", Fg, Circle);
+            knob.rectTransform.anchorMin = knob.rectTransform.anchorMax = new Vector2(value ? 1f : 0f, 0.5f);
+            knob.rectTransform.pivot = new Vector2(value ? 1f : 0f, 0.5f);
+            knob.rectTransform.anchoredPosition = new Vector2(value ? -4f : 4f, 0f);
+            knob.rectTransform.sizeDelta = new Vector2(36f, 36f);
+            var b = track.gameObject.AddComponent<Button>();
+            bool on = value;
+            b.onClick.AddListener(() =>
+            {
+                on = !on;
+                track.color = on ? Ember : Line;
+                knob.rectTransform.anchorMin = knob.rectTransform.anchorMax = new Vector2(on ? 1f : 0f, 0.5f);
+                knob.rectTransform.pivot = new Vector2(on ? 1f : 0f, 0.5f);
+                knob.rectTransform.anchoredPosition = new Vector2(on ? -4f : 4f, 0f);
+                changed(on);
+            });
+            return b;
+        }
+
+        /// <summary>A scrolling area; add children to the returned content (vertical or horizontal).</summary>
+        public static RectTransform Scroll(Transform parent, string name, bool vertical, out ScrollRect scroll)
+        {
+            var view = Rect(parent, name);
+            view.gameObject.AddComponent<RectMask2D>();
+            var hit = view.gameObject.AddComponent<Image>();
+            hit.color = new Color(0f, 0f, 0f, 0f);
+            var content = Rect(view, "Content");
+            if (vertical)
+            {
+                content.anchorMin = new Vector2(0f, 1f); content.anchorMax = new Vector2(1f, 1f);
+                content.pivot = new Vector2(0.5f, 1f);
+            }
+            else
+            {
+                content.anchorMin = new Vector2(0f, 0f); content.anchorMax = new Vector2(0f, 1f);
+                content.pivot = new Vector2(0f, 0.5f);
+            }
+            content.offsetMin = content.offsetMax = Vector2.zero;
+            scroll = view.gameObject.AddComponent<ScrollRect>();
+            scroll.content = content;
+            scroll.viewport = view;
+            scroll.horizontal = !vertical;
+            scroll.vertical = vertical;
+            scroll.movementType = ScrollRect.MovementType.Elastic;
+            scroll.scrollSensitivity = 30f;
+            return content;
+        }
+
+        /// <summary>Image + label button with an icon on the left.</summary>
+        public static Button IconButton(Transform parent, string name, Sprite icon, Color fill, Color iconColor, Action onClick, float size = 72f)
+        {
+            var img = Image(parent, name, fill, Circle);
+            img.raycastTarget = true;
+            img.rectTransform.sizeDelta = new Vector2(size, size);
+            var ic = Image(img.transform, "Icon", iconColor, icon);
+            ic.rectTransform.anchorMin = ic.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            ic.rectTransform.sizeDelta = new Vector2(size * 0.52f, size * 0.52f);
+            var b = img.gameObject.AddComponent<Button>();
+            b.onClick.AddListener(() => onClick());
+            return b;
+        }
+
         // ---------- generated sprites ----------
+
+        public static Sprite Pill
+        {
+            get
+            {
+                if (pill == null) pill = Shape(64, (x, y, n) => RoundRect(x, y, n, 31f), new Vector4(31, 31, 31, 31));
+                return pill;
+            }
+        }
+
+        /// <summary>A gold coin with a rim.</summary>
+        public static Sprite Coin
+        {
+            get
+            {
+                if (coin == null)
+                    coin = ShapeRGBA(64, (x, y, n) =>
+                    {
+                        float d = Dist(x, y, n) / (n * 0.5f);
+                        float a = Mathf.Clamp01((1f - d) * n * 0.5f);
+                        var rim = d > 0.78f ? new Color(0.85f, 0.55f, 0.12f) : new Color(1f, 0.78f, 0.25f);
+                        float shine = Mathf.Clamp01(1f - Vector2.Distance(new Vector2(x, y) / n, new Vector2(0.38f, 0.62f)) * 3f) * 0.4f;
+                        return new Color(rim.r + shine, rim.g + shine, rim.b + shine * 0.5f, a);
+                    });
+                return coin;
+            }
+        }
+
+        public static Sprite Gear
+        {
+            get
+            {
+                if (gear == null)
+                    gear = Shape(96, (x, y, n) =>
+                    {
+                        float dx = x + 0.5f - n * 0.5f, dy = y + 0.5f - n * 0.5f;
+                        float d = Mathf.Sqrt(dx * dx + dy * dy) / (n * 0.5f);
+                        float ang = Mathf.Atan2(dy, dx);
+                        float teeth = Mathf.Clamp01(Mathf.Cos(ang * 8f) * 3f) * 0.16f;
+                        float outer = 0.74f + teeth;
+                        return Mathf.Clamp01((outer - d) * 30f) * Mathf.Clamp01((d - 0.3f) * 30f);
+                    }, Vector4.zero);
+                return gear;
+            }
+        }
+
+        public static Sprite Back
+        {
+            get
+            {
+                if (back == null) back = Polygon(64, new[] { new Vector2(0.18f, 0.5f), new Vector2(0.55f, 0.85f), new Vector2(0.55f, 0.62f), new Vector2(0.85f, 0.62f), new Vector2(0.85f, 0.38f), new Vector2(0.55f, 0.38f), new Vector2(0.55f, 0.15f) });
+                return back;
+            }
+        }
+
+        public static Sprite Drop
+        {
+            get
+            {
+                if (drop == null) drop = Polygon(96, new[] { new Vector2(0.5f, 0.12f), new Vector2(0.86f, 0.5f), new Vector2(0.62f, 0.5f), new Vector2(0.62f, 0.9f), new Vector2(0.38f, 0.9f), new Vector2(0.38f, 0.5f), new Vector2(0.14f, 0.5f) });
+                return drop;
+            }
+        }
+
+        public static Sprite Check
+        {
+            get
+            {
+                if (check == null) check = Polygon(64, new[] { new Vector2(0.1f, 0.52f), new Vector2(0.24f, 0.66f), new Vector2(0.42f, 0.46f), new Vector2(0.8f, 0.86f), new Vector2(0.92f, 0.72f), new Vector2(0.42f, 0.18f) });
+                return check;
+            }
+        }
+
+        public static Sprite Gift
+        {
+            get
+            {
+                if (gift == null)
+                    gift = Shape(64, (x, y, n) =>
+                    {
+                        float u = (x + 0.5f) / n, v = (y + 0.5f) / n;
+                        bool box = u > 0.15f && u < 0.85f && v > 0.1f && v < 0.62f;
+                        bool lid = u > 0.1f && u < 0.9f && v > 0.62f && v < 0.75f;
+                        bool bowL = Vector2.Distance(new Vector2(u, v), new Vector2(0.38f, 0.84f)) < 0.1f;
+                        bool bowR = Vector2.Distance(new Vector2(u, v), new Vector2(0.62f, 0.84f)) < 0.1f;
+                        bool ribbon = Mathf.Abs(u - 0.5f) < 0.06f && v < 0.75f;
+                        return (box || lid || bowL || bowR) && !ribbon ? 1f : 0f;
+                    }, Vector4.zero);
+                return gift;
+            }
+        }
+
+        public static Sprite Lock
+        {
+            get
+            {
+                if (lockIcon == null)
+                    lockIcon = Shape(64, (x, y, n) =>
+                    {
+                        float u = (x + 0.5f) / n, v = (y + 0.5f) / n;
+                        bool body = u > 0.2f && u < 0.8f && v > 0.1f && v < 0.55f;
+                        float r = Vector2.Distance(new Vector2(u, v), new Vector2(0.5f, 0.55f));
+                        bool shackle = v > 0.55f && r < 0.24f && r > 0.14f;
+                        bool hole = Vector2.Distance(new Vector2(u, v), new Vector2(0.5f, 0.35f)) < 0.06f;
+                        return (body || shackle) && !hole ? 1f : 0f;
+                    }, Vector4.zero);
+                return lockIcon;
+            }
+        }
+
+        static Sprite ShapeRGBA(int n, Func<int, int, int, Color> color)
+        {
+            var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            var px = new Color32[n * n];
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                    px[y * n + x] = color(x, y, n);
+            tex.SetPixels32(px);
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, Vector4.zero);
+        }
 
         /// <summary>Small-radius rounded rectangle, 9-sliced (the spec's UI uses 2–4 px corners).</summary>
         public static Sprite Rounded

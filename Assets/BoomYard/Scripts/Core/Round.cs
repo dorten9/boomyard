@@ -24,11 +24,15 @@ namespace BoomYard.Core
 
         public event Action<RoundState> Changed;
 
-        public RoundModel() { State = RoundState.Loadout; TimeLeft = Duration; }
+        /// <summary>This round's time limit (levels set their own).</summary>
+        public float Limit { get; private set; }
 
-        public void Start()
+        public RoundModel() { State = RoundState.Loadout; TimeLeft = Limit = Duration; }
+
+        public void Start(float limit = Duration)
         {
-            TimeLeft = Duration;
+            Limit = limit;
+            TimeLeft = limit;
             Elapsed = 0f;
             StunLeft = 0f;
             Set(RoundState.Playing);
@@ -49,7 +53,7 @@ namespace BoomYard.Core
                 case RoundState.Playing:
                 case RoundState.Stunned:
                     Elapsed += dt;
-                    TimeLeft = Math.Max(0f, TimeLeft - dt);
+                    if (!Frozen) TimeLeft = Math.Max(0f, TimeLeft - dt);
                     if (State == RoundState.Stunned)
                     {
                         StunLeft -= dt;
@@ -64,6 +68,9 @@ namespace BoomYard.Core
                     break;
             }
         }
+
+        /// <summary>Holds the clock (the tutorial stops it while it explains).</summary>
+        public bool Frozen;
 
         /// <summary>Ends the round early (every item used and nothing left going off).</summary>
         public void Finish()

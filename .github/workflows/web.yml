@@ -151,7 +151,7 @@ jobs:
           # The Unity container writes the build as root; deploy from a copy we own.
           site="$RUNNER_TEMP/site"
           rm -rf "$site" && cp -r "${{ steps.out.outputs.dir }}" "$site"
-          cp Tools/web/vercel.json "$site/"
+          cp Tools/web/vercel.json Tools/web/privacy.html Tools/web/terms.html "$site/"
           cd "$site"
           npx --yes vercel@latest link --yes --project boomyard --token "$VERCEL_TOKEN"
           url=$(npx --yes vercel@latest deploy --prod --yes --token "$VERCEL_TOKEN")

@@ -35,6 +35,7 @@ namespace BoomYard.Game
         public static void Apply(QualityTier tier)
         {
             Tier = tier;
+            TextureLib.Scale = tier == QualityTier.Low ? 0.5f : 1f;
             QualitySettings.vSyncCount = 0;
             QualitySettings.shadowProjection = ShadowProjection.StableFit;
             switch (tier)

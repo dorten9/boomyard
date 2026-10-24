@@ -5,23 +5,29 @@ using UnityEngine;
 
 namespace BoomYard.Game
 {
-    /// <summary>The bill at the end of a round (spec §12).</summary>
+    /// <summary>How a level ended (the results screen).</summary>
     public sealed class RoundSummary
     {
+        public LevelDef Level;
         public ArenaDef Arena;
+        public bool Cleared;
+        public string FailReason;   // "time", "empty"
+        public float TimeLeft;
+        public int TargetsLeft, Targets;
         public long Total, Base, ChainExtra, PlacementExtra, Bonuses;
         public bool CleanSweep;
-        public int LongestChain, Destroyed, Objects, Stars, ContainedHits;
+        public int LongestChain, Destroyed, Objects, Stars, PreviousStars, ContainedHits;
         public long PreviousBest;
         public bool Record;
         public long Coins;
+        public bool FirstClear, Unlocked;
         public string TipKey;
         public List<BonusKind> BonusLog;
     }
 
     /// <summary>
-    /// The game: builds the arena, the player and the UI, runs the round (spec §16 RoundController) and keeps the
-    /// score. Title → round (90 s) → results → again.
+    /// The game: menus and the level map around it, and inside a level the round (spec §16 RoundController):
+    /// destroy every target before the clock runs out. Keeps score, chains, missions, rewards and the save.
     /// </summary>
     public sealed class GameController : MonoBehaviour
     {
@@ -29,8 +35,9 @@ namespace BoomYard.Game
         public static bool ReduceMotion { get { return SaveService.Data != null && SaveService.Data.settings.reduceMotion; } }
         public static bool ReduceFlashes { get { return SaveService.Data != null && SaveService.Data.settings.reduceFlashes; } }
 
-        public const int FreeBlackCats = 4;
+        public enum Mode { Menu, Level }
 
+        public Mode Current { get; private set; }
         public RoundModel Round { get; private set; }
         public RoundScore Score { get; private set; }
         public ChainTracker Chain { get; private set; }
@@ -38,15 +45,16 @@ namespace BoomYard.Game
         public Pocket Pocket { get; private set; }
         public Arena Arena { get; private set; }
         public ArenaDef ArenaDef { get { return Arena != null ? Arena.Def : Catalog.Arena(1); } }
+        public LevelDef Level { get; private set; }
         public GameUI UI { get; private set; }
         public Player Player { get; private set; }
+        public Tutorial Tutorial { get; private set; }
         public bool Paused { get; private set; }
         public RoundSummary Last { get; private set; }
-        public int LevelNumber = 4;
+        public string Shot { get; private set; }
 
         readonly Dictionary<int, int> killsPerBlast = new Dictionary<int, int>();
-        readonly Dictionary<string, int> pocketStart = new Dictionary<string, int>();
-        float idle, lastCloseCall = -10f;
+        float idle, clearedAt = -1f, lastCloseCall = -10f;
         int seed;
 
         void Awake()
@@ -54,9 +62,12 @@ namespace BoomYard.Game
             I = this;
             var save = SaveService.Load();
             Loc.Init("en");
-            Quality.Apply(Quality.Detect());
+            var tier = save.settings.quality >= 0 ? (QualityTier)save.settings.quality : Quality.Detect();
+            Quality.Apply(tier);
             Physics.defaultMaxDepenetrationVelocity = 6f;
-            gameObject.AddComponent<Sfx>().Volume = save.settings.sfxVolume;
+            var sfx = gameObject.AddComponent<Sfx>();
+            sfx.Volume = save.settings.sfxVolume;
+            sfx.MusicVolume = save.settings.musicVolume;
             gameObject.AddComponent<FireGrid>();
             Rendering.Create(Quality.Tier);
 
@@ -68,51 +79,19 @@ namespace BoomYard.Game
             seed = Daily.Seed(System.DateTime.Now) + save.roundsPlayed;
             Wind = new WindModel(seed);
 
+            // The menus play over a live level: the next one on the map.
+            Level = Levels.Get(Mathf.Clamp(save.unlocked, 1, Levels.All.Length));
             BuildArena();
             Player = Player.Create(Arena.Spawn, Arena.SpawnYaw);
             Player.ResetForRound(Arena.Spawn, Arena.SpawnYaw, Catalog.Lighter(save.lighter), seed);
             Player.Sensitivity = save.settings.sensitivity;
             Rendering.SetupCamera(Player.Cam, Quality.Tier);
-            FillPocket();
+            Tutorial = gameObject.AddComponent<Tutorial>();
 
             UI = GameUI.Create(this);
-            UI.ShowTitle();
             Shot = ShotMode();
+            GoHome();
             if (Shot != "") StartCoroutine(RunShot(Shot));
-        }
-
-        /// <summary>Screenshot runs (CI): ?shot=title|play|boom on the web page URL.</summary>
-        public string Shot { get; private set; }
-
-        static string ShotMode()
-        {
-            var url = Application.absoluteURL ?? "";
-            int i = url.IndexOf("shot=");
-            if (i < 0) return "";
-            var v = url.Substring(i + 5);
-            int amp = v.IndexOf('&');
-            return amp >= 0 ? v.Substring(0, amp) : v;
-        }
-
-        System.Collections.IEnumerator RunShot(string mode)
-        {
-            SaveService.Data.disclaimerSeen = true;
-            if (mode == "title") { UI.ShowTitle(); yield break; }
-            StartRound();
-            if (mode != "boom") yield break;
-            // A scripted blast for the explosion screenshots: an M-80 under the van, then the bins.
-            yield return new WaitForSeconds(2f);
-            Destructible van = null, bin = null;
-            foreach (var t in Arena.Targets) { if (t.Def.Id == "van") van = t; if (t.Def.Id == "bin" && bin == null) bin = t; }
-            if (van != null)
-            {
-                var pos = van.transform.TransformPoint(new Vector3(0.5f, 0f, 1.2f));
-                pos.y = 0.08f;
-                var live = LiveExplosive.Spawn(Catalog.Explosive("m80"), pos, Quaternion.identity, 0.3f, Placement.Contained);
-                live.Container = van;
-            }
-            yield return new WaitForSeconds(4f);
-            if (bin != null) LiveExplosive.Spawn(Catalog.Explosive("m80"), bin.transform.position + Vector3.up * 0.5f, Quaternion.identity, 0.2f, Placement.Thrown);
         }
 
         void BuildArena()
@@ -122,59 +101,122 @@ namespace BoomYard.Game
             FireGrid.I.Clear();
             var fx = GameObject.Find("Fx");
             if (fx != null) Destroy(fx);
-            Arena = ArenaBuilder.Build(Levels.Get(LevelNumber), Quality.Tier);
+            Arena = ArenaBuilder.Build(Level, Quality.Tier);
             if (Rendering.I != null) Rendering.I.RefreshReflections();
         }
 
-        /// <summary>Four free Black Cats plus what the player owns, one item per slot (spec §08, §13).</summary>
+        /// <summary>The level's kit plus what the player owns (bought in the shop), one item per slot.</summary>
         void FillPocket()
         {
             var save = SaveService.Data;
             Pocket.Slots.Clear();
             Pocket.Selected = 0;
-            pocketStart.Clear();
-            Pocket.Slots.Add(new PocketSlot { id = "blackcat", count = FreeBlackCats + save.Count("blackcat") });
+            int slots = Core.Pocket.BaseSlots + (save.Has("vest") ? 1 : 0);
+            var counts = new Dictionary<string, int>();
+            var order = new List<string>();
+            foreach (var k in Level.Kit) { if (!counts.ContainsKey(k.id)) { counts[k.id] = 0; order.Add(k.id); } counts[k.id] += k.count; }
             foreach (var s in save.inventory)
             {
-                if (Pocket.Slots.Count >= Core.Pocket.BaseSlots) break;
-                if (s.count <= 0 || s.id == "blackcat" || Catalog.Explosive(s.id) == null) continue;
-                Pocket.Slots.Add(new PocketSlot { id = s.id, count = s.count });
+                if (s.count <= 0 || Catalog.Explosive(s.id) == null) continue;
+                if (!counts.ContainsKey(s.id)) { if (order.Count >= slots) continue; counts[s.id] = 0; order.Add(s.id); }
+                counts[s.id] += s.count;
             }
-            foreach (var s in Pocket.Slots) pocketStart[s.id] = s.count;
+            foreach (var id in order)
+            {
+                if (Pocket.Slots.Count >= slots) break;
+                Pocket.Slots.Add(new PocketSlot { id = id, count = counts[id] });
+            }
         }
 
-        public void StartRound()
+        // ---------- navigation ----------
+
+        public void GoHome()
         {
-            if (Round.State == RoundState.Results || Round.State == RoundState.Settling) BuildArena();
-            Time.timeScale = 1f;
+            ToMenu();
+            UI.ShowHome();
+        }
+
+        public void GoMap()
+        {
+            ToMenu();
+            UI.ShowMap();
+        }
+
+        void ToMenu()
+        {
+            Current = Mode.Menu;
             Paused = false;
+            Time.timeScale = 1f;
+            AudioListener.pause = false;
+            if (Round.State != RoundState.Loadout)
+            {
+                Round = new RoundModel();
+                Round.Changed += OnRoundState;
+                BuildArena();
+                Player.ResetForRound(Arena.Spawn, Arena.SpawnYaw, Catalog.Lighter(SaveService.Data.lighter), seed);
+            }
+            Player.Controllable = false;
+            Tutorial.Stop();
+            Sfx.I.Music(true);
+        }
+
+        public void StartLevel(int number)
+        {
             var save = SaveService.Data;
+            Level = Levels.Get(number);
+            Current = Mode.Level;
+            Paused = false;
+            Time.timeScale = 1f;
+            AudioListener.pause = false;
+            Sfx.I.Music(false);
+            BuildArena();
             seed = Daily.Seed(System.DateTime.Now) * 31 + save.roundsPlayed;
             Wind = new WindModel(seed);
             Score = new RoundScore();
             Chain = new ChainTracker();
             killsPerBlast.Clear();
             idle = 0f;
+            clearedAt = -1f;
             FillPocket();
             Player.ResetForRound(Arena.Spawn, Arena.SpawnYaw, Catalog.Lighter(save.lighter), seed);
             Player.Controllable = true;
-            Round.Start();
+            Round = new RoundModel();
+            Round.Changed += OnRoundState;
+            Round.Start(Level.Time + (save.Has("watch") ? 10f : 0f));
             UI.ShowHud();
+            if (Level.Tutorial && !save.tutorialDone) Tutorial.Begin(this);
         }
+
+        public void Restart() { StartLevel(Level.Number); }
+
+        public void NextLevel() { StartLevel(Mathf.Min(Level.Number + 1, Levels.All.Length)); }
+
+        // ---------- the round ----------
 
         void Update()
         {
-            if (Paused) return;
+            UpdateTime();
+            if (Paused || Current != Mode.Level) return;
             Chain.Tick(Time.time);
             var st = Round.State;
             if (st == RoundState.Playing || st == RoundState.Stunned || st == RoundState.Settling)
             {
                 Wind.Update(Round.Elapsed);
-                bool busy = LiveExplosive.Active.Count > 0 || FireGrid.I.AnyBurning || Player.HeldLit;
-                Round.Tick(Time.deltaTime, busy);
+                bool busy = LiveExplosive.LitCount > 0 || FireGrid.I.AnyBurning || Player.HeldLit;
+                Round.Tick(Time.deltaTime, busy && Arena.TargetsLeft > 0);
 
-                // Everything used and nothing left going off: no need to wait out the clock.
-                if (Round.CanAct && Pocket.TotalLeft == 0 && !Player.HeldLit && LiveExplosive.Active.Count == 0)
+                // Everything down: hold a moment for the smoke, then the win.
+                if (Arena.TargetsLeft == 0 && clearedAt < 0f)
+                {
+                    clearedAt = Time.time;
+                    UI.Toast("ALL CLEAR!");
+                }
+                if (clearedAt >= 0f && Time.time - clearedAt > 2f && Round.State != RoundState.Results) Round.Finish();
+                if (clearedAt >= 0f && Round.State == RoundState.Settling) Round.Tick(0f, false);
+
+                // Out of explosives with targets standing and nothing going off: no need to wait out the clock.
+                bool nothingLeft = Pocket.TotalLeft == 0 && !Player.HeldLit && LiveExplosive.Active.Count == 0 && !FireGrid.I.AnyBurning;
+                if (Round.CanAct && clearedAt < 0f && nothingLeft)
                 {
                     idle += Time.deltaTime;
                     if (idle > 2.5f) Round.Finish();
@@ -184,18 +226,53 @@ namespace BoomYard.Game
             Player.Hands.Down = Player.Knocked || Round.State == RoundState.Stunned;
         }
 
+        // ---------- time effects ----------
+
+        float stopUntil, slowUntil, slowScale = 1f;
+
+        /// <summary>A frozen instant on a big close blast, so it lands.</summary>
+        public void HitStop(float seconds)
+        {
+            if (ReduceMotion) return;
+            stopUntil = Mathf.Max(stopUntil, Time.unscaledTime + seconds);
+        }
+
+        /// <summary>Slow motion for the big moments (a chain reaching three links and more).</summary>
+        public void SlowMo(float scale, float seconds)
+        {
+            if (ReduceMotion) return;
+            slowScale = scale;
+            slowUntil = Mathf.Max(slowUntil, Time.unscaledTime + seconds);
+        }
+
+        void UpdateTime()
+        {
+            if (Paused) return;
+            float now = Time.unscaledTime;
+            float ts = now < stopUntil ? 0.03f : now < slowUntil ? Mathf.Lerp(slowScale, 1f, Mathf.Clamp01(1f - (slowUntil - now) / 0.25f)) : 1f;
+            Time.timeScale = ts;
+            Time.fixedDeltaTime = 0.02f * Mathf.Max(ts, 0.25f);
+        }
+
         // ---------- scoring ----------
 
         /// <summary>Damage to an object turned into shekels (called by Destructible).</summary>
         public void Credit(Destructible d, float fraction, Hit hit, bool destroyed)
         {
+            if (Current != Mode.Level) return;
             var st = Round.State;
             if (st != RoundState.Playing && st != RoundState.Stunned && st != RoundState.Settling) return;
             float mult = destroyed ? Chain.OnDestroyed(Time.time, hit.ByObject) : Chain.MultiplierFor(hit.ByObject);
             long v = Score.AddDamage(d.Def.Value, fraction, d.Def.Material, hit.Placement, mult);
+            if (destroyed && hit.ByObject && Chain.Links >= 3 && Chain.Links % 3 == 0) SlowMo(0.3f, 0.9f);
             if (destroyed)
             {
                 Score.ObjectsDestroyed++;
+                var missions = SaveService.Data.TodaysMissions();
+                Missions.Count(missions, "destroy", null, 1);
+                Missions.Count(missions, "destroy_id", d.Def.Id, 1);
+                if (hit.ByObject) Missions.Count(missions, "chain", null, Chain.Links);
+                if (hit.Placement == Placement.Contained) Missions.Count(missions, "contained", null, 1);
                 if (hit.BlastId != 0 && !hit.ByObject)
                 {
                     int k;
@@ -203,6 +280,7 @@ namespace BoomYard.Game
                     killsPerBlast[hit.BlastId] = ++k;
                     if (k == ScoreCalculator.MultiCount) Bonus(BonusKind.Multi);
                 }
+                if (Arena.Targets.Contains(d)) UI.TargetDown(Arena.TargetsLeft, Arena.Targets.Count);
             }
             UI.Popup(d.transform.TransformPoint(d.FirePoint), v, destroyed && hit.ByObject ? mult : 0f);
         }
@@ -213,14 +291,22 @@ namespace BoomYard.Game
             UI.Bonus(kind);
         }
 
-        public void OnIgnite(ExplosiveDef def) { }
+        public void OnIgnite(ExplosiveDef def) { Tutorial.OnEvent("lit"); }
 
         public void OnRelease(LiveExplosive live)
         {
             if (live.ReleasedWith <= ScoreCalculator.LastSecondFuse && live.Def.Fuse > 0f) Bonus(BonusKind.LastSecond);
+            Tutorial.OnEvent("thrown");
         }
 
-        public void OnPlayerDetonation(LiveExplosive live, Placement placement) { }
+        public void OnPlaced() { Tutorial.OnEvent("placed"); }
+
+        public void OnPlayerDetonation(LiveExplosive live, Placement placement)
+        {
+            Missions.Count(SaveService.Data.TodaysMissions(), "blasts", null, 1);
+            SaveService.Data.totalBlasts++;
+            Tutorial.OnEvent("boom");
+        }
 
         /// <summary>It went off in the hand: white screen, shaking hands for 3 s, a fine (spec §04, §07).</summary>
         public void OnHandBurn()
@@ -246,14 +332,16 @@ namespace BoomYard.Game
 
         public void Toast(string key) { UI.Toast(Loc.T(key)); }
 
-        // ---------- flow ----------
+        // ---------- the end of a level ----------
 
         void OnRoundState(RoundState s)
         {
-            if (s != RoundState.Results) return;
+            if (s != RoundState.Results || Current != Mode.Level) return;
             Player.Controllable = false;
+            Tutorial.Stop();
             Last = Summarize();
             UI.ShowResults(Last);
+            if (Last.Cleared) Sfx.I.Win(); else Sfx.I.Fail();
         }
 
         RoundSummary Summarize()
@@ -266,11 +354,19 @@ namespace BoomYard.Game
                 total++;
                 if (d.Destroyed) destroyed++;
             }
+            int targetsLeft = Arena.TargetsLeft;
+            bool cleared = targetsLeft == 0;
             Score.CleanSweep = total > 0 && destroyed == total;
-            var rec = save.Arena(ArenaDef.Number);
+            var rec = save.Level(Level.Number);
             var sum = new RoundSummary
             {
+                Level = Level,
                 Arena = ArenaDef,
+                Cleared = cleared,
+                FailReason = cleared ? "" : Round.TimeLeft <= 0f ? "time" : "empty",
+                TimeLeft = Round.TimeLeft,
+                TargetsLeft = targetsLeft,
+                Targets = Arena.Targets.Count,
                 Total = Score.Total,
                 Base = Score.Base,
                 ChainExtra = Score.ChainExtra,
@@ -281,26 +377,41 @@ namespace BoomYard.Game
                 Destroyed = destroyed,
                 Objects = total,
                 ContainedHits = Score.ContainedHits,
-                PreviousBest = rec.best,
+                PreviousBest = rec.bestDamage,
+                PreviousStars = rec.stars,
                 BonusLog = new List<BonusKind>(Score.BonusLog),
             };
-            sum.Stars = ScoreCalculator.Stars(ArenaDef, sum.Total);
-            sum.Record = sum.Total > rec.best;
-            sum.Coins = ScoreCalculator.CoinsFromDamage(sum.Total);
-            sum.TipKey = Score.ContainedHits == 0 ? "tip.contain" : Chain.LongestChain < 2 ? "tip.chain" : "tip.again";
+            sum.Stars = Level.Stars(cleared, Round.TimeLeft);
+            sum.Record = cleared && sum.Total > rec.bestDamage;
+            sum.FirstClear = cleared && rec.stars == 0;
+            int newStars = Mathf.Max(0, sum.Stars - rec.stars);
+            sum.Coins = cleared ? Progress.LevelCoins(Level, sum.FirstClear, newStars, sum.Total) : ScoreCalculator.CoinsFromDamage(sum.Total) / 20;
+            sum.TipKey = cleared ? (Chain.LongestChain < 2 ? "tip.chain" : "tip.again") : (sum.FailReason == "empty" ? "tip.empty" : "tip.time");
 
-            // Book it: best, stars, coins, used items.
-            if (sum.Record) rec.best = sum.Total;
-            rec.stars = Mathf.Max(rec.stars, sum.Stars);
+            if (cleared)
+            {
+                if (sum.Record) rec.bestDamage = sum.Total;
+                rec.stars = Mathf.Max(rec.stars, sum.Stars);
+                rec.bestTimeLeft = Mathf.Max(rec.bestTimeLeft, Round.TimeLeft);
+                if (Level.Number >= save.unlocked && Level.Number < Levels.All.Length) { save.unlocked = Level.Number + 1; sum.Unlocked = true; }
+                var missions = save.TodaysMissions();
+                Missions.Count(missions, "clear", null, 1);
+                if (newStars > 0) Missions.Count(missions, "stars", null, newStars);
+                if (Level.Tutorial) save.tutorialDone = true;
+            }
             save.shekels += sum.Coins;
             save.roundsPlayed++;
+            save.totalDestroyed += destroyed;
+            save.bestChain = Mathf.Max(save.bestChain, Chain.LongestChain);
+            // Bought items that were used come out of the inventory (the level's own kit is free).
             foreach (var slot in Pocket.Slots)
             {
-                int start;
-                if (!pocketStart.TryGetValue(slot.id, out start)) continue;
-                int used = start - slot.count;
-                if (slot.id == "blackcat") used = Mathf.Max(0, used - FreeBlackCats);
-                if (used > 0) save.Add(slot.id, -used);
+                int kit = 0;
+                foreach (var k in Level.Kit) if (k.id == slot.id) kit += k.count;
+                int owned = save.Count(slot.id);
+                int used = (kit + owned) - slot.count;
+                int fromOwned = Mathf.Max(0, used - kit);
+                if (fromOwned > 0) save.Add(slot.id, -fromOwned);
             }
             SaveService.Save();
             return sum;
@@ -308,39 +419,134 @@ namespace BoomYard.Game
 
         public void TogglePause()
         {
-            if (Round.State == RoundState.Results || Round.State == RoundState.Loadout) return;
+            if (Current != Mode.Level || Round.State == RoundState.Results || Round.State == RoundState.Loadout) return;
             Paused = !Paused;
             Time.timeScale = Paused ? 0f : 1f;
             AudioListener.pause = Paused;
             UI.ShowPause(Paused);
         }
 
-        public void QuitToTitle()
+        // ---------- shop, missions, daily reward ----------
+
+        public bool Buy(ShopItem item)
         {
-            Paused = false;
-            Time.timeScale = 1f;
-            AudioListener.pause = false;
+            var save = SaveService.Data;
+            if (item.Kind == "lighter" && save.lighters.Contains(item.Grants)) { save.lighter = item.Grants; SaveService.Save(); return true; }
+            if (item.Kind == "upgrade" && save.Has(item.Grants)) return false;
+            if (item.Coins > 0 && save.shekels < item.Coins) return false;
+            if (item.Gems > 0 && save.gems < item.Gems) return false;
+            save.shekels -= item.Coins;
+            save.gems -= item.Gems;
+            switch (item.Kind)
+            {
+                case "explosive": save.Add(item.Grants, item.Amount); break;
+                case "lighter": save.lighters.Add(item.Grants); save.lighter = item.Grants; break;
+                case "upgrade": save.upgrades.Add(item.Grants); break;
+            }
+            SaveService.Save();
+            Sfx.I.Coin();
+            return true;
+        }
+
+        public void Claim(Mission m)
+        {
+            if (!m.Done || m.claimed) return;
+            m.claimed = true;
+            SaveService.Data.shekels += m.coins;
+            SaveService.Data.gems += m.gems;
+            SaveService.Save();
+            Sfx.I.Coin();
+        }
+
+        /// <summary>Today's login reward (day index), or -1 if already taken.</summary>
+        public int DailyAvailable()
+        {
+            var s = SaveService.Data;
+            return DailyReward.NextDay(s.dailyClaimDate, s.dailyStreak, System.DateTime.Now);
+        }
+
+        public void ClaimDaily()
+        {
+            int day = DailyAvailable();
+            if (day < 0) return;
+            var s = SaveService.Data;
+            s.dailyStreak = day;
+            s.dailyClaimDate = Daily.Seed(System.DateTime.Now);
+            s.shekels += DailyReward.Coins[day];
+            s.gems += DailyReward.Gems[day];
+            SaveService.Save();
+            Sfx.I.Star();
+        }
+
+        // ---------- settings ----------
+
+        public void ApplySettings()
+        {
+            var st = SaveService.Data.settings;
+            Sfx.I.Volume = st.sfxVolume;
+            Sfx.I.MusicVolume = st.musicVolume;
+            Sfx.I.Music(Current == Mode.Menu);
+            Player.Sensitivity = st.sensitivity;
+            var tier = st.quality >= 0 ? (QualityTier)st.quality : Quality.Detect();
+            Quality.Apply(tier);
+            Rendering.ApplyTier(tier);
+            Rendering.SetupCamera(Player.Cam, tier);
+            SaveService.Save();
+        }
+
+        public void ResetProgress()
+        {
+            var settings = SaveService.Data.settings;
+            SaveService.Wipe();
+            SaveService.Data.settings = settings;
+            SaveService.Data.disclaimerSeen = true;
+            SaveService.Save();
+            Level = Levels.Get(1);
             Round = new RoundModel();
             Round.Changed += OnRoundState;
             BuildArena();
-            Player.ResetForRound(Arena.Spawn, Arena.SpawnYaw, Catalog.Lighter(SaveService.Data.lighter), seed);
-            Player.Controllable = false;
-            FillPocket();
-            UI.ShowTitle();
-        }
-
-        public void SetLanguage(string lang)
-        {
-            SaveService.Data.settings.lang = lang;
-            SaveService.Save();
-            Loc.Init(lang);
-            UI.Rebuild();
+            GoHome();
         }
 
         void OnApplicationPause(bool paused)
         {
-            if (paused && (Round.State == RoundState.Playing || Round.State == RoundState.Stunned) && !Paused) TogglePause();
+            if (paused && Current == Mode.Level && (Round.State == RoundState.Playing || Round.State == RoundState.Stunned) && !Paused) TogglePause();
             if (paused) SaveService.Save();
+        }
+
+        // ---------- screenshot runs (CI) ----------
+
+        static string ShotMode()
+        {
+            var url = Application.absoluteURL ?? "";
+            int i = url.IndexOf("shot=");
+            if (i < 0) return "";
+            var v = url.Substring(i + 5);
+            int amp = v.IndexOf('&');
+            return amp >= 0 ? v.Substring(0, amp) : v;
+        }
+
+        /// <summary>?shot=title|map|shop|play|boom on the web page URL.</summary>
+        System.Collections.IEnumerator RunShot(string mode)
+        {
+            SaveService.Data.disclaimerSeen = true;
+            SaveService.Data.tutorialDone = true;
+            if (mode == "title") { GoHome(); yield break; }
+            if (mode == "map") { GoMap(); yield break; }
+            if (mode == "shop") { GoHome(); UI.ShowShop(); yield break; }
+            StartLevel(mode == "boom" ? 9 : 4);
+            if (mode != "boom") yield break;
+            // A scripted chain for the explosion screenshots: an M-80 under the van, then the barrels go.
+            yield return new WaitForSeconds(2f);
+            Destructible van = null;
+            foreach (var t in Arena.Targets) if (t.Def.Id == "van") van = t;
+            if (van != null)
+            {
+                var pos = van.transform.TransformPoint(new Vector3(0.6f, 0f, 1.4f));
+                pos.y = 0.08f;
+                var live = LiveExplosive.Spawn(Catalog.Explosive("m80"), pos, Quaternion.identity, 0.3f, Placement.Contained);
+                live.Container = van;
+            }
         }
     }
 }

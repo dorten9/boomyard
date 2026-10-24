@@ -11,7 +11,7 @@ namespace BoomYard.UI
     /// </summary>
     public sealed class TouchControls : MonoBehaviour
     {
-        public RectTransform LighterButton, ThrowButton, PauseButton;
+        public RectTransform LighterButton, ThrowButton, PlaceButton, PauseButton;
         public readonly List<RectTransform> PocketSlots = new List<RectTransform>();
 
         public bool JoystickActive { get; private set; }
@@ -24,7 +24,7 @@ namespace BoomYard.UI
         const float JoyRadiusShare = 0.11f;   // of the screen height
         const float TapSeconds = 0.25f;
 
-        enum Role { None, Move, Look, Lighter, Throw, Ui }
+        enum Role { None, Move, Look, Lighter, Throw, Place, Ui }
 
         sealed class Finger
         {
@@ -47,6 +47,8 @@ namespace BoomYard.UI
         {
             var player = Player.I;
             if (player == null) return;
+            var gc = GameController.I;
+            if (gc != null && gc.Current != GameController.Mode.Level) { fingers.Clear(); return; }
             var input = player.In;
             var settings = SaveService.Data.settings;
 
@@ -97,6 +99,9 @@ namespace BoomYard.UI
                         if (!ended) input.LighterHeld = true;
                         else input.LighterUp = true;
                         break;
+                    case Role.Place:
+                        if (ended) { input.Place = true; input.PlaceScreen = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f); }
+                        break;
                     case Role.Throw:
                         float power = 0.35f + 0.65f * Mathf.Clamp01((p.Pos.y - f.Start.y) / (Screen.height * 0.3f));
                         ThrowPower = power;
@@ -120,8 +125,10 @@ namespace BoomYard.UI
                 if (Hit(PocketSlots[i], pos)) { input.Select = i; return Role.Ui; }
             if (Hit(LighterButton, pos)) return Role.Lighter;
             if (Hit(ThrowButton, pos)) return Role.Throw;
+            if (Hit(PlaceButton, pos)) return Role.Place;
             bool mouse = Input.touchCount == 0;
-            if (!mouse && pos.x < Screen.width * 0.42f) return Role.Move;
+            bool left = SaveService.Data.settings.leftHanded;
+            if (!mouse && (left ? pos.x > Screen.width * 0.58f : pos.x < Screen.width * 0.42f)) return Role.Move;
             return Role.Look;
         }
 

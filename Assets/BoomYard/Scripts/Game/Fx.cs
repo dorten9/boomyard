@@ -25,28 +25,239 @@ namespace BoomYard.Game
             }
         }
 
-        /// <summary>Flash, fireball, smoke column and sparks scaled by the blast radius.</summary>
+        /// <summary>
+        /// A blast, in layers: a flash (light + white-hot core), a turbulent HDR fireball, a sunlit smoke column,
+        /// a dust ring racing out along the ground, a shockwave ring, bouncing embers and a scorch mark. Firecrackers
+        /// get a white paper-smoke puff and red paper confetti instead of a fireball.
+        /// </summary>
         public static void Explosion(Vector3 pos, float radius)
         {
             float s = Mathf.Clamp(radius, 0.5f, 12f);
+            bool cracker = radius < 1.2f;
             var go = new GameObject("Explosion");
             go.transform.SetParent(Root, false);
             go.transform.position = pos;
+            float ground = GroundY(pos);
+            bool onGround = pos.y - ground < 1.5f;
 
-            // Flash: a light for a couple of frames, then fading.
             var light = go.AddComponent<Light>();
             light.type = LightType.Point;
-            light.color = new Color(1f, 0.72f, 0.4f);
-            light.range = 6f + s * 4f;
-            light.intensity = 6f + s;
-            go.AddComponent<FadeLight>().Duration = 0.25f + 0.05f * s;
+            light.color = new Color(1f, 0.78f, 0.5f);
+            light.range = 6f + s * 6f;
+            light.intensity = cracker ? 6f : 14f + 3f * s;
+            light.shadows = LightShadows.None;
+            go.AddComponent<FadeLight>().Duration = cracker ? 0.12f : 0.35f + 0.04f * s;
 
-            Burst(go.transform, Mats.ParticleAdd, (int)(18 + 6 * s), 0.35f + 0.05f * s, 0.5f + 0.4f * s, 1.2f + 0.6f * s,
-                new Color(1f, 0.95f, 0.75f), new Color(1f, 0.45f, 0.1f, 0f), 0f, 0.3f * s);
-            Burst(go.transform, Mats.ParticleAlpha, (int)(10 + 4 * s), 2.5f + 0.3f * s, 0.6f * s + 0.6f, 0.8f + 0.3f * s,
-                new Color(0.22f, 0.2f, 0.19f, 0.75f), new Color(0.12f, 0.11f, 0.11f, 0f), -0.12f, 0.4f * s, 1.5f + 0.4f * s);
-            Sparks(go.transform, (int)(20 + 8 * s), 4f + 2f * s);
-            Object.Destroy(go, 6f + s);
+            // White-hot core: a couple of frames.
+            Emit(go.transform, Mats.FireballHDR, new E
+            {
+                Count = 3, Life = new Vector2(0.06f, 0.12f), Size = new Vector2(1.2f * s, 1.8f * s), Speed = Vector2.zero,
+                Start = new Color(1f, 0.95f, 0.85f, 1f), End = new Color(1f, 0.6f, 0.2f, 0f), Grow = 1.4f,
+            });
+
+            if (cracker)
+            {
+                Emit(go.transform, Mats.Smoke, new E
+                {
+                    Count = 8, Life = new Vector2(1.5f, 3f), Size = new Vector2(0.25f, 0.5f), Speed = new Vector2(0.2f, 0.8f), Radius = 0.1f,
+                    Start = new Color(0.85f, 0.84f, 0.82f, 0.7f), End = new Color(0.7f, 0.7f, 0.7f, 0f), Grow = 3f, Gravity = -0.03f, Noise = 0.4f,
+                });
+                Confetti(go.transform, 14);
+            }
+            else
+            {
+                // Fireball: rolling, turbulent, from white-yellow to deep orange to soot.
+                var fire = new Gradient();
+                fire.SetKeys(
+                    new[] { new GradientColorKey(new Color(1f, 0.9f, 0.7f), 0f), new GradientColorKey(new Color(1f, 0.55f, 0.18f), 0.35f), new GradientColorKey(new Color(0.55f, 0.15f, 0.05f), 0.75f), new GradientColorKey(new Color(0.15f, 0.05f, 0.03f), 1f) },
+                    new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0.9f, 0.5f), new GradientAlphaKey(0f, 1f) });
+                Emit(go.transform, Mats.FireballHDR, new E
+                {
+                    Count = (int)(10 + 5 * s), Life = new Vector2(0.45f, 0.9f + 0.05f * s), Size = new Vector2(0.7f * s, 1.4f * s), Speed = new Vector2(0.6f * s, 2.2f * s), Radius = 0.25f * s,
+                    Gradient = fire, Grow = 1.7f, Gravity = -0.25f, Noise = 0.8f, Spin = 1.5f, Damp = 0.4f,
+                });
+                // Smoke column, lit by the sun: dark and dense at first, greying as it rises and spreads.
+                Emit(go.transform, Mats.Smoke, new E
+                {
+                    Count = (int)(10 + 5 * s), Life = new Vector2(4f + 0.3f * s, 7f + 0.5f * s), Size = new Vector2(0.8f * s, 1.6f * s), Speed = new Vector2(0.4f * s, 1.2f * s), Radius = 0.3f * s,
+                    Start = new Color(0.16f, 0.15f, 0.14f, 0.85f), End = new Color(0.42f, 0.4f, 0.38f, 0f), Grow = 2.8f, Gravity = -0.06f, Noise = 0.5f, Spin = 0.3f, Damp = 0.35f, Delay = 0.05f,
+                });
+                if (onGround)
+                {
+                    // Dust thrown out along the ground.
+                    Emit(go.transform, Mats.Smoke, new E
+                    {
+                        Count = (int)(14 + 4 * s), Life = new Vector2(1.5f, 3f), Size = new Vector2(0.4f * s, 0.8f * s), Speed = new Vector2(3f + s, 6f + 2f * s), Radius = 0.2f,
+                        Start = new Color(0.55f, 0.5f, 0.43f, 0.6f), End = new Color(0.6f, 0.56f, 0.5f, 0f), Grow = 2.2f, Ring = true, Damp = 0.7f, AtY = ground + 0.15f,
+                    });
+                    Shockwave(new Vector3(pos.x, ground + 0.05f, pos.z), s);
+                }
+                Sparks(go.transform, (int)(25 + 10 * s), 5f + 2.5f * s, ground);
+            }
+            if (onGround) Scorch(new Vector3(pos.x, ground, pos.z), cracker ? 0.5f : 1.3f * s);
+            Object.Destroy(go, 12f + s);
+        }
+
+        /// <summary>Height of the ground under a point (falls back to 0).</summary>
+        static float GroundY(Vector3 p)
+        {
+            RaycastHit hit;
+            if (Physics.Raycast(p + Vector3.up * 0.5f, Vector3.down, out hit, 20f, Layers.WorldMask, QueryTriggerInteraction.Ignore)) return hit.point.y;
+            return 0f;
+        }
+
+        /// <summary>Settings of one particle burst.</summary>
+        struct E
+        {
+            public int Count;
+            public Vector2 Life, Size, Speed;
+            public float Radius, Grow, Gravity, Noise, Spin, Damp, Delay, AtY;
+            public Color Start, End;
+            public Gradient Gradient;
+            public bool Ring;
+        }
+
+        static ParticleSystem Emit(Transform parent, Material mat, E e)
+        {
+            var go = new GameObject("Burst");
+            go.transform.SetParent(parent, false);
+            if (e.AtY != 0f) go.transform.position = new Vector3(parent.position.x, e.AtY, parent.position.z);
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main;
+            main.loop = false;
+            main.duration = 0.2f;
+            main.startDelay = e.Delay;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(e.Life.x, e.Life.y);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(e.Speed.x, e.Speed.y);
+            main.startSize = new ParticleSystem.MinMaxCurve(e.Size.x, e.Size.y);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.gravityModifier = e.Gravity;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = 300;
+            var em = ps.emission;
+            em.rateOverTime = 0f;
+            em.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)Mathf.Max(1, e.Count)) });
+            var shape = ps.shape;
+            if (e.Ring)
+            {
+                shape.shapeType = ParticleSystemShapeType.Circle;
+                shape.rotation = new Vector3(-90f, 0f, 0f);
+                shape.radius = Mathf.Max(0.05f, e.Radius);
+                shape.radiusThickness = 0f;
+            }
+            else
+            {
+                shape.shapeType = ParticleSystemShapeType.Sphere;
+                shape.radius = Mathf.Max(0.01f, e.Radius);
+            }
+            var sol = ps.sizeOverLifetime;
+            sol.enabled = true;
+            sol.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(0f, 0.6f), new Keyframe(0.3f, 0.6f + (e.Grow - 0.6f) * 0.6f), new Keyframe(1f, e.Grow)));
+            var col = ps.colorOverLifetime;
+            col.enabled = true;
+            if (e.Gradient != null) col.color = e.Gradient;
+            else
+            {
+                var g = new Gradient();
+                g.SetKeys(new[] { new GradientColorKey(e.Start, 0f), new GradientColorKey(e.End, 1f) },
+                    new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(e.Start.a, 0.06f), new GradientAlphaKey(e.Start.a * 0.7f, 0.5f), new GradientAlphaKey(e.End.a, 1f) });
+                col.color = g;
+            }
+            if (e.Spin > 0f)
+            {
+                var rot = ps.rotationOverLifetime;
+                rot.enabled = true;
+                rot.z = new ParticleSystem.MinMaxCurve(-e.Spin, e.Spin);
+            }
+            if (e.Noise > 0f)
+            {
+                var noise = ps.noise;
+                noise.enabled = true;
+                noise.strength = e.Noise;
+                noise.frequency = 0.6f;
+                noise.scrollSpeed = 0.3f;
+                noise.quality = ParticleSystemNoiseQuality.Low;
+            }
+            if (e.Damp > 0f)
+            {
+                var limit = ps.limitVelocityOverLifetime;
+                limit.enabled = true;
+                limit.dampen = e.Damp * 0.25f;
+                limit.limit = 0.5f;
+            }
+            var r = go.GetComponent<ParticleSystemRenderer>();
+            r.sharedMaterial = mat;
+            r.sortingFudge = mat == Mats.Smoke ? 10f : 0f;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            ps.Play();
+            return ps;
+        }
+
+        /// <summary>Red paper bits from a firecracker, tumbling down.</summary>
+        static void Confetti(Transform parent, int count)
+        {
+            var go = new GameObject("Confetti");
+            go.transform.SetParent(parent, false);
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main;
+            main.loop = false;
+            main.duration = 0.1f;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(1.5f, 3f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(1.5f, 4f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.015f, 0.035f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.75f, 0.12f, 0.08f), new Color(0.9f, 0.85f, 0.75f));
+            main.gravityModifier = 0.25f;
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            var em = ps.emission;
+            em.rateOverTime = 0f;
+            em.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)count) });
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Hemisphere;
+            shape.radius = 0.05f;
+            shape.rotation = new Vector3(-90f, 0f, 0f);
+            var rot = ps.rotationOverLifetime;
+            rot.enabled = true;
+            rot.z = new ParticleSystem.MinMaxCurve(-8f, 8f);
+            var limit = ps.limitVelocityOverLifetime;
+            limit.enabled = true;
+            limit.dampen = 0.2f;
+            limit.limit = 0.6f;
+            var r = go.GetComponent<ParticleSystemRenderer>();
+            r.sharedMaterial = Mats.Paper;
+            ps.Play();
+        }
+
+        /// <summary>A flat ring of pressure racing out along the ground.</summary>
+        static void Shockwave(Vector3 at, float s)
+        {
+            var go = new GameObject("Shockwave");
+            go.transform.SetParent(Root, false);
+            go.transform.position = at;
+            go.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            go.AddComponent<MeshFilter>().sharedMesh = Mats.Quad;
+            var r = go.AddComponent<MeshRenderer>();
+            r.sharedMaterial = Mats.ShockRing;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            var w = go.AddComponent<Expand>();
+            w.To = s * 3.5f;
+            w.Duration = 0.35f + 0.03f * s;
+        }
+
+        /// <summary>A burnt patch left on the ground.</summary>
+        static void Scorch(Vector3 at, float size)
+        {
+            var go = new GameObject("Scorch");
+            go.transform.SetParent(Root, false);
+            go.transform.position = at + Vector3.up * 0.025f;
+            go.transform.rotation = Quaternion.Euler(90f, Random.Range(0f, 360f), 0f);
+            go.transform.localScale = Vector3.one * size;
+            go.AddComponent<MeshFilter>().sharedMesh = Mats.Quad;
+            var r = go.AddComponent<MeshRenderer>();
+            r.sharedMaterial = Mats.Scorch;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
 
         /// <summary>Looping fire on a burning object; destroy the returned object to put it out.</summary>
@@ -58,47 +269,72 @@ namespace BoomYard.Game
             var ps = go.AddComponent<ParticleSystem>();
             var main = ps.main;
             main.loop = true;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(0.5f, 0.9f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(0.6f * size, 1.4f * size);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.4f * size, 0.9f * size);
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.5f, 1f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.4f * size, 1.2f * size);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.5f * size, 1.1f * size);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.6f, 0.2f), new Color(1f, 0.85f, 0.4f));
-            main.gravityModifier = -0.1f;
+            main.gravityModifier = -0.15f;
             var em = ps.emission;
-            em.rateOverTime = 26f * size;
+            em.rateOverTime = 22f * size;
             var shape = ps.shape;
             shape.shapeType = ParticleSystemShapeType.Sphere;
             shape.radius = 0.35f * size;
-            Fade(ps, new Color(1f, 0.85f, 0.5f), new Color(0.8f, 0.2f, 0.05f, 0f));
-            go.GetComponent<ParticleSystemRenderer>().sharedMaterial = Mats.ParticleAdd;
+            var col = ps.colorOverLifetime;
+            col.enabled = true;
+            var g = new Gradient();
+            g.SetKeys(new[] { new GradientColorKey(new Color(1f, 0.75f, 0.4f), 0f), new GradientColorKey(new Color(1f, 0.4f, 0.1f), 0.5f), new GradientColorKey(new Color(0.4f, 0.1f, 0.03f), 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0.9f, 0.1f), new GradientAlphaKey(0f, 1f) });
+            col.color = g;
+            var sol = ps.sizeOverLifetime;
+            sol.enabled = true;
+            sol.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, 0.4f));
+            var noise = ps.noise;
+            noise.enabled = true;
+            noise.strength = 0.4f;
+            noise.frequency = 1.2f;
+            noise.quality = ParticleSystemNoiseQuality.Low;
+            var rr = go.GetComponent<ParticleSystemRenderer>();
+            rr.sharedMaterial = Mats.FireballHDR;
+            rr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
             var light = go.AddComponent<Light>();
             light.type = LightType.Point;
             light.color = new Color(1f, 0.55f, 0.2f);
             light.range = 4f + 3f * size;
-            light.intensity = 1.6f;
+            light.intensity = 3f;
             go.AddComponent<Flicker>();
+            Sfx.I.FireLoop(go.transform);
 
-            var smoke = Burst(go.transform, Mats.ParticleAlpha, 0, 3f, 0.8f * size, 0.5f, new Color(0.15f, 0.14f, 0.13f, 0.5f), new Color(0.1f, 0.1f, 0.1f, 0f), -0.05f, 0.3f * size, 1.6f * size);
+            var smoke = Emit(go.transform, Mats.Smoke, new E
+            {
+                Count = 1, Life = new Vector2(4f, 6f), Size = new Vector2(0.8f * size, 1.4f * size), Speed = new Vector2(0.8f, 1.6f), Radius = 0.3f * size,
+                Start = new Color(0.14f, 0.13f, 0.12f, 0.75f), End = new Color(0.35f, 0.34f, 0.33f, 0f), Grow = 3f, Gravity = -0.04f, Noise = 0.4f, Spin = 0.3f,
+            });
             var sm = smoke.main;
             sm.loop = true;
             var se = smoke.emission;
-            se.rateOverTime = 5f * size;
+            se.rateOverTime = 4f * size;
             smoke.Play();
+            ps.Play();
             return go;
         }
 
-        /// <summary>Thin smoke that keeps rising from a destroyed object until the round ends.</summary>
+        /// <summary>Thin smoke that keeps rising from a destroyed object until the level ends.</summary>
         public static void Smolder(Transform parent, Vector3 localPos, float size)
         {
             var go = new GameObject("Smolder");
             go.transform.SetParent(parent, false);
             go.transform.localPosition = localPos;
-            var smoke = Burst(go.transform, Mats.ParticleAlpha, 0, 4f, 0.5f * size, 0.35f, new Color(0.13f, 0.12f, 0.12f, 0.35f), new Color(0.1f, 0.1f, 0.1f, 0f), -0.03f, 0.3f * size, 1.4f * size);
+            var smoke = Emit(go.transform, Mats.Smoke, new E
+            {
+                Count = 1, Life = new Vector2(4f, 6f), Size = new Vector2(0.5f * size, 0.9f * size), Speed = new Vector2(0.4f, 0.9f), Radius = 0.2f * size,
+                Start = new Color(0.22f, 0.21f, 0.2f, 0.5f), End = new Color(0.45f, 0.44f, 0.43f, 0f), Grow = 3f, Gravity = -0.02f, Noise = 0.3f, Spin = 0.2f,
+            });
             var sm = smoke.main;
             sm.loop = true;
             var se = smoke.emission;
-            se.rateOverTime = 3f;
+            se.rateOverTime = 2.5f;
             smoke.Play();
         }
 
@@ -237,7 +473,7 @@ namespace BoomYard.Game
             return ps;
         }
 
-        static void Sparks(Transform parent, int count, float speed)
+        static void Sparks(Transform parent, int count, float speed, float groundY)
         {
             var go = new GameObject("Sparks");
             go.transform.SetParent(parent, false);
@@ -264,12 +500,12 @@ namespace BoomYard.Game
             col.type = ParticleSystemCollisionType.Planes;
             var floor = new GameObject("Floor").transform;
             floor.SetParent(go.transform, false);
-            floor.position = new Vector3(parent.position.x, 0f, parent.position.z);
+            floor.position = new Vector3(parent.position.x, groundY, parent.position.z);
             col.SetPlane(0, floor);
             col.bounce = 0.35f;
             col.dampen = 0.4f;
             var r = go.GetComponent<ParticleSystemRenderer>();
-            r.sharedMaterial = Mats.ParticleAdd;
+            r.sharedMaterial = Mats.EmberHDR;
             r.renderMode = ParticleSystemRenderMode.Stretch;
             r.velocityScale = 0.05f;
             r.lengthScale = 1f;
@@ -302,6 +538,27 @@ namespace BoomYard.Game
             float k = 1f - t / Duration;
             if (k <= 0f) { Destroy(l); Destroy(this); return; }
             l.intensity = start * k * k;
+        }
+    }
+
+    /// <summary>Scales a flat ring out and fades it (the shockwave).</summary>
+    public sealed class Expand : MonoBehaviour
+    {
+        public float To = 5f, Duration = 0.4f;
+        float t;
+        MaterialPropertyBlock mpb;
+        Renderer r;
+
+        void Start() { r = GetComponent<Renderer>(); mpb = new MaterialPropertyBlock(); }
+
+        void Update()
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / Duration);
+            transform.localScale = Vector3.one * Mathf.Lerp(0.2f, To, 1f - (1f - k) * (1f - k));
+            mpb.SetColor("_Tint", new Color(1f, 0.9f, 0.8f, (1f - k) * 0.55f));
+            r.SetPropertyBlock(mpb);
+            if (k >= 1f) Destroy(gameObject);
         }
     }
 

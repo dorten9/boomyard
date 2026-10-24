@@ -45,7 +45,7 @@ namespace BoomYard.Game
         public float Health01 { get { return Def == null ? 0f : Mathf.Clamp01(Hp / Def.Hp); } }
         public bool Flammable { get { return (Def.Reaction & Reaction.Burn) != 0 || Def.Material == Core.Material.Wood || Def.Material == Core.Material.Cardboard; } }
         public bool IsGlass { get { return (Def.Reaction & Reaction.Shatter) != 0; } }
-        public string Name { get { return Loc.He ? Def.NameHe : Def.NameEn; } }
+        public string Name { get { return Def.NameEn; } }
 
         public static Destructible Add(GameObject go, string id)
         {
@@ -243,7 +243,7 @@ namespace BoomYard.Game
     /// <summary>A launched object hurts what it hits: mass × speed (spec §06 "push"). Counts as a chain link.</summary>
     public sealed class ImpactDamage : MonoBehaviour
     {
-        float until;
+        float until, lastClang;
         Rigidbody rb;
 
         public void Arm(float seconds)
@@ -260,6 +260,11 @@ namespace BoomYard.Game
             if (!enabled || rb == null) return;
             float v = c.relativeVelocity.magnitude;
             if (v < 3f) return;
+            if (v > 5f && Time.time - lastClang > 0.15f)
+            {
+                lastClang = Time.time;
+                Sfx.I.Clang(transform.position);
+            }
             var target = c.collider.GetComponentInParent<Destructible>();
             if (target == null || target.gameObject == gameObject) return;
             float energy = 0.5f * Mathf.Min(rb.mass, 400f) * v * v;

@@ -23,6 +23,7 @@ static class CoreTests
         WindChecks();
         Rounds();
         CatalogChecks();
+        MetaTests.Run(Check);
         Console.WriteLine(passed + " passed, " + failed + " failed");
         return failed == 0 ? 0 : 1;
     }
@@ -139,6 +140,7 @@ static class CoreTests
         Check(r.State == RoundState.Loadout, "starts in loadout");
         r.Start();
         Check(r.CanAct, "playing");
+        Check(r.Limit == RoundModel.Duration, "default limit");
         r.Stun(RoundModel.StunSeconds);
         Check(r.State == RoundState.Stunned && !r.CanAct, "stunned");
         r.Tick(2.6f, false);
@@ -149,6 +151,14 @@ static class CoreTests
         Check(r.State == RoundState.Settling, "waits for what is still burning");
         r.Tick(1f, false);
         Check(r.State == RoundState.Results, "results");
+        var lr = new RoundModel();
+        lr.Start(30f);
+        lr.Frozen = true;
+        lr.Tick(10f, false);
+        Check(lr.TimeLeft == 30f, "frozen clock (tutorial)");
+        lr.Frozen = false;
+        lr.Tick(10f, false);
+        Check(lr.TimeLeft == 20f, "level time limit");
 
         var p = new Pocket();
         p.Slots.Add(new PocketSlot { id = "blackcat", count = 1 });
@@ -181,5 +191,44 @@ static class CoreTests
             Check(e.Fuse > last, "stronger items have longer fuses: " + id);
             last = e.Fuse;
         }
+    }
+}
+
+static class MetaTests
+{
+    public static void Run(System.Action<bool, string> check)
+    {
+        var lvl = Levels.Get(1);
+        check(lvl.Stars(true, lvl.Time * 0.5f) == 3, "3 stars with half the time left");
+        check(lvl.Stars(true, lvl.Time * 0.2f) == 2, "2 stars");
+        check(lvl.Stars(true, 1f) == 1, "1 star");
+        check(lvl.Stars(false, 99f) == 0, "no stars if not cleared");
+        check(Levels.All.Length >= 10, "10 levels");
+        for (int i = 0; i < Levels.All.Length; i++)
+        {
+            var l = Levels.All[i];
+            check(l.Number == i + 1, "levels numbered in order");
+            foreach (var p in l.Props) check(Catalog.Object(p.Id) != null, "level " + l.Number + " prop exists: " + p.Id);
+            foreach (var k in l.Kit) check(Catalog.Explosive(k.id) != null, "level " + l.Number + " kit item exists: " + k.id);
+        }
+        foreach (var it in Shop.Items)
+            check((it.Coins > 0) != (it.Gems > 0), "shop item has one price: " + it.Id);
+
+        var a = Missions.ForDay(20261024);
+        var b = Missions.ForDay(20261024);
+        check(a.Count == 3 && a[0].kind == b[0].kind && a[1].kind == b[1].kind, "same missions for the same day");
+        var m = new System.Collections.Generic.List<Mission> { new Mission { kind = "destroy", goal = 5 }, new Mission { kind = "chain", goal = 3 } };
+        Missions.Count(m, "destroy", null, 3);
+        Missions.Count(m, "destroy", null, 4);
+        check(m[0].progress == 5 && m[0].Done, "mission progress caps at the goal");
+        Missions.Count(m, "chain", null, 2);
+        Missions.Count(m, "chain", null, 1);
+        check(m[1].progress == 2, "chain missions keep the best");
+
+        check(DailyReward.NextDay(0, 0, new System.DateTime(2026, 10, 24)) == 0, "first daily reward");
+        check(DailyReward.NextDay(20261023, 2, new System.DateTime(2026, 10, 24)) == 3, "streak continues");
+        check(DailyReward.NextDay(20261024, 2, new System.DateTime(2026, 10, 24)) == -1, "claimed today");
+        check(DailyReward.NextDay(20261020, 4, new System.DateTime(2026, 10, 24)) == 0, "missed day restarts");
+        check(Progress.LevelCoins(lvl, true, 3, 100000) == lvl.Reward + 120 + 200, "level coins");
     }
 }

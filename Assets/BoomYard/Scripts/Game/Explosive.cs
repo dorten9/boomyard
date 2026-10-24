@@ -12,65 +12,76 @@ namespace BoomYard.Game
         public static GameObject Build(ExplosiveDef def)
         {
             var root = new GameObject(def.Id);
+            var paper = Mats.Surface("paint", new Color(0.62f, 0.13f, 0.1f), 0f, 0.35f, 0.1f, 0.4f);
+            var band = Mats.Lit(new Color(0.82f, 0.78f, 0.68f), 0f, 0.25f);
+            var cap = Mats.Lit(new Color(0.75f, 0.7f, 0.6f), 0f, 0.2f);
             float fuseLen = 0.05f;
             Vector3 tip;
             switch (def.Id)
             {
                 case "cherry":
-                    Part(root, PrimitiveType.Sphere, Vector3.zero, Vector3.one * 0.04f, Mats.Lit(new Color(0.6f, 0.08f, 0.06f), 0f, 0.5f));
-                    tip = new Vector3(0f, 0.02f + fuseLen, 0f);
+                    Part(root, MeshKit.Blob(0.022f, 0.05f, 900), Vector3.zero, Mats.Lit(new Color(0.58f, 0.07f, 0.05f), 0f, 0.55f));
+                    tip = new Vector3(0f, 0.022f + fuseLen, 0f);
                     break;
                 case "sparkler":
-                    Part(root, PrimitiveType.Sphere, Vector3.zero, Vector3.one * 0.06f, Mats.Lit(new Color(0.35f, 0.35f, 0.38f), 0.2f, 0.3f));
-                    tip = new Vector3(0f, 0.03f + fuseLen, 0f);
+                    Part(root, MeshKit.Blob(0.032f, 0.08f, 901), Vector3.zero, Mats.Lit(new Color(0.35f, 0.35f, 0.38f), 0.3f, 0.35f));
+                    tip = new Vector3(0f, 0.032f + fuseLen, 0f);
                     break;
                 case "dynamite":
-                    for (int i = 0; i < 3; i++)
-                        Part(root, PrimitiveType.Cylinder, new Vector3((i - 1) * 0.03f, 0f, 0f), new Vector3(0.028f, 0.1f, 0.028f), Mats.Lit(new Color(0.62f, 0.12f, 0.08f), 0f, 0.25f));
-                    Part(root, PrimitiveType.Cube, Vector3.zero, new Vector3(0.095f, 0.03f, 0.032f), Mats.Lit(new Color(0.75f, 0.7f, 0.6f), 0f, 0.2f));
+                    for (int i = 0; i < 3; i++) Tube(root, new Vector3((i - 1) * 0.029f, -0.1f, 0f), 0.0145f, 0.2f, Mats.Lit(new Color(0.62f, 0.12f, 0.08f), 0f, 0.3f), cap);
+                    Part(root, MeshKit.RoundedBox(new Vector3(0.094f, 0.03f, 0.033f), 0.012f), Vector3.zero, Mats.Lit(new Color(0.15f, 0.15f, 0.16f), 0f, 0.5f));
                     tip = new Vector3(0f, 0.1f + fuseLen, 0f);
                     break;
                 case "keg":
-                    Part(root, PrimitiveType.Cylinder, Vector3.zero, new Vector3(0.38f, 0.25f, 0.38f), Mats.Lit(Mats.Wood, 0f, 0.2f));
-                    Part(root, PrimitiveType.Cylinder, Vector3.zero, new Vector3(0.39f, 0.02f, 0.39f), Mats.Lit(Mats.DarkMetal, 0.8f, 0.4f));
+                    Part(root, MeshKit.Lathe("keg", new[] { new Vector2(0.17f, -0.25f), new Vector2(0.2f, -0.12f), new Vector2(0.21f, 0f), new Vector2(0.2f, 0.12f), new Vector2(0.17f, 0.25f) }, 20, true, true), Vector3.zero, Mats.Surface("wood", Color.white, 0f, 0.6f, 0.3f));
+                    for (int i = -1; i <= 1; i += 2) Part(root, MeshKit.Lathe("keghoop", new[] { new Vector2(0.205f, -0.012f), new Vector2(0.212f, 0f), new Vector2(0.205f, 0.012f) }, 20), new Vector3(0f, i * 0.16f, 0f), Mats.Lit(Mats.DarkMetal, 0.8f, 0.4f));
                     tip = new Vector3(0f, 0.25f + fuseLen, 0f);
                     break;
                 case "string50":
                     for (int i = 0; i < 10; i++)
-                        Part(root, PrimitiveType.Cylinder, new Vector3((i - 4.5f) * 0.012f, 0f, 0f), new Vector3(0.009f, 0.018f, 0.009f), Mats.Lit(new Color(0.75f, 0.1f, 0.08f), 0f, 0.3f));
+                    {
+                        var c = Tube(root, new Vector3((i - 4.5f) * 0.012f, -0.009f, 0f), 0.0045f, 0.018f, paper, band);
+                        c.transform.localRotation = Quaternion.Euler(0f, 0f, (i % 2 == 0 ? 8f : -8f));
+                    }
                     tip = new Vector3(-0.07f, 0.02f, 0f);
                     break;
                 case "m80":
+                    Tube(root, new Vector3(0f, -0.04f, 0f), 0.014f, 0.08f, Mats.Lit(new Color(0.16f, 0.17f, 0.2f), 0f, 0.35f), cap);
+                    tip = new Vector3(0f, 0.04f + fuseLen, 0f);
+                    break;
                 case "pipe":
-                    var c = def.Id == "pipe" ? Mats.Lit(Mats.Steel, 0.9f, 0.5f) : Mats.Lit(new Color(0.16f, 0.17f, 0.2f), 0f, 0.3f);
-                    Part(root, PrimitiveType.Cylinder, Vector3.zero, def.Id == "pipe" ? new Vector3(0.05f, 0.11f, 0.05f) : new Vector3(0.028f, 0.04f, 0.028f), c);
-                    tip = new Vector3(0f, (def.Id == "pipe" ? 0.11f : 0.04f) + fuseLen, 0f);
+                    Tube(root, new Vector3(0f, -0.11f, 0f), 0.025f, 0.22f, Mats.Lit(Mats.Steel, 0.9f, 0.55f), Mats.Lit(new Color(0.3f, 0.3f, 0.32f), 0.9f, 0.4f));
+                    tip = new Vector3(0f, 0.11f + fuseLen, 0f);
                     break;
                 default:
-                    // Black Cat and anything without a model yet: a red paper tube with a white band.
-                    Part(root, PrimitiveType.Cylinder, Vector3.zero, new Vector3(0.022f, 0.035f, 0.022f), Mats.Lit(new Color(0.61f, 0.16f, 0.13f), 0f, 0.3f));
-                    Part(root, PrimitiveType.Cylinder, new Vector3(0f, 0.022f, 0f), new Vector3(0.0225f, 0.006f, 0.0225f), Mats.Lit(new Color(0.78f, 0.75f, 0.69f), 0f, 0.2f));
+                    // Black Cat: a red paper tube with a cream band and clay end caps.
+                    Tube(root, new Vector3(0f, -0.035f, 0f), 0.011f, 0.07f, paper, cap);
+                    Part(root, MeshKit.Lathe("bcband", new[] { new Vector2(0.0115f, -0.008f), new Vector2(0.0115f, 0.008f) }, 16), new Vector3(0f, 0.012f, 0f), band);
                     tip = new Vector3(0f, 0.035f + fuseLen, 0f);
                     break;
             }
-            // The fuse: a thin cord from the body to the tip.
-            var fuse = Part(root, PrimitiveType.Cylinder, tip - Vector3.up * fuseLen * 0.5f, new Vector3(0.003f, fuseLen * 0.5f, 0.003f), Mats.Lit(new Color(0.85f, 0.82f, 0.72f), 0f, 0.1f));
+            // The fuse: a thin waxed cord from the body to the tip, slightly bent.
+            var fuse = Part(root, MeshKit.Lathe("fuse", new[] { new Vector2(0.0018f, 0f), new Vector2(0.0018f, fuseLen) }, 6), tip - Vector3.up * fuseLen, Mats.Lit(new Color(0.55f, 0.5f, 0.36f), 0f, 0.35f));
+            fuse.transform.localRotation = Quaternion.Euler(0f, 0f, 9f);
             fuse.name = "Fuse";
             var tipT = new GameObject("FuseTip").transform;
             tipT.SetParent(root.transform, false);
-            tipT.localPosition = tip;
+            tipT.localPosition = tip + new Vector3(-Mathf.Sin(9f * Mathf.Deg2Rad) * fuseLen, 0f, 0f);
             return root;
         }
 
-        static GameObject Part(GameObject root, PrimitiveType type, Vector3 pos, Vector3 scale, UnityEngine.Material mat)
+        /// <summary>A paper or steel tube standing on <paramref name="bottom"/>, with end caps.</summary>
+        static GameObject Tube(GameObject root, Vector3 bottom, float r, float h, UnityEngine.Material body, UnityEngine.Material ends)
         {
-            var go = GameObject.CreatePrimitive(type);
-            Object.DestroyImmediate(go.GetComponent<Collider>());
-            go.transform.SetParent(root.transform, false);
-            go.transform.localPosition = pos;
-            go.transform.localScale = scale;
-            var r = go.GetComponent<Renderer>();
-            r.sharedMaterial = mat;
+            var t = Part(root, MeshKit.Lathe("tube" + r + h, new[] { new Vector2(r * 0.92f, 0f), new Vector2(r, r * 0.15f), new Vector2(r, h - r * 0.15f), new Vector2(r * 0.92f, h) }, 16), bottom, body);
+            Part(t, MeshKit.Lathe("cap" + r, new[] { new Vector2(r * 0.93f, 0f), new Vector2(r * 0.5f, 0.0015f), new Vector2(0f, 0.002f) }, 16), new Vector3(0f, h, 0f), ends);
+            return t;
+        }
+
+        static GameObject Part(GameObject root, Mesh mesh, Vector3 pos, UnityEngine.Material mat)
+        {
+            var go = Props.Part(root.transform, mesh, pos, mat, false);
+            go.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
             return go;
         }
 
@@ -105,11 +116,37 @@ namespace BoomYard.Game
         public bool Airborne;
         public int BlastId;
         public float ReleasedWith;   // fuse left when it left the hand, for the Last Second bonus
+        /// <summary>Placed items wait unlit until the player lights them (place → light → run).</summary>
+        public bool Lit { get; private set; }
 
         Light glow;
+        GameObject marker;
         bool done;
 
-        public static LiveExplosive Spawn(ExplosiveDef def, Vector3 pos, Quaternion rot, float remaining, Placement placement)
+        /// <summary>An unlit item lying in the world, waiting for the lighter.</summary>
+        public static LiveExplosive SpawnUnlit(ExplosiveDef def, Vector3 pos, Quaternion rot, Placement placement)
+        {
+            var live = Spawn(def, pos, rot, BoomYard.Core.Fuse.TotalBurn(def) > 0f ? BoomYard.Core.Fuse.TotalBurn(def) : 8f, placement, false);
+            // A soft ring on the ground so placed charges are easy to find again.
+            live.marker = new GameObject("Marker");
+            live.marker.transform.SetParent(live.transform, false);
+            var lr = live.marker.AddComponent<LineRenderer>();
+            lr.sharedMaterial = Mats.ParticleAdd;
+            lr.startColor = lr.endColor = new Color(1f, 0.55f, 0.15f, 0.9f);
+            lr.widthMultiplier = 0.012f;
+            lr.loop = true;
+            lr.useWorldSpace = false;
+            lr.positionCount = 24;
+            for (int i = 0; i < 24; i++)
+            {
+                float a = i / 24f * Mathf.PI * 2f;
+                lr.SetPosition(i, new Vector3(Mathf.Cos(a) * 0.14f, 0.005f, Mathf.Sin(a) * 0.14f));
+            }
+            lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            return live;
+        }
+
+        public static LiveExplosive Spawn(ExplosiveDef def, Vector3 pos, Quaternion rot, float remaining, Placement placement, bool lit = true)
         {
             var go = ItemModel.Build(def);
             go.transform.SetPositionAndRotation(pos, rot);
@@ -136,26 +173,53 @@ namespace BoomYard.Game
             }
             go.layer = Layers.Default;
 
-            var tip = go.transform.Find("FuseTip");
-            if (tip != null && def.Fuse > 0f)
+            Active.Add(live);
+            if (lit) live.Light();
+            return live;
+        }
+
+        /// <summary>The fuse catches: sparks, a glow, the hiss, and the countdown starts.</summary>
+        public void Light()
+        {
+            if (Lit || done) return;
+            Lit = true;
+            if (marker != null) Destroy(marker);
+            var tip = transform.Find("FuseTip");
+            if (tip != null && Def.Fuse > 0f)
             {
                 Fx.FuseSparks(tip);
-                live.glow = tip.gameObject.AddComponent<Light>();
-                live.glow.type = LightType.Point;
-                live.glow.color = new Color(1f, 0.7f, 0.35f);
-                live.glow.range = 1.5f;
-                live.glow.intensity = 0.8f;
+                glow = tip.gameObject.AddComponent<Light>();
+                glow.type = LightType.Point;
+                glow.color = new Color(1f, 0.7f, 0.35f);
+                glow.range = 1.5f;
+                glow.intensity = 0.8f;
                 tip.gameObject.AddComponent<Flicker>();
+                var hiss = tip.gameObject.AddComponent<AudioSource>();
+                Sfx.I.FuseOn(hiss);
             }
-            Active.Add(live);
-            return live;
+        }
+
+        public Vector3 FuseTipWorld
+        {
+            get { var tip = transform.Find("FuseTip"); return tip != null ? tip.position : transform.position; }
+        }
+
+        /// <summary>Unlit charges in the world, for the "light it" prompt and the tutorial.</summary>
+        public static int UnlitCount
+        {
+            get { int n = 0; foreach (var l in Active) if (l != null && !l.Lit) n++; return n; }
+        }
+
+        public static int LitCount
+        {
+            get { int n = 0; foreach (var l in Active) if (l != null && l.Lit) n++; return n; }
         }
 
         void OnDestroy() { Active.Remove(this); }
 
         void Update()
         {
-            if (done) return;
+            if (done || !Lit) return;
             Remaining -= Time.deltaTime;
             if (Remaining <= 0f) Detonate();
         }
@@ -164,7 +228,7 @@ namespace BoomYard.Game
         {
             if (done) return;
             Airborne = false;
-            if (Def.Fuse <= 0f) Detonate();   // molotov: breaks on contact
+            if (Def.Fuse <= 0f && Lit) Detonate();   // molotov: breaks on contact
         }
 
         public void Detonate()

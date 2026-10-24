@@ -16,6 +16,11 @@ namespace BoomYard.Game
         public bool gyro;
         public bool reduceMotion;
         public bool reduceFlashes;
+        public bool haptics = true;
+        public float musicVolume = 0.6f;
+        public bool leftHanded;
+        public bool colorblind;
+        public int quality = -1;   // -1 = automatic
     }
 
     [Serializable]
@@ -27,18 +32,40 @@ namespace BoomYard.Game
     }
 
     [Serializable]
+    public class LevelRecord
+    {
+        public int number;
+        public int stars;
+        public float bestTimeLeft = -1f;
+        public long bestDamage;
+    }
+
+    [Serializable]
     public class SaveData
     {
-        public const int CurrentSchema = 1;
+        public const int CurrentSchema = 2;
         public int schema = CurrentSchema;
-        public long shekels;
+        public long shekels;              // coins
         public int gems;
         public string lighter = "basic";
+        public List<string> lighters = new List<string> { "basic" };
+        public List<string> upgrades = new List<string>();
         public bool disclaimerSeen;
+        public bool tutorialDone;
         public int roundsPlayed;
+        public int unlocked = 1;           // highest level that can be played
         public List<PocketSlot> inventory = new List<PocketSlot>();
         public List<ArenaRecord> arenas = new List<ArenaRecord>();
+        public List<LevelRecord> levels = new List<LevelRecord>();
         public Settings settings = new Settings();
+
+        // Daily missions and the login calendar.
+        public int missionsDate;
+        public List<Mission> missions = new List<Mission>();
+        public int dailyClaimDate, dailyStreak;
+
+        // Lifetime stats (shown in the profile, used by achievements later).
+        public int totalDestroyed, totalBlasts, bestChain;
 
         public ArenaRecord Arena(int number)
         {
@@ -48,7 +75,17 @@ namespace BoomYard.Game
             return r;
         }
 
-        public int TotalStars { get { int n = 0; foreach (var a in arenas) n += a.stars; return n; } }
+        public LevelRecord Level(int number)
+        {
+            foreach (var l in levels) if (l.number == number) return l;
+            var r = new LevelRecord { number = number };
+            levels.Add(r);
+            return r;
+        }
+
+        public int TotalStars { get { int n = 0; foreach (var l in levels) n += l.stars; return n; } }
+
+        public bool Has(string upgrade) { return upgrades.Contains(upgrade); }
 
         public int Count(string id)
         {
@@ -60,6 +97,18 @@ namespace BoomYard.Game
         {
             foreach (var s in inventory) if (s.id == id) { s.count = Math.Max(0, s.count + n); return; }
             if (n > 0) inventory.Add(new PocketSlot { id = id, count = n });
+        }
+
+        /// <summary>Today's missions, rolled over at midnight.</summary>
+        public List<Mission> TodaysMissions()
+        {
+            int today = Daily.Seed(DateTime.Now);
+            if (missionsDate != today || missions.Count == 0)
+            {
+                missionsDate = today;
+                missions = Missions.ForDay(today);
+            }
+            return missions;
         }
     }
 
@@ -81,6 +130,7 @@ namespace BoomYard.Game
             {
                 var raw = PlayerPrefs.GetString(Key, "");
                 if (!string.IsNullOrEmpty(raw)) Data = JsonUtility.FromJson<SaveData>(Decode(raw));
+                if (Data != null && Data.schema < SaveData.CurrentSchema) Data = null;   // the base's saves predate the level map
             }
             catch (Exception e) { Debug.LogWarning("BoomYard: save unreadable, starting fresh. " + e.Message); }
             if (Data == null) Data = Fresh();
@@ -91,9 +141,8 @@ namespace BoomYard.Game
         static SaveData Fresh()
         {
             var d = new SaveData();
-            d.Add("string50", 1);
-            d.Add("sparkler", 2);
-            d.Add("m80", 2);
+            d.shekels = 300;
+            d.gems = 5;
             return d;
         }
 
