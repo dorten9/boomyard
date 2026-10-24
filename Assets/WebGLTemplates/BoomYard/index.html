@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -23,16 +23,13 @@
     #loader .tag { margin-top: 1.5vmin; font-size: 3.4vmin; color: #ffb347; }
     #loader .bar { width: 40%; height: 6px; margin-top: 5vmin; border-radius: 3px; background: #2c282d; overflow: hidden; }
     #loader .fill { width: 0; height: 100%; background: #ff7a1a; transition: width .2s; }
-    #rotate { display: none; position: fixed; inset: 0; z-index: 10; background: #0c0b0d; color: #ebe6df; font: 600 6vmin system-ui, sans-serif; align-items: center; justify-content: center; text-align: center; padding: 8vmin; }
-    @media (orientation: portrait) and (pointer: coarse) { #rotate { display: flex; } }
   </style>
 </head>
 <body>
   <div id="frame">
     <canvas id="unity-canvas" tabindex="-1"></canvas>
-    <div id="loader"><div class="logo">BOOMYARD</div><div class="tag">מדליקים. סופרים. בורחים.</div><div class="bar"><div class="fill" id="fill"></div></div></div>
+    <div id="loader"><div class="logo">BOOMYARD</div><div class="tag">Light it. Count. Run.</div><div class="bar"><div class="fill" id="fill"></div></div></div>
   </div>
-  <div id="rotate">סובבו את הטלפון לרוחב<br>Turn your phone sideways</div>
   <script>
     var canvas = document.querySelector("#unity-canvas");
     var config = {
@@ -46,7 +43,16 @@
       // The web build is the Low profile: cap the resolution for fill rate.
       devicePixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
     };
-    try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock("landscape").catch(function () {}); } catch (e) {}
+    // Open straight into landscape: on the first touch go full screen and lock the orientation (Android browsers;
+    // the phone apps are landscape-only anyway).
+    function goLandscape() {
+      try {
+        var el = document.documentElement, fs = el.requestFullscreen || el.webkitRequestFullscreen;
+        var lock = function () { if (screen.orientation && screen.orientation.lock) screen.orientation.lock("landscape").catch(function () {}); };
+        if (fs && !document.fullscreenElement) { var p = fs.call(el); if (p && p.then) p.then(lock, lock); else lock(); } else lock();
+      } catch (e) {}
+    }
+    if (matchMedia("(pointer: coarse)").matches) window.addEventListener("pointerdown", goLandscape, { once: true });
     var script = document.createElement("script");
     script.src = "Build/{{{ LOADER_FILENAME }}}";
     script.onload = function () {

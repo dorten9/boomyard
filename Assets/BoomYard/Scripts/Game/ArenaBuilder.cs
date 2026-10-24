@@ -4,372 +4,243 @@ using UnityEngine;
 
 namespace BoomYard.Game
 {
-    /// <summary>A built arena: its objects, where the player starts and the 6 slots for the player's own yard props.</summary>
+    /// <summary>A built level: its set, its targets (everything that has to go), and where the player starts.</summary>
     public sealed class Arena
     {
+        public LevelDef Level;
         public ArenaDef Def;
         public GameObject Root;
         public Vector3 Spawn;
         public float SpawnYaw;
+        public readonly List<Destructible> Targets = new List<Destructible>();
         public readonly List<Destructible> Objects = new List<Destructible>();
-        public readonly List<Vector3> PropSlots = new List<Vector3>();
+
+        public int TargetsLeft
+        {
+            get { int n = 0; foreach (var t in Targets) if (t != null && !t.Destroyed) n++; return n; }
+        }
     }
 
     /// <summary>
-    /// Builds the arenas from primitives and code-made PBR materials (spec §10). The base has arena 1, the backyard:
-    /// bins, a mailbox, an AC unit, windows, a bicycle, an old van and pallets, at night under street lamps.
-    /// Art passes later swap the primitives for the real models; positions and data stay.
+    /// Builds a level: the suburban street at golden hour (house, driveway, lawn, street, neighbours, trees) and
+    /// the level's props on it. All geometry and surfaces are generated (MeshKit, TextureLib).
     /// </summary>
     public static class ArenaBuilder
     {
-        public static Arena Build(int number, QualityTier tier)
+        public static Arena Build(LevelDef level, QualityTier tier)
         {
-            var a = new Arena { Def = Catalog.Arena(number) };
-            a.Root = new GameObject("Arena " + a.Def.Id);
-            Night(a.Root.transform, tier);
-            Backyard(a);
+            var a = new Arena { Level = level, Def = Catalog.Arena(1) };
+            a.Root = new GameObject("Level " + level.Number);
+            var root = a.Root.transform;
+            a.Spawn = new Vector3(0f, 0f, -8f);
+            a.SpawnYaw = 6f;
+
+            Rendering.Sunset(root, new Vector3(0f, 3f, 2f));
+            Ground(root);
+            House(root, new Vector3(0f, 0f, 14f), 0f, new Color(0.93f, 0.88f, 0.8f), true);
+            House(root, new Vector3(-27f, 0f, 16f), 0f, new Color(0.78f, 0.82f, 0.86f), false);
+            House(root, new Vector3(26f, 0f, 15f), 0f, new Color(0.9f, 0.8f, 0.68f), false);
+            House(root, new Vector3(-14f, 0f, -36f), 180f, new Color(0.85f, 0.86f, 0.8f), false);
+            House(root, new Vector3(14f, 0f, -37f), 180f, new Color(0.92f, 0.84f, 0.78f), false);
+            Fences(root);
+            Trees(root, tier);
+            Lamps(root);
+
+            foreach (var spot in level.Props)
+            {
+                var pos = new Vector3(spot.X, spot.Id == "acunit" ? 1.25f : 0f, spot.Z);
+                var d = Props.Spawn(spot.Id, root, pos, spot.Yaw, spot.Variant);
+                a.Targets.Add(d);
+            }
             foreach (var d in a.Root.GetComponentsInChildren<Destructible>()) a.Objects.Add(d);
             return a;
         }
 
-        // ---------- lighting ----------
+        // ---------- ground ----------
 
-        static void Night(Transform root, QualityTier tier)
+        static void Ground(Transform root)
         {
-            var sky = new UnityEngine.Material(Shader.Find("BoomYard/Sky"));
-            RenderSettings.skybox = sky;
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.1f, 0.11f, 0.16f);
-            RenderSettings.ambientEquatorColor = new Color(0.09f, 0.075f, 0.07f);
-            RenderSettings.ambientGroundColor = new Color(0.03f, 0.03f, 0.03f);
-            RenderSettings.fog = true;
-            RenderSettings.fogMode = FogMode.ExponentialSquared;
-            RenderSettings.fogColor = new Color(0.09f, 0.08f, 0.085f);
-            RenderSettings.fogDensity = 0.022f;
-            RenderSettings.reflectionIntensity = 0.5f;
+            var grass = Mats.Surface("grass", Color.white, 0f, 1f);
+            var asphalt = Mats.Surface("asphalt", Color.white, 0f, 1f);
+            var concrete = Mats.Surface("concrete", new Color(0.95f, 0.93f, 0.9f), 0f, 1f);
+            var kerb = Mats.Surface("concrete", new Color(0.82f, 0.81f, 0.78f), 0f, 0.8f, 0.6f);
 
-            var moon = new GameObject("Moon").AddComponent<Light>();
-            moon.transform.SetParent(root, false);
-            moon.type = LightType.Directional;
-            moon.color = new Color(0.55f, 0.62f, 0.8f);
-            moon.intensity = 0.28f;
-            moon.shadows = LightShadows.Soft;
-            moon.shadowStrength = 0.8f;
-            moon.transform.rotation = Quaternion.Euler(48f, -35f, 0f);
-            RenderSettings.sun = moon;
-
-            Lamp(root, new Vector3(-8.5f, 0f, -3f), tier >= QualityTier.Medium);
-            Lamp(root, new Vector3(9f, 0f, 1f), tier >= QualityTier.High);
-            // Porch light over the door.
-            var porch = new GameObject("Porch").AddComponent<Light>();
-            porch.transform.SetParent(root, false);
-            porch.transform.position = new Vector3(-4.5f, 2.6f, 11.4f);
-            porch.type = LightType.Point;
-            porch.color = new Color(1f, 0.72f, 0.45f);
-            porch.range = 7f;
-            porch.intensity = 1.3f;
+            // A wide ground slab carries the collider; surfaces sit just on top of it.
+            var slab = Slab(root, "Ground", new Vector3(0f, -0.5f, 0f), new Vector3(220f, 1f, 220f), grass);
+            slab.GetComponent<MeshRenderer>().sharedMaterial = grass;
+            Flat(root, "Street", new Vector3(0f, 0.01f, -16f), new Vector2(220f, 9f), asphalt);
+            Flat(root, "Driveway", new Vector3(6.5f, 0.015f, -1f), new Vector2(5.5f, 21f), concrete);
+            Flat(root, "Walk", new Vector3(-3.5f, 0.015f, 1.5f), new Vector2(1.4f, 21f), concrete);
+            Flat(root, "Sidewalk", new Vector3(0f, 0.02f, -10.4f), new Vector2(220f, 2.2f), concrete);
+            Flat(root, "SidewalkFar", new Vector3(0f, 0.02f, -21.6f), new Vector2(220f, 2.2f), concrete);
+            Box(root, "Kerb", new Vector3(0f, 0.07f, -11.55f), new Vector3(220f, 0.16f, 0.22f), kerb, true);
+            Box(root, "KerbFar", new Vector3(0f, 0.07f, -20.45f), new Vector3(220f, 0.16f, 0.22f), kerb, true);
+            // Worn centre line.
+            var paint = Mats.Lit(new Color(0.85f, 0.78f, 0.5f), 0f, 0.4f);
+            for (int i = -20; i <= 20; i++) Flat(root, "Line", new Vector3(i * 5f, 0.018f, -16f), new Vector2(2.6f, 0.12f), paint);
         }
 
-        static void Lamp(Transform root, Vector3 at, bool shadows)
+        // ---------- the houses ----------
+
+        /// <summary>Two-storey house: stucco, brick plinth, gable roof, framed windows, door with porch light, garage.</summary>
+        static void House(Transform parent, Vector3 pos, float yaw, Color plaster, bool main)
         {
-            var lamp = new GameObject("StreetLamp").transform;
-            lamp.SetParent(root, false);
-            lamp.position = at;
-            Box(lamp, "Pole", new Vector3(0f, 2.6f, 0f), new Vector3(0.14f, 5.2f, 0.14f), Mats.Lit(Mats.DarkMetal, 0.6f, 0.4f));
-            Box(lamp, "Arm", new Vector3(0.6f, 5.15f, 0f), new Vector3(1.3f, 0.1f, 0.12f), Mats.Lit(Mats.DarkMetal, 0.6f, 0.4f));
-            Box(lamp, "Head", new Vector3(1.15f, 5.05f, 0f), new Vector3(0.5f, 0.12f, 0.28f), Mats.Emissive(new Color(1f, 0.85f, 0.6f), new Color(2.2f, 1.6f, 0.9f)), false);
-            var l = new GameObject("Light").AddComponent<Light>();
-            l.transform.SetParent(lamp, false);
-            l.transform.localPosition = new Vector3(1.15f, 4.95f, 0f);
-            l.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            l.type = LightType.Spot;
-            l.spotAngle = 110f;
-            l.range = 16f;
-            l.intensity = 2.4f;
-            l.color = new Color(1f, 0.8f, 0.55f);
-            l.shadows = shadows ? LightShadows.Soft : LightShadows.None;
-        }
+            var h = new GameObject(main ? "House" : "Neighbour").transform;
+            h.SetParent(parent, false);
+            h.position = pos;
+            h.rotation = Quaternion.Euler(0f, yaw, 0f);
+            const float w = 15f, depth = 9f, wall = 6.1f;
+            var walls = Mats.Surface("plaster", plaster, 0f, 1f);
+            var brick = Mats.Surface("brick", Color.white, 0f, 1f);
+            var trim = Mats.Surface("paint", new Color(0.95f, 0.94f, 0.9f), 0f, 0.6f);
+            var roof = Mats.Surface("roof", new Color(0.75f, 0.62f, 0.55f), 0f, 1f);
 
-        // ---------- the backyard ----------
+            // Walls (front face at local z = 0, building extends back).
+            Box(h, "Walls", new Vector3(0f, wall * 0.5f, depth * 0.5f), new Vector3(w, wall, depth), walls, true);
+            Box(h, "Plinth", new Vector3(0f, 0.45f, -0.04f), new Vector3(w + 0.1f, 0.9f, 0.12f), brick, false);
+            Box(h, "Band", new Vector3(0f, 3.1f, -0.04f), new Vector3(w + 0.06f, 0.16f, 0.1f), trim, false);
+            var roofGo = Props.Part(h, MeshKit.Gable(new Vector3(depth, 3f, w), 0.5f), new Vector3(0f, wall, depth * 0.5f), roof, false);
+            roofGo.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+            Box(h, "Fascia", new Vector3(0f, wall - 0.08f, -0.52f), new Vector3(w + 1f, 0.22f, 0.06f), trim, false);
+            Box(h, "Gutter", new Vector3(0f, wall - 0.04f, -0.6f), new Vector3(w + 1f, 0.12f, 0.12f), Mats.Lit(new Color(0.85f, 0.85f, 0.83f), 0.6f, 0.5f), false);
+            Box(h, "Chimney", new Vector3(-4.5f, wall + 2.2f, depth * 0.6f), new Vector3(0.9f, 3.2f, 0.9f), brick, false);
 
-        static void Backyard(Arena a)
-        {
-            var root = a.Root.transform;
-            a.Spawn = new Vector3(0f, 0f, -7f);
-            a.SpawnYaw = 8f;
+            // Door with frame, step and porch canopy and lamp.
+            float dx = -3.5f;
+            Box(h, "Door", new Vector3(dx, 1.08f, -0.02f), new Vector3(1.0f, 2.16f, 0.08f), Mats.Surface("wood", new Color(0.55f, 0.32f, 0.22f), 0f, 0.7f), false);
+            Box(h, "DoorFrame", new Vector3(dx, 2.22f, -0.05f), new Vector3(1.3f, 0.12f, 0.12f), trim, false);
+            Box(h, "Step", new Vector3(dx, 0.09f, -0.6f), new Vector3(1.8f, 0.18f, 1.0f), Mats.Surface("concrete", Color.white, 0f, 0.8f), true);
+            Box(h, "Canopy", new Vector3(dx, 2.65f, -0.55f), new Vector3(2.0f, 0.1f, 1.1f), trim, false);
+            Box(h, "PorchLamp", new Vector3(dx + 0.8f, 2.1f, -0.1f), new Vector3(0.14f, 0.24f, 0.14f), Mats.Emissive(new Color(1f, 0.85f, 0.6f), new Color(2.2f, 1.5f, 0.8f)), false);
 
-            // Ground: asphalt yard with a strip of dead grass and the driveway.
-            Box(root, "Ground", new Vector3(0f, -0.5f, 0f), new Vector3(90f, 1f, 90f), Mats.Lit(Mats.Asphalt, 0f, 0.35f));
-            Box(root, "Grass", new Vector3(-7f, 0.005f, 5f), new Vector3(8f, 0.01f, 12f), Mats.Lit(Mats.Grass, 0f, 0.1f), false);
-            Box(root, "Curb", new Vector3(0f, 0.06f, -12f), new Vector3(40f, 0.12f, 0.3f), Mats.Lit(new Color(0.4f, 0.39f, 0.37f), 0f, 0.2f));
-
-            House(root);
-            Neighbourhood(root);
-
-            Van(root, new Vector3(3.6f, 0f, 3.2f), 68f);
-            Bin(root, new Vector3(-5.2f, 0f, 9.6f));
-            Bin(root, new Vector3(-3.9f, 0f, 9.9f));
-            Mailbox(root, new Vector3(-6.6f, 0f, -3.4f));
-            AcUnit(root, new Vector3(5.8f, 1.1f, 11.78f));
-            Bicycle(root, new Vector3(-10.3f, 0f, 2.2f));
-            Pallets(root, new Vector3(-6.6f, 0f, 4.6f));
-            for (int i = 0; i < 4; i++) Fence(root, new Vector3(-11f, 0f, -4.5f + i * 3f));
-
-            // The 6 slots where the player's own props from "my yard" appear (spec §11).
-            var slots = new[] { new Vector3(7.5f, 0f, -2f), new Vector3(-2f, 0f, 4.5f), new Vector3(8.5f, 0f, 8f), new Vector3(-8.5f, 0f, -7f), new Vector3(1.5f, 0f, 9.5f), new Vector3(10f, 0f, 3.5f) };
-            foreach (var s in slots)
+            // Garage door (right side), ribbed steel.
+            if (main)
             {
-                a.PropSlots.Add(s);
-                var m = Box(root, "PropSlot", s + Vector3.up * 0.004f, new Vector3(2.2f, 0.008f, 2.2f), Mats.Lit(new Color(0.2f, 0.18f, 0.17f), 0f, 0.15f), false);
-                m.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                Box(h, "Garage", new Vector3(5.2f, 1.2f, -0.03f), new Vector3(3.2f, 2.4f, 0.08f), Mats.Surface("paint", new Color(0.88f, 0.88f, 0.85f), 0.3f, 0.5f), false);
+                for (int i = 0; i < 5; i++) Box(h, "Rib", new Vector3(5.2f, 0.3f + i * 0.48f, -0.08f), new Vector3(3.15f, 0.04f, 0.03f), trim, false);
             }
+
+            float[] xs = main ? new[] { -6.2f, -1.2f, 1.6f } : new[] { -5f, 0.5f, 4.5f };
+            float[] upper = { -6.2f, -3.5f, -0.6f, 2.4f, 5.2f };
+            int lit = 0;
+            foreach (var x in xs) Window(h, new Vector3(x, 1.55f, 0f), new Vector2(1.25f, 1.35f), (lit++ % 2) == 0, trim);
+            foreach (var x in upper) Window(h, new Vector3(x, 4.5f, 0f), new Vector2(1.1f, 1.25f), (lit++ % 3) == 0, trim);
         }
 
-        static void House(Transform root)
+        static void Window(Transform h, Vector3 p, Vector2 size, bool lit, UnityEngine.Material trim)
         {
-            var house = new GameObject("House").transform;
-            house.SetParent(root, false);
-            var plaster = Mats.Lit(Mats.Plaster, 0f, 0.15f);
-            var trim = Mats.Lit(new Color(0.25f, 0.23f, 0.22f), 0f, 0.3f);
-            Box(house, "Walls", new Vector3(0f, 3f, 16f), new Vector3(16f, 6f, 8f), plaster);
-            Box(house, "Parapet", new Vector3(0f, 6.15f, 12.1f), new Vector3(16.2f, 0.3f, 0.3f), trim);
-            Box(house, "Plinth", new Vector3(0f, 0.2f, 11.95f), new Vector3(16f, 0.4f, 0.12f), trim);
-            Box(house, "Door", new Vector3(-4.5f, 1.1f, 11.96f), new Vector3(1.05f, 2.2f, 0.1f), Mats.Lit(new Color(0.22f, 0.13f, 0.08f), 0f, 0.35f));
-            Box(house, "Step", new Vector3(-4.5f, 0.08f, 11.5f), new Vector3(1.6f, 0.16f, 0.9f), trim);
+            var room = lit ? Mats.Emissive(new Color(0.35f, 0.25f, 0.16f), new Color(0.9f, 0.55f, 0.25f)) : Mats.Lit(new Color(0.04f, 0.04f, 0.05f), 0f, 0.1f);
+            // Everything stands proud of the wall face (z = 0): the dark room, the glass, then the frame.
+            Box(h, "Room", p + new Vector3(0f, 0f, -0.012f), new Vector3(size.x, size.y, 0.02f), room, false);
+            Box(h, "FrameT", p + new Vector3(0f, size.y * 0.5f + 0.05f, -0.06f), new Vector3(size.x + 0.2f, 0.1f, 0.1f), trim, false);
+            Box(h, "FrameL", p + new Vector3(-size.x * 0.5f - 0.05f, 0f, -0.06f), new Vector3(0.1f, size.y + 0.2f, 0.1f), trim, false);
+            Box(h, "FrameR", p + new Vector3(size.x * 0.5f + 0.05f, 0f, -0.06f), new Vector3(0.1f, size.y + 0.2f, 0.1f), trim, false);
+            Box(h, "Sill", p + new Vector3(0f, -size.y * 0.5f - 0.07f, -0.12f), new Vector3(size.x + 0.3f, 0.07f, 0.24f), Mats.Surface("concrete", Color.white, 0f, 0.6f), false);
+            Box(h, "Mullion", p + new Vector3(0f, 0f, -0.05f), new Vector3(0.05f, size.y, 0.04f), trim, false);
 
-            // 10 windows: two floors of five (spec arena 1). Some are lit from inside.
-            float[] xs = { -6.5f, -2f, 0.5f, 3f, 6.5f };
-            for (int row = 0; row < 2; row++)
-                for (int i = 0; i < xs.Length; i++)
-                    Window(house, new Vector3(xs[i], row == 0 ? 1.6f : 4.3f, 11.97f), new Vector2(1.1f, 1.25f), (i * 7 + row * 2) % 3 == 0);
-        }
-
-        static void Window(Transform parent, Vector3 pos, Vector2 size, bool lit)
-        {
-            var frame = Mats.Lit(new Color(0.85f, 0.83f, 0.78f), 0f, 0.4f);
-            var interior = lit ? Mats.Emissive(new Color(0.3f, 0.22f, 0.14f), new Color(0.9f, 0.55f, 0.25f)) : Mats.Lit(new Color(0.05f, 0.05f, 0.06f), 0f, 0.1f);
-            // Frame and the room behind stay; the glass is what breaks.
-            Box(parent, "Interior", pos + new Vector3(0f, 0f, 0.025f), new Vector3(size.x, size.y, 0.01f), interior, false);
-            Box(parent, "FrameTop", pos + new Vector3(0f, size.y * 0.5f + 0.04f, -0.01f), new Vector3(size.x + 0.16f, 0.08f, 0.06f), frame, false);
-            Box(parent, "FrameBottom", pos + new Vector3(0f, -size.y * 0.5f - 0.05f, -0.03f), new Vector3(size.x + 0.22f, 0.1f, 0.12f), frame, false);
-            Box(parent, "FrameMid", pos + new Vector3(0f, 0f, -0.012f), new Vector3(0.05f, size.y, 0.04f), frame, false);
-
-            var w = new GameObject("Window");
-            w.transform.SetParent(parent, false);
-            w.transform.position = pos;
-            Box(w.transform, "Glass", Vector3.zero, new Vector3(size.x, size.y, 0.02f), Mats.Glass(Mats.GlassTint));
-            var d = Destructible.Add(w, "window");
+            var g = new GameObject("Window").transform;
+            g.SetParent(h, false);
+            g.localPosition = p + new Vector3(0f, 0f, -0.035f);
+            Props.Part(g, MeshKit.RoundedBox(new Vector3(size.x, size.y, 0.015f), 0.005f, 1), Vector3.zero, Mats.Glass(Mats.GlassTint), true);
+            var d = Destructible.Add(g.gameObject, "window");
             d.FirePoint = Vector3.zero;
             d.FireSize = 0.5f;
         }
 
-        static void Neighbourhood(Transform root)
+        // ---------- set dressing ----------
+
+        static void Fences(Transform root)
         {
-            var dark = Mats.Lit(new Color(0.11f, 0.105f, 0.115f), 0f, 0.1f);
-            var warm = Mats.Emissive(new Color(0.25f, 0.18f, 0.1f), new Color(0.8f, 0.45f, 0.18f));
-            var rng = new System.Random(4);
-            for (int i = 0; i < 9; i++)
+            // Timber privacy fences on the lot lines (scenery, not targets).
+            var wood = Mats.Surface("wood", new Color(0.72f, 0.62f, 0.5f), 0f, 0.6f);
+            for (int s = -1; s <= 1; s += 2)
+                for (int i = 0; i < 9; i++)
+                {
+                    float z = -8.5f + i * 2.5f;
+                    Box(root, "Panel", new Vector3(s * 13.5f, 0.9f, z), new Vector3(0.06f, 1.8f, 2.45f), wood, true);
+                    Box(root, "Post", new Vector3(s * 13.5f, 0.95f, z - 1.25f), new Vector3(0.12f, 1.9f, 0.12f), wood, false);
+                }
+        }
+
+        static void Trees(Transform root, QualityTier tier)
+        {
+            var bark = Mats.Surface("wood", new Color(0.42f, 0.35f, 0.3f), 0f, 0.3f, 0.4f);
+            var rng = new System.Random(3);
+            var spots = new List<Vector3>
             {
-                float x = -40f + i * 10f + (float)rng.NextDouble() * 3f;
-                float z = 34f + (float)rng.NextDouble() * 8f;
-                float h = 6f + (float)rng.NextDouble() * 10f;
-                var b = Box(root, "Building", new Vector3(x, h * 0.5f, z), new Vector3(7f + (float)rng.NextDouble() * 4f, h, 6f), dark);
-                for (int k = 0; k < 3; k++)
-                    if (rng.NextDouble() < 0.6)
-                        Box(b.transform.parent, "Lit", new Vector3(x - 2f + k * 2f, 1.5f + (float)rng.NextDouble() * (h - 3f), z - 3.02f), new Vector3(0.8f, 1f, 0.02f), warm, false);
-            }
-            // Trees along the sides.
-            for (int i = 0; i < 6; i++)
+                new Vector3(-11f, 0f, 9f), new Vector3(11.5f, 0f, -6f), new Vector3(-9f, 0f, -6.5f), new Vector3(10f, 0f, 20f),
+                new Vector3(-20f, 0f, -7f), new Vector3(20f, 0f, -8f), new Vector3(-34f, 0f, 4f), new Vector3(33f, 0f, 2f),
+                new Vector3(-4f, 0f, -26f), new Vector3(5f, 0f, -27f), new Vector3(-24f, 0f, -26f), new Vector3(26f, 0f, -26f),
+            };
+            // A ring of trees closes the horizon.
+            int ring = tier == QualityTier.Low ? 18 : 30;
+            for (int i = 0; i < ring; i++)
             {
-                float side = i % 2 == 0 ? -1f : 1f;
-                var p = new Vector3(side * (16f + (float)rng.NextDouble() * 4f), 0f, -10f + i * 6f);
-                Box(root, "Trunk", p + Vector3.up * 1.5f, new Vector3(0.35f, 3f, 0.35f), Mats.Lit(new Color(0.16f, 0.12f, 0.09f), 0f, 0.1f));
-                var crown = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                crown.name = "Crown";
-                crown.transform.SetParent(root, false);
-                crown.transform.position = p + Vector3.up * 4f;
-                crown.transform.localScale = new Vector3(3.5f, 3f, 3.5f);
-                crown.GetComponent<Renderer>().sharedMaterial = Mats.Lit(new Color(0.07f, 0.09f, 0.06f), 0f, 0.05f);
+                float a = i / (float)ring * Mathf.PI * 2f;
+                float r = 62f + (float)rng.NextDouble() * 12f;
+                spots.Add(new Vector3(Mathf.Cos(a) * r, 0f, Mathf.Sin(a) * r));
             }
-        }
-
-        /// <summary>The old van: body, cab, glass, and six parts that fly off first (4 wheels, 2 doors).</summary>
-        static void Van(Transform parent, Vector3 pos, float yaw)
-        {
-            var van = new GameObject("Van");
-            van.transform.SetParent(parent, false);
-            van.transform.position = pos;
-            van.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
-            var t = van.transform;
-            var paint = Mats.Lit(Mats.VanWhite, 0.4f, 0.55f);
-            var black = Mats.Lit(new Color(0.07f, 0.07f, 0.08f), 0.2f, 0.3f);
-            Box(t, "Body", new Vector3(0f, 1.3f, -0.4f), new Vector3(2f, 1.75f, 4.2f), paint);
-            Box(t, "Nose", new Vector3(0f, 0.88f, 2.1f), new Vector3(1.95f, 0.9f, 0.8f), paint);
-            Box(t, "Bumper", new Vector3(0f, 0.5f, 2.52f), new Vector3(2f, 0.22f, 0.12f), black);
-            Box(t, "RearBumper", new Vector3(0f, 0.5f, -2.53f), new Vector3(2f, 0.22f, 0.12f), black);
-            Box(t, "Stripe", new Vector3(0f, 1.05f, -0.4f), new Vector3(2.02f, 0.12f, 4.1f), Mats.Lit(new Color(0.6f, 0.15f, 0.1f), 0.3f, 0.5f), false);
-            Box(t, "HeadL", new Vector3(-0.72f, 1f, 2.505f), new Vector3(0.32f, 0.16f, 0.02f), Mats.Emissive(Color.white, new Color(0.3f, 0.3f, 0.28f)), false);
-            Box(t, "HeadR", new Vector3(0.72f, 1f, 2.505f), new Vector3(0.32f, 0.16f, 0.02f), Mats.Emissive(Color.white, new Color(0.3f, 0.3f, 0.28f)), false);
-            Box(t, "TailL", new Vector3(-0.85f, 1.1f, -2.51f), new Vector3(0.14f, 0.32f, 0.02f), Mats.Emissive(new Color(0.5f, 0.05f, 0.05f), new Color(0.25f, 0.01f, 0.01f)), false);
-            Box(t, "TailR", new Vector3(0.85f, 1.1f, -2.51f), new Vector3(0.14f, 0.32f, 0.02f), Mats.Emissive(new Color(0.5f, 0.05f, 0.05f), new Color(0.25f, 0.01f, 0.01f)), false);
-
-            var d = Destructible.Add(van, "van");
-            d.FirePoint = new Vector3(0f, 0.9f, 1.4f);   // fuel tank / engine
-            d.FireSize = 1.6f;
-
-            // The windscreen is its own pane of glass: the blast wave breaks it before the van goes.
-            var ws = new GameObject("Windscreen");
-            ws.transform.SetParent(t, false);
-            ws.transform.localPosition = new Vector3(0f, 1.75f, 1.71f);
-            ws.transform.localRotation = Quaternion.Euler(-14f, 0f, 0f);
-            Box(ws.transform, "Glass", Vector3.zero, new Vector3(1.8f, 0.72f, 0.03f), Mats.Glass(new Color(0.25f, 0.32f, 0.38f, 0.5f)));
-            var wd = Destructible.Add(ws, "window");
-            wd.FirePoint = Vector3.zero;
-
-            for (int i = 0; i < 4; i++)
+            int k = 0;
+            foreach (var p in spots)
             {
-                float x = i % 2 == 0 ? -0.93f : 0.93f, z = i < 2 ? 1.65f : -1.55f;
-                var wheel = Cylinder(t, "Wheel", new Vector3(x, 0.36f, z), new Vector3(0.72f, 0.12f, 0.72f), Quaternion.Euler(0f, 0f, 90f), Mats.Lit(Mats.Rubber, 0f, 0.25f));
-                Cylinder(wheel.transform, "Hub", new Vector3(0f, i % 2 == 0 ? -1.02f : 1.02f, 0f), new Vector3(0.5f, 0.05f, 0.5f), Quaternion.identity, Mats.Lit(Mats.Steel, 0.9f, 0.5f), false);
-                d.Parts.Add(wheel.transform);
+                float scale = 0.85f + (float)rng.NextDouble() * 0.5f;
+                if (p.magnitude > 50f) scale *= 1.6f;
+                var tree = new GameObject("Tree").transform;
+                tree.SetParent(root, false);
+                tree.position = p;
+                var trunk = Props.Part(tree, MeshKit.Lathe("trunk", new[] { new Vector2(0.24f, 0f), new Vector2(0.17f, 0.4f), new Vector2(0.13f, 3.2f), new Vector2(0.06f, 4.2f) }, 10), Vector3.zero, bark, false);
+                trunk.transform.localScale = Vector3.one * scale;
+                if (p.magnitude < 50f) { var c = trunk.AddComponent<CapsuleCollider>(); c.radius = 0.22f; c.height = 4f; c.center = new Vector3(0f, 2f, 0f); }
+                int blobs = 3 + rng.Next(3);
+                for (int b = 0; b < blobs; b++)
+                {
+                    var leaf = Mats.Lit(Color.Lerp(new Color(0.2f, 0.27f, 0.1f), new Color(0.34f, 0.38f, 0.14f), (float)rng.NextDouble()), 0f, 0.15f);
+                    var offset = new Vector3((float)rng.NextDouble() * 2.4f - 1.2f, 3.6f + (float)rng.NextDouble() * 1.6f, (float)rng.NextDouble() * 2.4f - 1.2f) * scale;
+                    Props.Part(tree, MeshKit.Blob((1.5f + (float)rng.NextDouble() * 0.8f) * scale, 0.35f, k++), offset, leaf, false);
+                }
             }
-            for (int i = 0; i < 2; i++)
+            // Low hedges along the house.
+            var hedge = Mats.Lit(new Color(0.17f, 0.25f, 0.09f), 0f, 0.12f);
+            for (int i = 0; i < 4; i++) Props.Part(root, MeshKit.Blob(0.75f, 0.3f, 100 + i), new Vector3(-7.4f + i * 1.3f, 0.45f, 12.8f), hedge, false);
+        }
+
+        static void Lamps(Transform root)
+        {
+            foreach (var at in new[] { new Vector3(-9f, 0f, -10f), new Vector3(12f, 0f, -21.2f) })
             {
-                float x = i == 0 ? -1.015f : 1.015f;
-                var door = Box(t, "Door", new Vector3(x, 1.35f, 1.15f), new Vector3(0.05f, 1.15f, 0.95f), paint);
-                Box(door.transform, "DoorGlass", new Vector3(0f, 0.3f, 0f), new Vector3(1.2f, 0.4f, 0.8f), Mats.Glass(new Color(0.2f, 0.25f, 0.3f, 0.6f)), false);
-                d.Parts.Add(door.transform);
+                var lamp = new GameObject("StreetLamp").transform;
+                lamp.SetParent(root, false);
+                lamp.position = at;
+                var metal = Mats.Lit(new Color(0.18f, 0.19f, 0.2f), 0.7f, 0.45f);
+                Props.Part(lamp, MeshKit.Lathe("lamppole", new[] { new Vector2(0.11f, 0f), new Vector2(0.09f, 0.4f), new Vector2(0.06f, 5.3f), new Vector2(0f, 5.35f) }, 12), Vector3.zero, metal, false);
+                Box(lamp, "Arm", new Vector3(0.65f, 5.2f, 0f), new Vector3(1.3f, 0.08f, 0.08f), metal, false);
+                Box(lamp, "Head", new Vector3(1.25f, 5.12f, 0f), new Vector3(0.55f, 0.12f, 0.26f), Mats.Emissive(new Color(1f, 0.85f, 0.6f), new Color(1.6f, 1.1f, 0.6f)), false);
             }
-        }
-
-        static void Bin(Transform parent, Vector3 pos)
-        {
-            var bin = new GameObject("Bin");
-            bin.transform.SetParent(parent, false);
-            bin.transform.position = pos;
-            var green = Mats.Lit(new Color(0.12f, 0.24f, 0.16f), 0.2f, 0.35f);
-            FlatBottom(Cylinder(bin.transform, "Can", new Vector3(0f, 0.5f, 0f), new Vector3(0.6f, 0.5f, 0.6f), Quaternion.identity, Mats.Lit(Mats.Steel, 0.85f, 0.45f)));
-            var lid = Cylinder(bin.transform, "Lid", new Vector3(0f, 1.02f, 0f), new Vector3(0.66f, 0.03f, 0.66f), Quaternion.identity, green);
-            FlatBottom(lid);
-            var rb = bin.AddComponent<Rigidbody>();
-            rb.mass = 15f;
-            var d = Destructible.Add(bin, "bin");
-            d.FirePoint = new Vector3(0f, 0.5f, 0f);
-            d.FireSize = 0.6f;
-            d.Parts.Add(lid.transform);
-        }
-
-        static void Mailbox(Transform parent, Vector3 pos)
-        {
-            var mb = new GameObject("Mailbox");
-            mb.transform.SetParent(parent, false);
-            mb.transform.position = pos;
-            Cylinder(mb.transform, "Post", new Vector3(0f, 0.6f, 0f), new Vector3(0.09f, 0.6f, 0.09f), Quaternion.identity, Mats.Lit(Mats.Wood, 0f, 0.2f));
-            Box(mb.transform, "Box", new Vector3(0f, 1.35f, 0f), new Vector3(0.42f, 0.34f, 0.55f), Mats.Lit(new Color(0.18f, 0.2f, 0.32f), 0.7f, 0.5f));
-            Box(mb.transform, "Flag", new Vector3(0.23f, 1.45f, 0.1f), new Vector3(0.02f, 0.2f, 0.06f), Mats.Lit(new Color(0.7f, 0.1f, 0.08f), 0.3f, 0.4f), false);
-            var d = Destructible.Add(mb, "mailbox");
-            d.FirePoint = new Vector3(0f, 1.35f, 0f);
-            d.FireSize = 0.4f;
-        }
-
-        static void AcUnit(Transform parent, Vector3 pos)
-        {
-            var ac = new GameObject("AcUnit");
-            ac.transform.SetParent(parent, false);
-            ac.transform.position = pos;
-            Box(ac.transform, "Case", new Vector3(0f, 0f, -0.2f), new Vector3(0.9f, 0.62f, 0.34f), Mats.Lit(new Color(0.78f, 0.78f, 0.75f), 0.3f, 0.4f));
-            Cylinder(ac.transform, "Fan", new Vector3(0.15f, 0f, -0.375f), new Vector3(0.42f, 0.01f, 0.42f), Quaternion.Euler(90f, 0f, 0f), Mats.Lit(new Color(0.15f, 0.15f, 0.16f), 0.4f, 0.3f), false);
-            Box(ac.transform, "Bracket", new Vector3(0f, -0.36f, -0.2f), new Vector3(0.95f, 0.04f, 0.38f), Mats.Lit(Mats.Rust, 0.6f, 0.2f), false);
-            var d = Destructible.Add(ac, "acunit");
-            d.FirePoint = new Vector3(0f, 0f, -0.2f);
-            d.FireSize = 0.5f;
-        }
-
-        static void Bicycle(Transform parent, Vector3 pos)
-        {
-            var bike = new GameObject("Bicycle");
-            bike.transform.SetParent(parent, false);
-            bike.transform.position = pos;
-            bike.transform.rotation = Quaternion.Euler(0f, 0f, -12f);   // leaning on the fence
-            var frame = Mats.Lit(new Color(0.55f, 0.1f, 0.1f), 0.6f, 0.5f);
-            var tyre = Mats.Lit(Mats.Rubber, 0f, 0.2f);
-            Cylinder(bike.transform, "WheelF", new Vector3(0f, 0.34f, 0.52f), new Vector3(0.68f, 0.015f, 0.68f), Quaternion.Euler(0f, 0f, 90f), tyre);
-            Cylinder(bike.transform, "WheelB", new Vector3(0f, 0.34f, -0.52f), new Vector3(0.68f, 0.015f, 0.68f), Quaternion.Euler(0f, 0f, 90f), tyre);
-            Box(bike.transform, "Top", new Vector3(0f, 0.78f, 0f), new Vector3(0.035f, 0.035f, 0.9f), frame, false);
-            var down = Box(bike.transform, "Down", new Vector3(0f, 0.55f, 0.18f), new Vector3(0.035f, 0.035f, 0.75f), frame, false);
-            down.transform.localRotation = Quaternion.Euler(-40f, 0f, 0f);
-            Box(bike.transform, "Seat", new Vector3(0f, 0.92f, -0.38f), new Vector3(0.12f, 0.05f, 0.25f), tyre, false);
-            Box(bike.transform, "Bars", new Vector3(0f, 0.98f, 0.45f), new Vector3(0.55f, 0.03f, 0.03f), Mats.Lit(Mats.Steel, 0.9f, 0.5f), false);
-            var d = Destructible.Add(bike, "bicycle");
-            d.FirePoint = new Vector3(0f, 0.5f, 0f);
-            d.FireSize = 0.5f;
-        }
-
-        static void Pallets(Transform parent, Vector3 pos)
-        {
-            var stack = new GameObject("Pallets");
-            stack.transform.SetParent(parent, false);
-            stack.transform.position = pos;
-            stack.transform.rotation = Quaternion.Euler(0f, 17f, 0f);
-            for (int i = 0; i < 6; i++)
-            {
-                var wood = Mats.Lit(Color.Lerp(Mats.Wood, new Color(0.35f, 0.27f, 0.18f), (i % 3) / 2f), 0f, 0.15f);
-                var p = Box(stack.transform, "Pallet", new Vector3((i % 2) * 0.05f, 0.07f + i * 0.145f, 0f), new Vector3(1.2f, 0.14f, 1f), wood);
-                p.transform.localRotation = Quaternion.Euler(0f, (i % 2) * 4f, 0f);
-            }
-            var d = Destructible.Add(stack, "pallets");
-            d.FirePoint = new Vector3(0f, 0.45f, 0f);
-            d.FireSize = 1.1f;
-        }
-
-        static void Fence(Transform parent, Vector3 pos)
-        {
-            var seg = new GameObject("Fence");
-            seg.transform.SetParent(parent, false);
-            seg.transform.position = pos;
-            var metal = Mats.Lit(Mats.Steel, 0.85f, 0.45f);
-            Cylinder(seg.transform, "Post", new Vector3(0f, 0.9f, -1.5f), new Vector3(0.06f, 0.9f, 0.06f), Quaternion.identity, metal);
-            Box(seg.transform, "Rail", new Vector3(0f, 1.78f, 0f), new Vector3(0.04f, 0.04f, 3f), metal, false);
-            // Chain-link mesh reads as a see-through grey panel in the base.
-            Box(seg.transform, "Mesh", new Vector3(0f, 0.9f, 0f), new Vector3(0.02f, 1.75f, 3f), Mats.Glass(new Color(0.32f, 0.33f, 0.35f, 0.35f), 0.4f));
-            var d = Destructible.Add(seg, "fence");
-            d.FirePoint = new Vector3(0f, 0.9f, 0f);
-            d.FireSize = 0.5f;
         }
 
         // ---------- primitives ----------
 
-        /// <summary>A cylinder's default capsule collider balances on a point; standing objects get a box instead.</summary>
-        static void FlatBottom(GameObject cylinder)
+        public static GameObject Box(Transform parent, string name, Vector3 pos, Vector3 size, UnityEngine.Material mat, bool collider)
         {
-            Object.DestroyImmediate(cylinder.GetComponent<Collider>());
-            cylinder.AddComponent<BoxCollider>();
-        }
-
-        /// <summary>A box at a position local to its parent (the arena and the house sit at the origin, so theirs are world positions).</summary>
-        static GameObject Box(Transform parent, string name, Vector3 pos, Vector3 size, UnityEngine.Material mat, bool collider = true)
-        {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            float r = Mathf.Min(0.03f, Mathf.Min(size.x, Mathf.Min(size.y, size.z)) * 0.3f);
+            var go = Props.Part(parent, MeshKit.RoundedBox(size, r, 1), pos, mat, collider);
             go.name = name;
-            if (!collider) Object.DestroyImmediate(go.GetComponent<Collider>());
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = pos;
-            go.transform.localScale = size;
-            go.GetComponent<Renderer>().sharedMaterial = mat;
             return go;
         }
 
-        static GameObject Cylinder(Transform parent, string name, Vector3 localPos, Vector3 scale, Quaternion localRot, UnityEngine.Material mat, bool collider = true)
+        static GameObject Slab(Transform parent, string name, Vector3 pos, Vector3 size, UnityEngine.Material mat)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            var go = Props.Part(parent, MeshKit.RoundedBox(size, 0.01f, 1), pos, mat, true);
             go.name = name;
-            if (!collider) Object.DestroyImmediate(go.GetComponent<Collider>());
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = localPos;
-            go.transform.localRotation = localRot;
-            go.transform.localScale = scale;
-            go.GetComponent<Renderer>().sharedMaterial = mat;
             return go;
+        }
+
+        /// <summary>A thin flat surface (no collider): roads and paths lying on the ground slab.</summary>
+        static void Flat(Transform parent, string name, Vector3 pos, Vector2 size, UnityEngine.Material mat)
+        {
+            var go = Props.Part(parent, MeshKit.RoundedBox(new Vector3(size.x, 0.02f, size.y), 0.005f, 1), pos, mat, false);
+            go.name = name;
+            go.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
     }
 }

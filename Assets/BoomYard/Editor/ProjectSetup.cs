@@ -18,8 +18,8 @@ namespace BoomYard.EditorTools
         public const string ScenePath = "Assets/BoomYard/Scenes/Main.unity";
         const string DoneKey = "BoomYard.ProjectSetup.v1";
 
-        /// <summary>Built-in shaders the game creates materials from at runtime (its own live in Resources/Shaders).</summary>
-        public static readonly string[] RuntimeShaders = { "Standard", "UI/Default", "Sprites/Default" };
+        /// <summary>Built-in shaders the UI uses (the world's URP materials come from PipelineSetup's templates).</summary>
+        public static readonly string[] RuntimeShaders = { "UI/Default", "Sprites/Default" };
 
         static ProjectSetup()
         {
@@ -41,6 +41,7 @@ namespace BoomYard.EditorTools
             if (EditorApplication.isPlayingOrWillChangePlaymode) return;
 
             EnsureScene();
+            PipelineSetup.Run();
             EnsureShaders(RuntimeShaders);
             EnsureFogVariants();
 
@@ -159,6 +160,7 @@ namespace BoomYard.EditorTools
             PlayerSettings.SplashScreen.showUnityLogo = false;
             PlayerSettings.SplashScreen.backgroundColor = new Color32(0x0C, 0x0B, 0x0D, 0xFF);
             ApplyPlayerSettings();
+            PipelineSetup.Run();
             EnsureShaders(RuntimeShaders);
             EnsureFogVariants();
             EnsureScene();

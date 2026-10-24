@@ -15,6 +15,7 @@ namespace BoomYard.Game
         public bool invertY;
         public bool gyro;
         public bool reduceMotion;
+        public bool reduceFlashes;
     }
 
     [Serializable]

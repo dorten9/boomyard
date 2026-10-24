@@ -27,6 +27,7 @@ namespace BoomYard.Game
     {
         public static GameController I { get; private set; }
         public static bool ReduceMotion { get { return SaveService.Data != null && SaveService.Data.settings.reduceMotion; } }
+        public static bool ReduceFlashes { get { return SaveService.Data != null && SaveService.Data.settings.reduceFlashes; } }
 
         public const int FreeBlackCats = 4;
 
@@ -41,7 +42,7 @@ namespace BoomYard.Game
         public Player Player { get; private set; }
         public bool Paused { get; private set; }
         public RoundSummary Last { get; private set; }
-        public int ArenaNumber = 1;
+        public int LevelNumber = 4;
 
         readonly Dictionary<int, int> killsPerBlast = new Dictionary<int, int>();
         readonly Dictionary<string, int> pocketStart = new Dictionary<string, int>();
@@ -52,11 +53,12 @@ namespace BoomYard.Game
         {
             I = this;
             var save = SaveService.Load();
-            Loc.Init(save.settings.lang);
+            Loc.Init("en");
             Quality.Apply(Quality.Detect());
             Physics.defaultMaxDepenetrationVelocity = 6f;
             gameObject.AddComponent<Sfx>().Volume = save.settings.sfxVolume;
             gameObject.AddComponent<FireGrid>();
+            Rendering.Create(Quality.Tier);
 
             Round = new RoundModel();
             Round.Changed += OnRoundState;
@@ -70,10 +72,47 @@ namespace BoomYard.Game
             Player = Player.Create(Arena.Spawn, Arena.SpawnYaw);
             Player.ResetForRound(Arena.Spawn, Arena.SpawnYaw, Catalog.Lighter(save.lighter), seed);
             Player.Sensitivity = save.settings.sensitivity;
+            Rendering.SetupCamera(Player.Cam, Quality.Tier);
             FillPocket();
 
             UI = GameUI.Create(this);
             UI.ShowTitle();
+            Shot = ShotMode();
+            if (Shot != "") StartCoroutine(RunShot(Shot));
+        }
+
+        /// <summary>Screenshot runs (CI): ?shot=title|play|boom on the web page URL.</summary>
+        public string Shot { get; private set; }
+
+        static string ShotMode()
+        {
+            var url = Application.absoluteURL ?? "";
+            int i = url.IndexOf("shot=");
+            if (i < 0) return "";
+            var v = url.Substring(i + 5);
+            int amp = v.IndexOf('&');
+            return amp >= 0 ? v.Substring(0, amp) : v;
+        }
+
+        System.Collections.IEnumerator RunShot(string mode)
+        {
+            SaveService.Data.disclaimerSeen = true;
+            if (mode == "title") { UI.ShowTitle(); yield break; }
+            StartRound();
+            if (mode != "boom") yield break;
+            // A scripted blast for the explosion screenshots: an M-80 under the van, then the bins.
+            yield return new WaitForSeconds(2f);
+            Destructible van = null, bin = null;
+            foreach (var t in Arena.Targets) { if (t.Def.Id == "van") van = t; if (t.Def.Id == "bin" && bin == null) bin = t; }
+            if (van != null)
+            {
+                var pos = van.transform.TransformPoint(new Vector3(0.5f, 0f, 1.2f));
+                pos.y = 0.08f;
+                var live = LiveExplosive.Spawn(Catalog.Explosive("m80"), pos, Quaternion.identity, 0.3f, Placement.Contained);
+                live.Container = van;
+            }
+            yield return new WaitForSeconds(4f);
+            if (bin != null) LiveExplosive.Spawn(Catalog.Explosive("m80"), bin.transform.position + Vector3.up * 0.5f, Quaternion.identity, 0.2f, Placement.Thrown);
         }
 
         void BuildArena()
@@ -83,7 +122,8 @@ namespace BoomYard.Game
             FireGrid.I.Clear();
             var fx = GameObject.Find("Fx");
             if (fx != null) Destroy(fx);
-            Arena = ArenaBuilder.Build(ArenaNumber, Quality.Tier);
+            Arena = ArenaBuilder.Build(Levels.Get(LevelNumber), Quality.Tier);
+            if (Rendering.I != null) Rendering.I.RefreshReflections();
         }
 
         /// <summary>Four free Black Cats plus what the player owns, one item per slot (spec §08, §13).</summary>

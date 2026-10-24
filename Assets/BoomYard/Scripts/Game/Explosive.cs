@@ -54,7 +54,7 @@ namespace BoomYard.Game
                     break;
             }
             // The fuse: a thin cord from the body to the tip.
-            var fuse = Part(root, PrimitiveType.Cylinder, tip - Vector3.up * fuseLen * 0.5f, new Vector3(0.003f, fuseLen * 0.5f, 0.003f), Mats.Lit(new Color(0.85f, 0.82f, 0.72f), 0f, 0.1f, false));
+            var fuse = Part(root, PrimitiveType.Cylinder, tip - Vector3.up * fuseLen * 0.5f, new Vector3(0.003f, fuseLen * 0.5f, 0.003f), Mats.Lit(new Color(0.85f, 0.82f, 0.72f), 0f, 0.1f));
             fuse.name = "Fuse";
             var tipT = new GameObject("FuseTip").transform;
             tipT.SetParent(root.transform, false);

@@ -133,6 +133,8 @@ namespace BoomYard.Core
             new ObjectDef { Id = "container", NameHe = "מכולת שילוח", NameEn = "Shipping container", Hp = 500, Value = 9000, Material = Material.Metal, Reaction = Reaction.Launch | Reaction.Contain, Mass = 3800 },
             new ObjectDef { Id = "foodcart", NameHe = "עגלת מזון", NameEn = "Food cart", Hp = 90, Value = 45000, Material = Material.Metal, Reaction = Reaction.Explode | Reaction.Burn, BlastRadius = 4f, BlastDamage = 600, BlastDelay = 1f, BurnSeconds = 15f, ShopPrice = 14000, Mass = 350 },
             new ObjectDef { Id = "fireworkstand", NameHe = "מתקן זיקוקים", NameEn = "Firework stand", Hp = 60, Value = 30000, Material = Material.Cardboard, Reaction = Reaction.Explode | Reaction.Burn, BlastRadius = 6f, BlastDamage = 300, BlastDelay = 0.5f, BurnSeconds = 10f, ShopPrice = 18000, Mass = 120 },
+            new ObjectDef { Id = "barrel", NameHe = "חבית שמן", NameEn = "Oil drum", Hp = 50, Value = 1500, Material = Material.Metal, Reaction = Reaction.Explode | Reaction.Launch | Reaction.Burn, BlastRadius = 3.5f, BlastDamage = 500, BlastDelay = 0.9f, BurnSeconds = 10f, Mass = 60 },
+            new ObjectDef { Id = "crate", NameHe = "ארגז עץ", NameEn = "Wooden crate", Hp = 25, Value = 800, Material = Material.Wood, Reaction = Reaction.Burn | Reaction.Launch, BurnSeconds = 8f, Mass = 40 },
             new ObjectDef { Id = "industrialtank", NameHe = "מיכל תעשייתי 50 קוב", NameEn = "Industrial tank", Hp = 900, Value = 900000, Material = Material.Metal, Reaction = Reaction.Explode, BlastRadius = 15f, BlastDamage = 5000, BlastDelay = 2f, ThermiteOnly = true, Mass = 20000 },
         };
 

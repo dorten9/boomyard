@@ -12,6 +12,9 @@ concurrency:
   group: check-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
   gate:
     runs-on: ubuntu-latest
@@ -140,3 +143,20 @@ jobs:
           path: |
             ${{ steps.out.outputs.dir }}
             ${{ runner.temp }}/smoke.png
+
+      # A timeline of screenshots (title, play, a scripted explosion) pushed to the "screenshots" branch for review.
+      - name: Screenshots
+        continue-on-error: true
+        run: |
+          site="$RUNNER_TEMP/shots-site"
+          rm -rf "$site" && cp -r "${{ steps.out.outputs.dir }}" "$site"
+          (cd "$site" && python3 -m http.server 8091 >/dev/null 2>&1 &)
+          cd Tools/screenshots
+          node shoot.mjs http://localhost:8091 "$RUNNER_TEMP/shots"
+          cd "$RUNNER_TEMP/shots"
+          echo "Build of ${GITHUB_SHA} (${GITHUB_REF_NAME})" > README.md
+          git init -q
+          git checkout -q -b screenshots
+          git add .
+          git -c user.name="boomyard-ci" -c user.email="ci@boomyard.invalid" commit -qm "Screenshots for ${GITHUB_SHA}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" screenshots
