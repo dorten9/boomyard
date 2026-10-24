@@ -29,6 +29,7 @@ for (const [shot, times] of Object.entries(plans)) {
     fs.writeFileSync(`${out}/${shot}-console.txt`, log.join('\n'));
   }
   fs.writeFileSync(`${out}/${shot}-console.txt`, log.join('\n'));
-  await page.close();
+  await Promise.race([page.close(), new Promise((r) => setTimeout(r, 5000))]);
 }
-await browser.close();
+await Promise.race([browser.close(), new Promise((r) => setTimeout(r, 5000))]);   // a stuck close must not hang the job
+process.exit(0);

@@ -24,5 +24,5 @@ console.log(stamp(), 'unity instance ready');
 await page.waitForTimeout(10000);
 await page.screenshot({ path: out, timeout: 120000 });
 console.log(stamp(), 'screenshot taken');
-await browser.close();
+await Promise.race([browser.close(), new Promise((r) => setTimeout(r, 5000))]);   // a stuck close must not hang the job
 process.exit(0);

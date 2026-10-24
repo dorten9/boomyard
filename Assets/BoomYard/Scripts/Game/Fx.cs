@@ -413,7 +413,9 @@ namespace BoomYard.Game
 
         static Rigidbody Chunk(string name, PrimitiveType type)
         {
-            var go = GameObject.CreatePrimitive(type);
+            // A quad primitive brings a MeshCollider, whose class the web build strips: start from a cube and swap the mesh.
+            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            if (type == PrimitiveType.Quad) go.GetComponent<MeshFilter>().sharedMesh = Resources.GetBuiltinResource<Mesh>("Quad.fbx");
             go.name = name;
             go.transform.SetParent(Root, false);
             Object.DestroyImmediate(go.GetComponent<Collider>());

@@ -50,6 +50,7 @@ namespace BoomYard.EditorTools
             asset.supportsHDR = true;
             asset.msaaSampleCount = 1;            // SMAA on the camera instead: cheaper on phones
             asset.renderScale = 1f;
+            asset.upscalingFilter = UpscalingFilterSelection.Linear;
             asset.shadowDistance = 70f;
             asset.shadowCascadeCount = 2;
             asset.supportsCameraDepthTexture = true;

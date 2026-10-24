@@ -207,6 +207,7 @@ namespace BoomYard.Game
         {
             if (!firstFrame) { firstFrame = true; Mark("first frame"); }
             UpdateTime();
+            Player.Hands.Down = Current != Mode.Level || Player.Knocked || Round.State == RoundState.Stunned;
             if (Paused || Current != Mode.Level) return;
             Chain.Tick(Time.time);
             var st = Round.State;
@@ -234,7 +235,6 @@ namespace BoomYard.Game
                 }
                 else idle = 0f;
             }
-            Player.Hands.Down = Player.Knocked || Round.State == RoundState.Stunned;
         }
 
         // ---------- time effects ----------

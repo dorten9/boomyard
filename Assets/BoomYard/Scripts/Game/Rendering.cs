@@ -38,6 +38,8 @@ namespace BoomYard.Game
         {
             var urp = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
             if (urp == null) return;
+            // Plain bilinear upscale: the FSR blit shader is stripped from builds, and without it URP skips all post.
+            urp.upscalingFilter = UpscalingFilterSelection.Linear;
             switch (tier)
             {
                 case QualityTier.High:

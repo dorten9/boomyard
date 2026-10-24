@@ -149,8 +149,8 @@ jobs:
           (cd "$site" && python3 -m http.server 8090 >/dev/null 2>&1 &)
           cd Tools/screenshots
           npm init -y >/dev/null
-          npm i --no-save playwright@1.48.2 >/dev/null
-          npx playwright install --with-deps chromium >/dev/null
+          npm i --no-save playwright@1.63.0 2>&1 | tail -n 3
+          timeout 300 npx playwright install --with-deps chromium 2>&1 | tail -n 5
           node smoke.mjs http://localhost:8090 "$RUNNER_TEMP/smoke.png"
           pip install -q pillow
           python3 smoke_check.py "$RUNNER_TEMP/smoke.png"
