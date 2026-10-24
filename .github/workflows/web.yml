@@ -13,6 +13,9 @@ concurrency:
   group: web-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
   gate:
     runs-on: ubuntu-latest
@@ -30,7 +33,7 @@ jobs:
     # A manual run started from another branch would otherwise deploy that branch to production.
     if: needs.gate.outputs.ok == 'true' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
@@ -123,8 +126,23 @@ jobs:
           ls -la "$dir"
           echo "dir=$dir" >> "$GITHUB_OUTPUT"
 
+      # The built player on a branch, so it can be run and debugged elsewhere (artifact downloads need auth).
+      - name: Publish build to a branch
+        continue-on-error: true
+        run: |
+          pub="$RUNNER_TEMP/pub"
+          rm -rf "$pub" && cp -r "${{ steps.out.outputs.dir }}" "$pub"
+          cd "$pub"
+          echo "WebGL build of ${GITHUB_SHA} (${GITHUB_REF_NAME})" > README.md
+          git init -q
+          git checkout -q -b webgl-${GITHUB_REF_NAME//\//-}
+          git add .
+          git -c user.name="boomyard-ci" -c user.email="ci@boomyard.invalid" commit -qm "WebGL build of ${GITHUB_SHA}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" HEAD
+
       # Never deploy a broken build: the title screen must render (a missing shader paints it magenta).
       - name: Smoke test
+        timeout-minutes: 12
         run: |
           site="$RUNNER_TEMP/smoke-site"
           rm -rf "$site" && cp -r "${{ steps.out.outputs.dir }}" "$site"

@@ -5,6 +5,7 @@ import fs from 'fs';
 
 const [base, out] = process.argv.slice(2);
 fs.mkdirSync(out, { recursive: true });
+setTimeout(() => { console.log('shoot: hard time limit reached'); process.exit(3); }, 17 * 60 * 1000);
 const browser = await chromium.launch({
   args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl'],
 });
@@ -19,12 +20,13 @@ for (const [shot, times] of Object.entries(plans)) {
   page.on('console', (m) => log.push(`[${m.type()}] ${m.text()}`));
   page.on('pageerror', (e) => log.push(`[pageerror] ${e.message}`));
   await page.goto(`${base}/index.html?shot=${shot}`, { waitUntil: 'load', timeout: 60000 });
-  await page.waitForFunction(() => window.unityInstance || window.unityError, null, { timeout: 240000 });
+  await page.waitForFunction(() => window.unityInstance || window.unityError, null, { timeout: 300000, polling: 1000 });
   const t0 = Date.now();
   for (const t of times) {
     const wait = t - (Date.now() - t0);
     if (wait > 0) await page.waitForTimeout(wait);
-    await page.screenshot({ path: `${out}/${shot}-${String(t).padStart(5, '0')}.png` });
+    await page.screenshot({ path: `${out}/${shot}-${String(t).padStart(5, '0')}.png`, timeout: 120000 });
+    fs.writeFileSync(`${out}/${shot}-console.txt`, log.join('\n'));
   }
   fs.writeFileSync(`${out}/${shot}-console.txt`, log.join('\n'));
   await page.close();

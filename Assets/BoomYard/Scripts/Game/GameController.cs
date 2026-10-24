@@ -57,9 +57,14 @@ namespace BoomYard.Game
         float idle, clearedAt = -1f, lastCloseCall = -10f;
         int seed;
 
+        /// <summary>Startup timing in the log (the browser build's console), to find what makes loading slow.</summary>
+        static void Mark(string what) { Debug.Log("BoomYard: " + what + " at " + Time.realtimeSinceStartup.ToString("0.00") + " s"); }
+        bool firstFrame;
+
         void Awake()
         {
             I = this;
+            Mark("start");
             var save = SaveService.Load();
             Loc.Init("en");
             var tier = save.settings.quality >= 0 ? (QualityTier)save.settings.quality : Quality.Detect();
@@ -68,8 +73,10 @@ namespace BoomYard.Game
             var sfx = gameObject.AddComponent<Sfx>();
             sfx.Volume = save.settings.sfxVolume;
             sfx.MusicVolume = save.settings.musicVolume;
+            Mark("sound ready");
             gameObject.AddComponent<FireGrid>();
             Rendering.Create(Quality.Tier);
+            Mark("rendering ready");
 
             Round = new RoundModel();
             Round.Changed += OnRoundState;
@@ -82,6 +89,7 @@ namespace BoomYard.Game
             // The menus play over a live level: the next one on the map.
             Level = Levels.Get(Mathf.Clamp(save.unlocked, 1, Levels.All.Length));
             BuildArena();
+            Mark("arena built");
             Player = Player.Create(Arena.Spawn, Arena.SpawnYaw);
             Player.ResetForRound(Arena.Spawn, Arena.SpawnYaw, Catalog.Lighter(save.lighter), seed);
             Player.Sensitivity = save.settings.sensitivity;
@@ -89,8 +97,10 @@ namespace BoomYard.Game
             Tutorial = gameObject.AddComponent<Tutorial>();
 
             UI = GameUI.Create(this);
+            Mark("ui built");
             Shot = ShotMode();
             GoHome();
+            Mark("home shown");
             if (Shot != "") StartCoroutine(RunShot(Shot));
         }
 
@@ -195,6 +205,7 @@ namespace BoomYard.Game
 
         void Update()
         {
+            if (!firstFrame) { firstFrame = true; Mark("first frame"); }
             UpdateTime();
             if (Paused || Current != Mode.Level) return;
             Chain.Tick(Time.time);
