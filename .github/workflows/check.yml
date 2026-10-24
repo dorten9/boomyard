@@ -122,6 +122,13 @@ jobs:
           ls -la "$dir"
           echo "dir=$dir" >> "$GITHUB_OUTPUT"
 
+      # The Unity image and the swap file fill the disk; the browser tests need room to install Chromium.
+      - name: Free disk after the build
+        run: |
+          docker system prune -af >/dev/null || true
+          sudo swapoff /swapfile 2>/dev/null && sudo rm -f /swapfile || true
+          df -h / | tail -n 1
+
       # The built player on a branch, so it can be run and debugged elsewhere (artifact downloads need auth).
       - name: Publish build to a branch
         continue-on-error: true
