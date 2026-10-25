@@ -203,6 +203,35 @@ namespace BoomYard.Game
         }
 
         public bool Raining { get { return Current == Mode.Level && Level != null && Level.Rule == LevelRule.Rain; } }
+
+        /// <summary>Delay a timer charge is set to when placed (5, 10 or 15 s; tap it again in the pocket).</summary>
+        public float TimerSeconds = 10f;
+
+        public void CycleTimer()
+        {
+            TimerSeconds = TimerSeconds >= 15f ? 5f : TimerSeconds + 5f;
+            Sfx.I.Tap();
+            UI.Toast(Loc.F("toast.timerset", Mathf.RoundToInt(TimerSeconds)));
+        }
+
+        /// <summary>The detonator: every remote charge in the yard goes at once (a few frames apart, so it reads as a ripple).</summary>
+        public void DetonateRemotes()
+        {
+            var list = new List<LiveExplosive>();
+            foreach (var l in LiveExplosive.Active) if (l != null && l.Def.Remote) list.Add(l);
+            if (list.Count == 0) return;
+            Sfx.I.Click();
+            StartCoroutine(Ripple(list));
+        }
+
+        System.Collections.IEnumerator Ripple(List<LiveExplosive> list)
+        {
+            foreach (var l in list)
+            {
+                if (l != null) { OnIgnite(l.Def); l.Detonate(); }
+                yield return new WaitForSeconds(0.06f);
+            }
+        }
         GameObject rain;
         bool spareBroken;
 

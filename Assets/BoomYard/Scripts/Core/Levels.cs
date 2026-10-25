@@ -119,7 +119,7 @@ namespace BoomYard.Core
                 P("shed", 6.5f, 8f, 180f), P("bicycle", 4.2f, 7.2f, 90f), P("bicycle", 3.4f, 6.6f, 80f), P("crate", -6f, 6f, 15f), P("bin", -8f, 10.4f)),
             L(13, "Kerbside", 70f, 1300, Kit("m80", 2, "blackcat", 4),
                 P("sedan", -6f, -13.4f, 90f, 1), P("scooter", 3f, -12.8f, 90f), P("bin", -9f, 10.4f), P("bin", -8.1f, 10.5f, 0f, 2), P("newsbox", 6f, -10.9f)),
-            L(14, "Rainy Row", 80f, 1400, Kit("blackcat", 6, "m80", 2),
+            L(14, "Rainy Row", 80f, 1400, Kit("timer", 2, "blackcat", 6, "m80", 2),
                 P("bin", -9f, 10.4f), P("bin", -8.1f, 10.5f, 0f, 1), P("bin", -7.2f, 10.4f, 0f, 2), P("gascyl", 2f, 7f), P("barrel", 3f, 7.4f), P("crate", -2f, 4f, 30f)).With(LevelRule.Rain),
             L(15, "Gnome Guard", 75f, 1500, Kit("blackcat", 6, "cherry", 2),
                 P("gnome", 0f, 6f, 180f), P("bin", -5f, 9f), P("crate", 4f, 6.5f, 10f), P("bicycle", -3f, 3f, 70f), P("gascyl", 6.5f, 3f), P("bin", 2.5f, 9.5f, 0f, 1)).With(LevelRule.Spare, 0),
@@ -137,7 +137,7 @@ namespace BoomYard.Core
                 P("grill", -4f, 6f, 15f), P("grill", 3f, 6.5f, -20f), P("gascyl", -3.2f, 6.4f), P("gascyl", 3.8f, 6.8f), P("lawnchair", 0f, 5f, 180f), P("barrel", 6.5f, 5f)),
             L(21, "Pink Flock", 60f, 2000, Kit("string50", 2, "blackcat", 4),
                 P("flamingo", -6f, 4f, 10f), P("flamingo", -4.5f, 5f, -20f), P("flamingo", -3f, 4.2f), P("flamingo", -1.5f, 5.4f, 30f), P("flamingo", 0f, 4.5f), P("flamingo", 1.5f, 5.2f, -15f), P("flamingo", 3f, 4.4f, 25f), P("flamingo", 4.5f, 5f)),
-            L(22, "Windy Afternoon", 80f, 2100, Kit("m80", 2, "blackcat", 4),
+            L(22, "Windy Afternoon", 80f, 2100, Kit("remote", 3, "m80", 2, "blackcat", 4),
                 P("pickup", 6.5f, 1f, 175f), P("gascyl", -3f, 6f), P("lawnchair", -1f, 5f, 170f), P("lawnchair", 0.2f, 5.2f, 200f), P("generator", -6f, 8f, 90f)).With(LevelRule.Windy),
             L(23, "Matchbox", 80f, 2200, Kit("blackcat", 6, "sparkler", 2),
                 P("crate", -4f, 5f), P("crate", -3f, 5.5f, 20f), P("pallets", -6f, 7f), P("grill", 2f, 6f), P("barrel", 3.5f, 6.5f, 0f, 1), P("lawnchair", 0f, 4f, 180f)).With(LevelRule.Matches),
@@ -145,7 +145,7 @@ namespace BoomYard.Core
                 P("generator", -5f, 7.5f, 90f), P("barrel", -3.6f, 7.8f), P("barrel", -3.2f, 7.1f, 0f, 1), P("gascyl", -6.6f, 6.6f), P("pickup", 6.5f, 1f, 180f), P("grill", 2f, 6f)),
             L(25, "Gnome Village", 75f, 2400, Kit("blackcat", 8),
                 P("gnome", 0f, 5f, 180f), P("gnome", -3f, 4f, 160f), P("gnome", -1.8f, 6.5f, 200f), P("gnome", 2f, 4.5f, 190f), P("gnome", 3.2f, 6.2f, 170f), P("flamingo", -4.5f, 6f), P("flamingo", 4.6f, 5f)).With(LevelRule.Spare, 0),
-            L(26, "The Big Caravan", 120f, 3200, Kit("m80", 3, "dynamite", 1, "cherry", 2, "blackcat", 4),
+            L(26, "The Big Caravan", 120f, 3200, Kit("remote", 2, "m80", 3, "dynamite", 1, "blackcat", 4),
                 P("caravan", 4.5f, 4f, 170f), P("generator", -4f, 8f, 90f), P("gascyl", -2.6f, 8f), P("gascyl", 1.5f, 6.6f), P("grill", -1f, 5f), P("pickup", -6f, -13.4f, 90f), P("lawnchair", -3f, 3f, 150f)).AsBoss(),
 
             // ---------- Main Street: small-town shops ----------
@@ -157,13 +157,13 @@ namespace BoomYard.Core
                 P("hydrant", -5f, -10.8f), P("hydrant", 5f, -10.8f), P("newsbox", 0f, -10.9f), P("bench", -2f, 11.2f), P("scooter", 6.5f, 4f, 90f)),
             L(30, "Rush Hour", 50f, 2800, Kit("m80", 2, "blackcat", 6),
                 P("sedan", -5f, -13.4f, 90f, 0), P("scooter", 1f, -12.8f, 90f), P("scooter", 3f, -12.8f, 85f), P("cone", -1f, -15f), P("cone", 0.5f, -15f), P("cone", 2f, -15f), P("cone", 3.5f, -15f)),
-            L(31, "Rain on Main", 80f, 2900, Kit("m80", 2, "blackcat", 6),
+            L(31, "Rain on Main", 80f, 2900, Kit("timer", 2, "m80", 2, "blackcat", 6),
                 P("vending", -9f, 11.4f, 180f), P("vending", 9f, 11.4f, 180f), P("newsbox", 0f, 11f), P("bench", -3f, 11.2f), P("bin", 3f, 11f), P("bin", 4f, 11f, 0f, 1)).With(LevelRule.Rain),
             L(32, "The Sheriff's Bike", 75f, 3000, Kit("cherry", 3, "blackcat", 4),
                 P("bicycle", 0f, 8f, 90f), P("scooter", -4f, 7f, 80f), P("bench", -2f, 11.2f), P("bench", 2f, 11.2f), P("cafetable", 4f, 7.5f), P("cafetable", 5.5f, 8f, 30f)).With(LevelRule.Spare, 0),
             L(33, "Delivery", 80f, 3100, Kit("m80", 2, "blackcat", 4, "sparkler", 1),
                 P("pickup", 6.5f, 1f, 180f), P("crate", 3f, 5f), P("crate", 3.1f, 6f, 30f), P("crate", 2.2f, 5.5f), P("crate", -3f, 6f, 15f), P("pallets", -5f, 7f)),
-            L(34, "Food Truck Friday", 120f, 4000, Kit("m80", 3, "dynamite", 1, "blackcat", 6),
+            L(34, "Food Truck Friday", 120f, 4000, Kit("timer", 2, "m80", 3, "dynamite", 1, "blackcat", 6),
                 P("foodcart", -5f, 6f, 90f), P("foodcart", 4.5f, 6f, -90f), P("vending", -9f, 11.4f, 180f), P("cafetable", -1.5f, 5f), P("cafetable", 0f, 6f, 20f), P("cafetable", 1.5f, 5f), P("gascyl", -6.4f, 7.4f), P("gascyl", 5.9f, 7.4f)).AsBoss(),
 
             // ---------- Hillcrest: big modern houses ----------
@@ -173,7 +173,7 @@ namespace BoomYard.Core
                 P("golfcart", 6.5f, 2f, 180f), P("golfcart", 6.5f, 6f, 175f), P("bin", -9f, 10f), P("bin", -8.1f, 10.1f, 0f, 2), P("gnome", -3f, 6f, 180f)),
             L(37, "Supercar", 80f, 3500, Kit("m80", 2, "dynamite", 1, "blackcat", 4),
                 P("sportscar", 6.5f, 1f, 178f), P("bin", -9f, 10f), P("bin", -8.1f, 10.1f, 0f, 1), P("gascyl", 4f, 7f)),
-            L(38, "Windy Hill", 80f, 3600, Kit("m80", 3, "blackcat", 4),
+            L(38, "Windy Hill", 80f, 3600, Kit("remote", 3, "m80", 2, "blackcat", 4),
                 P("golfcart", 6.5f, 2f, 180f), P("jacuzzi", -4f, 6f), P("grill", 0f, 7f), P("lawnchair", -1f, 4f, 180f), P("lawnchair", 1f, 4.2f, 160f)).With(LevelRule.Windy),
             L(39, "The Collector", 85f, 3700, Kit("cherry", 3, "blackcat", 6),
                 P("sportscar", 6.5f, 1f, 178f), P("pickup", -6f, -13.4f, 90f), P("golfcart", 2.5f, 7f, 160f), P("bin", -9f, 10f), P("bin", -8.1f, 10.1f, 0f, 2), P("grill", -3f, 6f)).With(LevelRule.Spare, 0),
@@ -181,7 +181,7 @@ namespace BoomYard.Core
                 P("grill", -4f, 7f), P("grill", 4f, 7f, 180f), P("cafetable", -2f, 5f), P("cafetable", 0f, 5.5f, 20f), P("cafetable", 2f, 5f), P("cafetable", 0f, 3.5f), P("gascyl", -5f, 7.6f)),
             L(41, "Matches Only", 85f, 3900, Kit("sparkler", 2, "blackcat", 6),
                 P("shed", -6f, 8f, 180f), P("pallets", -3.5f, 7f), P("crate", 2f, 6f), P("crate", 3f, 6.4f, 25f), P("barrel", 4.2f, 7f)).With(LevelRule.Matches),
-            L(42, "The Neighbour's Fortress", 150f, 5000, Kit("dynamite", 3, "m80", 3, "keg", 1, "blackcat", 6),
+            L(42, "The Neighbour's Fortress", 150f, 5000, Kit("dynamite", 3, "remote", 4, "m80", 3, "keg", 1, "blackcat", 6),
                 P("fortress", -5f, 7f, 180f), P("sportscar", 6.5f, 1f, 178f), P("golfcart", 6.5f, 7f, 180f), P("gascyl", -2f, 7f), P("gascyl", -2.4f, 7.5f), P("gascyl", -1.6f, 7.6f), P("barrel", -7.6f, 4.5f), P("barrel", -7f, 4f, 0f, 1)).AsBoss(),
 
             // ---------- Holly Lane: dressed up for the holidays ----------
@@ -191,7 +191,7 @@ namespace BoomYard.Core
                 P("giftbox", -3f, 5f), P("giftbox", -2.3f, 5.1f, 20f), P("giftbox", -1.6f, 5f), P("giftbox", -2.6f, 5.7f, 45f), P("giftbox", 1.6f, 5f), P("giftbox", 2.3f, 5.2f, 10f), P("giftbox", 3f, 5f, 60f), P("giftbox", 2.4f, 5.8f)),
             L(45, "Snowmen", 70f, 4200, Kit("blackcat", 6, "m80", 1),
                 P("inflatable", -6f, 6f), P("inflatable", -3.5f, 8f), P("inflatable", -1f, 6f), P("inflatable", 1.5f, 8f), P("inflatable", 4f, 6f), P("inflatable", 6.5f, 8f)),
-            L(46, "Holiday Rain", 80f, 4300, Kit("m80", 2, "blackcat", 6),
+            L(46, "Holiday Rain", 80f, 4300, Kit("timer", 3, "m80", 2, "blackcat", 6),
                 P("inflatable", -4f, 7f), P("giftbox", -2f, 5f), P("giftbox", 2f, 5f), P("sedan", 6.5f, 1f, 178f, 3), P("bin", -9f, 10.4f), P("bin", -8.1f, 10.5f, 0f, 1)).With(LevelRule.Rain),
             L(47, "Leave the Gnome", 75f, 4400, Kit("cherry", 3, "blackcat", 6),
                 P("gnome", 0f, 6f, 180f), P("inflatable", -3f, 7f), P("inflatable", 3f, 7f), P("giftbox", -1.6f, 5f), P("giftbox", 1.6f, 5f), P("giftbox", 0f, 4f, 30f)).With(LevelRule.Spare, 0),
@@ -199,7 +199,7 @@ namespace BoomYard.Core
                 P("fireworkstand", -5f, 6f, 90f), P("giftbox", -2f, 5f), P("giftbox", -1.2f, 5.4f, 30f), P("giftbox", 2f, 5f), P("gascyl", 4f, 7f), P("inflatable", 5f, 9f)),
             L(49, "Last Light", 100f, 4800, Kit("m80", 3, "dynamite", 1, "blackcat", 6),
                 P("pickup", 6.5f, 1f, 178f), P("sedan", -6f, -13.4f, 90f, 2), P("inflatable", -4f, 8f), P("inflatable", -1f, 8.5f), P("inflatable", 2f, 8f), P("giftbox", -2f, 5f), P("giftbox", 0f, 5f, 40f), P("giftbox", 2f, 5f), P("grill", -6f, 6f), P("gascyl", -6.6f, 6.6f)),
-            L(50, "Corner Gas", 150f, 8000, Kit("m80", 3, "dynamite", 2, "keg", 1, "blackcat", 6),
+            L(50, "Corner Gas", 150f, 8000, Kit("remote", 4, "timer", 2, "dynamite", 2, "keg", 1, "blackcat", 6),
                 P("fuelpump", -3f, 6f), P("fuelpump", 1f, 6f), P("fueltruck", 6.5f, 2f, 180f), P("barrel", -6f, 8f), P("barrel", -5.4f, 8.4f, 0f, 1), P("gascyl", 3f, 9f), P("gascyl", 3.5f, 9.3f), P("newsbox", -8f, 10.5f)).AsBoss(),
         };
 

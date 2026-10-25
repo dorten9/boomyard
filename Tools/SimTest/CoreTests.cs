@@ -177,7 +177,7 @@ static class CoreTests
 
     static void CatalogChecks()
     {
-        Check(Catalog.Explosives.Length == 14, "14 explosives");
+        Check(Catalog.Explosives.Length == 16, "16 explosives (with the timer and remote charges)");
         Check(Catalog.Objects.Length >= 28, "28+ objects");
         Check(Catalog.Arenas.Length == 6, "6 arenas");
         foreach (var o in Catalog.Objects)

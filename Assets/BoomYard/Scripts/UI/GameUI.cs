@@ -25,7 +25,7 @@ namespace BoomYard.UI
         Text timer, targets, damage, chain, wind, prompt, fuseTime, tutText;
         Image chainBadge, windArrow, joyBase, joyKnob, catchRing, powerFill, tutCard, targetsPill, hudCoin;
         RectTransform fuseBar, fusePointer, powerBar, markers;
-        RectTransform lightBtn, throwBtn, placeBtn;
+        RectTransform lightBtn, throwBtn, placeBtn, boomBtn;
         Image fuseRed, fuseOrange, fuseGreen;
         readonly List<Image> slotFrames = new List<Image>();
         readonly List<Text> slotCounts = new List<Text>();
@@ -149,7 +149,7 @@ namespace BoomYard.UI
         /// <summary>Left-handed: the action buttons move to the left edge and the pocket to the right.</summary>
         void ApplyHanded(bool left)
         {
-            foreach (var b in new[] { lightBtn, throwBtn, placeBtn, fuseBar })
+            foreach (var b in new[] { lightBtn, throwBtn, placeBtn, boomBtn, fuseBar })
             {
                 var x = Mathf.Abs(b.anchoredPosition.x);
                 b.anchorMin = b.anchorMax = new Vector2(left ? 0f : 1f, 0f);
@@ -261,6 +261,9 @@ namespace BoomYard.UI
             controls.LighterButton = lightBtn;
             controls.ThrowButton = throwBtn;
             controls.PlaceButton = placeBtn;
+            // The detonator: shows while remote charges are waiting.
+            boomBtn = RoundButton("Boom", new Vector2(-330f, 300f), 128f, UIKit.Danger, UIKit.FlameIcon, "BOOM");
+            controls.DetonateButton = boomBtn;
             powerBar = UIKit.Rect(throwBtn, "Power");
             UIKit.Place(powerBar, new Vector2(0.5f, 1f), new Vector2(0f, 36f), new Vector2(14f, 150f));
             powerBar.pivot = new Vector2(0.5f, 0f);
@@ -430,6 +433,7 @@ namespace BoomYard.UI
             var g = game;
             var player = Player.I;
             damage.text = Loc.Money(g.Score.Total);
+            boomBtn.gameObject.SetActive(LiveExplosive.RemoteCount > 0);
             // The coin sits just left of the number, however wide it is.
             hudCoin.rectTransform.anchoredPosition = new Vector2(-40f - damage.preferredWidth - 30f, -26f);
             float tl = g.Round.TimeLeft;

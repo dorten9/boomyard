@@ -53,6 +53,25 @@ namespace BoomYard.Game
                     Tube(root, new Vector3(0f, -0.11f, 0f), 0.025f, 0.22f, Mats.Lit(Mats.Steel, 0.9f, 0.55f), Mats.Lit(new Color(0.3f, 0.3f, 0.32f), 0.9f, 0.4f));
                     tip = new Vector3(0f, 0.11f + fuseLen, 0f);
                     break;
+                case "timer":
+                    // Two sticks taped to a black kitchen-timer box with a green display and a red LED.
+                    for (int i = 0; i < 2; i++) Tube(root, new Vector3((i - 0.5f) * 0.03f, -0.09f, -0.012f), 0.0145f, 0.18f, Mats.Lit(new Color(0.62f, 0.12f, 0.08f), 0f, 0.3f), cap);
+                    Part(root, MeshKit.RoundedBox(new Vector3(0.07f, 0.05f, 0.025f), 0.006f), new Vector3(0f, 0f, 0.012f), Mats.Lit(new Color(0.06f, 0.06f, 0.07f), 0.2f, 0.5f));
+                    Part(root, MeshKit.RoundedBox(new Vector3(0.05f, 0.018f, 0.003f), 0.001f), new Vector3(0f, 0.006f, 0.026f), Mats.Emissive(new Color(0.2f, 0.6f, 0.3f), new Color(0.4f, 2f, 0.6f)));
+                    var led = Part(root, MeshKit.RoundedBox(new Vector3(0.008f, 0.008f, 0.004f), 0.003f), new Vector3(0.025f, -0.014f, 0.026f), Mats.Emissive(new Color(0.6f, 0.05f, 0.03f), new Color(3f, 0.2f, 0.1f)));
+                    led.name = "Led";
+                    for (int k = -1; k <= 1; k += 2) Part(root, MeshKit.RoundedBox(new Vector3(0.075f, 0.012f, 0.04f), 0.003f), new Vector3(0f, k * 0.05f, 0f), Mats.Lit(new Color(0.45f, 0.45f, 0.48f), 0.2f, 0.6f));
+                    tip = new Vector3(0f, 0.09f + fuseLen, 0f);
+                    break;
+                case "remote":
+                    // A putty brick with a receiver, a blue LED and a wire antenna.
+                    Part(root, MeshKit.RoundedBox(new Vector3(0.09f, 0.04f, 0.06f), 0.008f), Vector3.zero, Mats.Lit(new Color(0.82f, 0.8f, 0.72f), 0f, 0.3f));
+                    Part(root, MeshKit.RoundedBox(new Vector3(0.04f, 0.018f, 0.03f), 0.004f), new Vector3(0.012f, 0.028f, 0f), Mats.Lit(new Color(0.1f, 0.12f, 0.1f), 0.3f, 0.5f));
+                    var blue = Part(root, MeshKit.RoundedBox(new Vector3(0.007f, 0.007f, 0.007f), 0.003f), new Vector3(0.025f, 0.039f, 0f), Mats.Emissive(new Color(0.1f, 0.2f, 0.6f), new Color(0.3f, 0.8f, 3f)));
+                    blue.name = "Led";
+                    Part(root, MeshKit.Lathe("antenna", new[] { new Vector2(0.0012f, 0f), new Vector2(0.0012f, 0.07f), new Vector2(0f, 0.071f) }, 6), new Vector3(0.0f, 0.037f, 0f), Mats.Lit(new Color(0.1f, 0.1f, 0.1f), 0.5f, 0.4f));
+                    tip = new Vector3(0f, 0.06f + fuseLen, 0f);
+                    break;
                 default:
                     // Black Cat: a red paper tube with a cream band and clay end caps.
                     Tube(root, new Vector3(0f, -0.035f, 0f), 0.011f, 0.07f, paper, cap);
@@ -95,6 +114,8 @@ namespace BoomYard.Game
                 case "dynamite": return new Color(0.7f, 0.15f, 0.1f);
                 case "keg": return Mats.Wood;
                 case "pipe": return Mats.Steel;
+                case "timer": return new Color(0.12f, 0.35f, 0.18f);
+                case "remote": return new Color(0.18f, 0.3f, 0.6f);
                 default: return new Color(0.61f, 0.16f, 0.13f);
             }
         }
@@ -192,6 +213,7 @@ namespace BoomYard.Game
             if (Lit || done) return;
             Lit = true;
             if (marker != null) Destroy(marker);
+            if (Def.Timer) { gameObject.AddComponent<Beeper>().Live = this; return; }
             var tip = transform.Find("FuseTip");
             if (tip != null && Def.Fuse > 0f)
             {
@@ -223,6 +245,12 @@ namespace BoomYard.Game
             get { int n = 0; foreach (var l in Active) if (l != null && l.Lit) n++; return n; }
         }
 
+        /// <summary>Remote charges waiting for the button.</summary>
+        public static int RemoteCount
+        {
+            get { int n = 0; foreach (var l in Active) if (l != null && l.Def.Remote && !l.done) n++; return n; }
+        }
+
         void OnDestroy() { Active.Remove(this); }
 
         void Update()
@@ -232,7 +260,7 @@ namespace BoomYard.Game
             if (Remaining <= 0f) { Detonate(); return; }
             // In the rain a fuse lying in the open can fizzle out (about one in six over a 3 s fuse).
             var gc = GameController.I;
-            if (gc != null && gc.Raining && Def.Fuse > 0f && Remaining > 0.6f)
+            if (gc != null && gc.Raining && Def.Fuse > 0f && !Def.Timer && Remaining > 0.6f)
             {
                 wetCheck += Time.deltaTime;
                 if (wetCheck >= 0.5f) { wetCheck = 0f; if (Random.value < 0.03f) Fizzle(); }
@@ -300,6 +328,55 @@ namespace BoomYard.Game
                 Charge(def, p, placement, container, blastId);
                 yield return new WaitForSeconds(def.UnitInterval);
             }
+        }
+    }
+
+    /// <summary>A timer charge counting down: the LED blinks and it beeps once a second, faster for the last three.</summary>
+    public sealed class Beeper : MonoBehaviour
+    {
+        public LiveExplosive Live;
+        static AudioClip beep;
+        AudioSource source;
+        Renderer led;
+        float next;
+
+        void Start()
+        {
+            if (beep == null)
+            {
+                const int rate = 44100;
+                var d = new float[rate / 14];
+                for (int i = 0; i < d.Length; i++)
+                {
+                    float t = i / (float)rate;
+                    d[i] = Mathf.Sin(2f * Mathf.PI * 2900f * t) * Mathf.Clamp01(t * 400f) * Mathf.Clamp01((d.Length - i) / 300f) * 0.5f;
+                }
+                beep = AudioClip.Create("beep", d.Length, 1, rate, false);
+                beep.SetData(d, 0);
+            }
+            source = gameObject.AddComponent<AudioSource>();
+            source.clip = beep;
+            source.spatialBlend = 1f;
+            source.minDistance = 1.5f;
+            source.maxDistance = 30f;
+            source.rolloffMode = AudioRolloffMode.Linear;
+            var t2 = transform.Find("Led");
+            led = t2 != null ? t2.GetComponent<Renderer>() : null;
+            next = 0f;
+        }
+
+        float interval = 1f;
+
+        void Update()
+        {
+            if (Live == null) return;
+            next -= Time.deltaTime;
+            if (led != null) led.enabled = next > interval - 0.12f;   // a short flash with each beep
+            if (next > 0f) return;
+            interval = Live.Remaining < 3f ? 0.33f : 1f;
+            next = interval;
+            source.volume = 0.6f * (Sfx.I != null ? Sfx.I.Volume : 1f);
+            source.Play();
         }
     }
 }

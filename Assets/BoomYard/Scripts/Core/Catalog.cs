@@ -43,6 +43,8 @@ namespace BoomYard.Core
         public float ShrapnelRadius;
         public bool Rolls;
         public float Mass = 0.08f;  // kg, for throwing
+        public bool Timer;          // placed, it counts down by itself (no lighter); Fuse is the default delay
+        public bool Remote;         // placed, it waits for the detonator button
         public string Note;
     }
 
@@ -101,6 +103,8 @@ namespace BoomYard.Core
             new ExplosiveDef { Id = "dynamite", NameHe = "דינמיט", NameEn = "Dynamite", Family = Family.Blast, Fuse = 4f, Damage = 2500, Radius = 3.5f, Price = 9000, UnlockArena = 4, BreaksConcrete = true, Mass = 0.25f, Note = "The only thing that breaks concrete at full radius." },
             new ExplosiveDef { Id = "pipe", NameHe = "פצצת צינור", NameEn = "Pipe bomb", Family = Family.Blast, Fuse = 5f, Damage = 1800, Radius = 2.5f, ShrapnelRadius = 8f, Price = 7000, UnlockArena = 5, Mass = 0.8f, Note = "Shrapnel shatters glass in a huge radius." },
             new ExplosiveDef { Id = "detcord", NameHe = "Det cord", NameEn = "Det cord", Family = Family.Timed, Fuse = 0f, Damage = 300, Radius = 0.6f, Price = 4000, UnlockArena = 5, Throwable = false, Note = "String it between objects, light one end: all at once." },
+            new ExplosiveDef { Id = "timer", NameHe = "מטען שעון", NameEn = "Timer charge", Family = Family.Timed, Fuse = 10f, Damage = 500, Radius = 2.2f, Price = 0, Throwable = false, Timer = true, Mass = 0.6f, Note = "Place it and walk away: it goes off when the clock hits zero. Tap it again in the pocket for 5, 10 or 15 s." },
+            new ExplosiveDef { Id = "remote", NameHe = "מטען שלט", NameEn = "Remote charge", Family = Family.Timed, Fuse = 0f, Damage = 450, Radius = 2f, Price = 0, Throwable = false, Remote = true, Mass = 0.5f, Note = "Place as many as you like, then press BOOM to set them all off at once." },
             new ExplosiveDef { Id = "thermite", NameHe = "Thermite", NameEn = "Thermite", Family = Family.Fire, Fuse = 3f, Damage = 80, Units = 12, UnitInterval = 1f, Radius = 0.5f, Price = 5500, UnlockArena = 6, Throwable = false, Note = "Burns through metal: opens tanks, lights engines." },
         };
 

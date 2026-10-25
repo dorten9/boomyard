@@ -16,10 +16,11 @@ namespace BoomYard.Game
         public Vector2 PlaceScreen;
         public int Select = -1;
         public bool Pause;
+        public bool Detonate;         // the remote's BOOM button
 
         public void ClearEdges()
         {
-            LighterDown = LighterUp = ThrowUp = Place = Pause = false;
+            LighterDown = LighterUp = ThrowUp = Place = Pause = Detonate = false;
             Select = -1;
             Look = Vector2.zero;
         }
@@ -143,7 +144,14 @@ namespace BoomYard.Game
 
             if (Controllable && game != null && game.Round.State != RoundState.Results)
             {
-                if (act && In.Select >= 0 && !HeldLit) game.Pocket.Selected = Mathf.Clamp(In.Select, 0, game.Pocket.Slots.Count - 1);
+                if (act && In.Select >= 0 && !HeldLit)
+                {
+                    int sel = Mathf.Clamp(In.Select, 0, game.Pocket.Slots.Count - 1);
+                    // Tapping the timer charge again sets its delay: 5, 10 or 15 seconds.
+                    if (sel == game.Pocket.Selected && HeldDef != null && HeldDef.Timer) game.CycleTimer();
+                    game.Pocket.Selected = sel;
+                }
+                if (act && In.Detonate) game.DetonateRemotes();
                 Hold(game);
                 if (act) Lighter(game, dt);
                 else Ignition.Release();
@@ -250,7 +258,7 @@ namespace BoomYard.Game
             var flat = new Vector3(Cam.transform.forward.x, 0f, Cam.transform.forward.z).normalized;
             foreach (var l in LiveExplosive.Active)
             {
-                if (l == null || l.Lit) continue;
+                if (l == null || l.Lit || l.Def.Remote || l.Def.Timer) continue;
                 var to = l.transform.position - transform.position;
                 to.y = 0f;
                 float d = to.magnitude;
@@ -290,7 +298,7 @@ namespace BoomYard.Game
                         Ignition.Release();
                     }
                 }
-                else if (HeldDef != null && !HeldLit && Ignition.Hold(dt, Running)) LightHeld(game);
+                else if (HeldDef != null && !HeldLit && !HeldDef.Timer && !HeldDef.Remote && Ignition.Hold(dt, Running)) LightHeld(game);
             }
             if (!In.LighterHeld) Ignition.Release();
         }
@@ -410,11 +418,13 @@ namespace BoomYard.Game
                 point.y = 0.08f;
             }
             LiveExplosive live;
+            bool timer = !HeldLit && HeldDef.Timer, remote = !HeldLit && HeldDef.Remote;
             if (HeldLit) live = LiveExplosive.Spawn(HeldDef, point, Quaternion.Euler(0f, yaw, 0f), HeldRemaining, placement);
             else
             {
                 if (game.Pocket.Take() == null) return;
-                live = LiveExplosive.SpawnUnlit(HeldDef, point, Quaternion.Euler(0f, yaw, 0f), placement);
+                if (timer) live = LiveExplosive.Spawn(HeldDef, point, Quaternion.Euler(0f, yaw, 0f), game.TimerSeconds, placement);
+                else live = LiveExplosive.SpawnUnlit(HeldDef, point, Quaternion.Euler(0f, yaw, 0f), placement);
             }
             live.Container = container;
             if (container != null && target == container && !under)
@@ -430,8 +440,11 @@ namespace BoomYard.Game
             bool wasLit = HeldLit;
             DropHeld();
             if (wasLit) game.OnRelease(live);
+            else if (timer) game.OnIgnite(live.Def);
             else game.OnPlaced();
-            game.Toast(container != null ? "toast.contained" : wasLit ? "toast.runaway" : "toast.placed");
+            if (timer) game.UI.Toast(Loc.F("toast.timer", Mathf.RoundToInt(game.TimerSeconds)));
+            else if (remote) game.Toast("toast.remote");
+            else game.Toast(container != null ? "toast.contained" : wasLit ? "toast.runaway" : "toast.placed");
         }
 
         /// <summary>The throw arc and the danger ring where it would land (spec §05).</summary>
