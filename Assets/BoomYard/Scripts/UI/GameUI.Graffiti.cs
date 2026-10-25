@@ -25,6 +25,12 @@ namespace BoomYard.UI
             for (int y = 0; y < h; y++)
                 for (int x = 0; x < w; x++)
                 {
+                    if (st.Picture)
+                    {
+                        int i = (y * w + x) * 4;
+                        px[(h - 1 - y) * w + x] = new Color32(st.Rgba[i], st.Rgba[i + 1], st.Rgba[i + 2], st.Rgba[i + 3] >= 128 ? (byte)255 : (byte)0);
+                        continue;
+                    }
                     var c = Graffiti.Paint(st.At(x, y), can);
                     px[(h - 1 - y) * w + x] = c != null ? new Color32((byte)(c.R * 255), (byte)(c.G * 255), (byte)(c.B * 255), 255) : new Color32(0, 0, 0, 0);
                 }
