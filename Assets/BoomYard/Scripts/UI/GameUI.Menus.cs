@@ -114,6 +114,7 @@ namespace BoomYard.UI
             UIKit.Place(dsub.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 8f), new Vector2(400f, 26f));
             dsub.rectTransform.pivot = new Vector2(0.5f, 0f);
             ((RectTransform)daily.transform.Find("Label")).offsetMin = new Vector2(0f, 18f);
+            Btn(s, "FIREWORKS SHOW", false, () => game.StartShow(), new Vector2(0f, 0.5f), new Vector2(275f, -385f), new Vector2(410f, 80f), 26);
             var missions = Btn(s, "MISSIONS", false, () => ShowMissions(), new Vector2(0f, 0.5f), new Vector2(380f, -165f), new Vector2(200f, 86f), 28);
             int ready = 0;
             foreach (var m in save.TodaysMissions()) if (m.Done && !m.claimed) ready++;

@@ -151,7 +151,7 @@ namespace BoomYard.Game
                     if (sel == game.Pocket.Selected && HeldDef != null && HeldDef.Timer) game.CycleTimer();
                     game.Pocket.Selected = sel;
                 }
-                if (act && In.Detonate) game.DetonateRemotes();
+                if (act && In.Detonate) { if (game.Level.Show) game.LaunchShow(); else game.DetonateRemotes(); }
                 Hold(game);
                 if (act) Lighter(game, dt);
                 else Ignition.Release();
@@ -385,6 +385,13 @@ namespace BoomYard.Game
 #endif
             rb.angularVelocity = Random.insideUnitSphere * 6f;
             live.Airborne = true;
+            if (HeldLit && HeldDef.Id == "rocket")
+            {
+                // A lit rocket flies where you aim it, under power.
+                rb.angularVelocity = Vector3.zero;
+                live.Motor = live.gameObject.AddComponent<RocketMotor>();
+                live.Motor.Launch(live, RocketMotor.Kind.Missile, ThrowVelocity(1f).normalized);
+            }
             Hands.Throw();
             bool lit = HeldLit;
             DropHeld();

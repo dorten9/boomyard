@@ -175,6 +175,32 @@ namespace BoomYard.Game
 
         public void StartLevel(int number) { StartLevel(Levels.Get(number)); }
 
+        /// <summary>The fireworks show: Holly Lane, no targets, no clock, a pocket full of rockets.</summary>
+        public void StartShow()
+        {
+            StartLevel(Levels.FireworksShow());
+            Sfx.I.Music(true);
+            UI.Toast(Loc.T("show.intro"), 5f);
+        }
+
+        /// <summary>Every rocket standing in the yard goes up, one after another, in the order they were set down.</summary>
+        public void LaunchShow()
+        {
+            var list = new List<LiveExplosive>();
+            foreach (var l in LiveExplosive.Active) if (l != null && !l.Lit && l.Def.Id == "rocket") list.Add(l);
+            if (list.Count == 0) return;
+            StartCoroutine(Show(list));
+        }
+
+        System.Collections.IEnumerator Show(List<LiveExplosive> list)
+        {
+            foreach (var l in list)
+            {
+                if (l != null && !l.Lit) { l.Remaining = 0.6f; l.Light(); }
+                yield return new WaitForSeconds(Random.Range(0.35f, 0.7f));
+            }
+        }
+
         /// <summary>Today's challenge.</summary>
         public void StartDaily() { StartLevel(Levels.DailyChallenge(Daily.Seed(System.DateTime.Now))); }
 
@@ -263,6 +289,7 @@ namespace BoomYard.Game
             if (Paused || Current != Mode.Level) return;
             Chain.Tick(Time.time);
             var st = Round.State;
+            if (Level.Show) { Wind.Update(Time.timeSinceLevelLoad); return; }   // no clock, no targets: just the sky
             if (st == RoundState.Playing || st == RoundState.Stunned || st == RoundState.Settling)
             {
                 Wind.Update(Round.Elapsed);

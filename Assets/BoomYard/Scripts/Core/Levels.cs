@@ -44,6 +44,7 @@ namespace BoomYard.Core
         public int Spare = -1;   // index into Props of the object to keep (LevelRule.Spare)
         public bool Boss;        // the street's last level: one big target and everything round it
         public bool Daily;       // today's challenge: a copy of a level with a twist, the same for everyone
+        public bool Show;        // the fireworks show: no targets, no clock
 
         public StreetDef Street { get { return Streets.ForLevel(Number); } }
 
@@ -119,7 +120,7 @@ namespace BoomYard.Core
                 P("newsbox", -4f, -10.9f, 0f), P("cone", 2.5f, -13f), P("cone", 4f, -13.4f)),
             L(12, "Bike Shed", 75f, 1200, Kit("blackcat", 4, "sparkler", 2, "m80", 1),
                 P("shed", 6.5f, 8f, 180f), P("bicycle", 4.2f, 7.2f, 90f), P("bicycle", 3.4f, 6.6f, 80f), P("crate", -6f, 6f, 15f), P("bin", -8f, 10.4f)),
-            L(13, "Kerbside", 70f, 1300, Kit("m80", 2, "blackcat", 4),
+            L(13, "Kerbside", 70f, 1300, Kit("rocket", 3, "m80", 2, "blackcat", 4),
                 P("sedan", -6f, -13.4f, 90f, 1), P("scooter", 3f, -12.8f, 90f), P("bin", -9f, 10.4f), P("bin", -8.1f, 10.5f, 0f, 2), P("newsbox", 6f, -10.9f)),
             L(14, "Rainy Row", 80f, 1400, Kit("timer", 2, "blackcat", 6, "m80", 2),
                 P("bin", -9f, 10.4f), P("bin", -8.1f, 10.5f, 0f, 1), P("bin", -7.2f, 10.4f, 0f, 2), P("gascyl", 2f, 7f), P("barrel", 3f, 7.4f), P("crate", -2f, 4f, 30f)).With(LevelRule.Rain),
@@ -151,7 +152,7 @@ namespace BoomYard.Core
                 P("caravan", 4.5f, 4f, 170f), P("generator", -4f, 8f, 90f), P("gascyl", -2.6f, 8f), P("gascyl", 1.5f, 6.6f), P("grill", -1f, 5f), P("pickup", -6f, -13.4f, 90f), P("lawnchair", -3f, 3f, 150f)).AsBoss(),
 
             // ---------- Main Street: small-town shops ----------
-            L(27, "Opening Hours", 70f, 2500, Kit("blackcat", 6, "m80", 1),
+            L(27, "Opening Hours", 70f, 2500, Kit("rocket", 3, "blackcat", 6, "m80", 1),
                 P("newsbox", -6f, 11f), P("newsbox", 5f, 11f), P("bench", -2f, 11.2f), P("bench", 2f, 11.2f), P("cafetable", -4f, 8f), P("cafetable", 3.5f, 8f, 30f), P("cafetable", 0f, 7.6f)),
             L(28, "Cafe Terrace", 70f, 2600, Kit("string50", 1, "blackcat", 4, "m80", 1),
                 P("cafetable", -5f, 8f), P("cafetable", -3f, 8.4f, 20f), P("cafetable", -1f, 8f), P("cafetable", 1f, 8.3f, -15f), P("cafetable", 3f, 8f), P("bench", 6f, 11.2f), P("vending", -9f, 11.4f, 180f)),
@@ -206,6 +207,12 @@ namespace BoomYard.Core
         };
 
         public const int DailyReward = 600;
+
+        /// <summary>The fireworks show: an empty yard on Holly Lane and forty rockets to set out and launch.</summary>
+        public static LevelDef FireworksShow()
+        {
+            return new LevelDef { Number = 43, Name = "Fireworks Show", Time = 3600f, Reward = 0, Props = new PropSpot[0], Kit = Kit("rocket", 40), Show = true };
+        }
 
         /// <summary>
         /// Today's challenge (the same for everyone on a date): one of the levels from 2 on, 15% less time, and a

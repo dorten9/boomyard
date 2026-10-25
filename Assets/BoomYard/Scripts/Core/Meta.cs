@@ -24,6 +24,7 @@ namespace BoomYard.Core
             new ShopItem { Id = "pack_cherry", Name = "Cherry Bombs ×3", Kind = "explosive", Grants = "cherry", Amount = 3, Coins = 650, UnlockLevel = 3 },
             new ShopItem { Id = "pack_pipe", Name = "Pipe Bomb ×1", Kind = "explosive", Grants = "pipe", Amount = 1, Coins = 1500, UnlockLevel = 6 },
             new ShopItem { Id = "pack_dynamite", Name = "Dynamite ×2", Kind = "explosive", Grants = "dynamite", Amount = 2, Coins = 2000, UnlockLevel = 8 },
+            new ShopItem { Id = "pack_rocket", Name = "Rockets ×6", Kind = "explosive", Grants = "rocket", Amount = 6, Coins = 500, UnlockLevel = 3 },
             new ShopItem { Id = "pack_timer", Name = "Timer Charges ×3", Kind = "explosive", Grants = "timer", Amount = 3, Coins = 900, UnlockLevel = 14 },
             new ShopItem { Id = "pack_remote", Name = "Remote Charges ×4", Kind = "explosive", Grants = "remote", Amount = 4, Coins = 1400, UnlockLevel = 22 },
             new ShopItem { Id = "lighter_zippo", Name = "Zippo", Kind = "lighter", Grants = "zippo", Amount = 1, Coins = 2500 },

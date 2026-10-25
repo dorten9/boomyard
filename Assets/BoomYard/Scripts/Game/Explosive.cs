@@ -53,6 +53,13 @@ namespace BoomYard.Game
                     Tube(root, new Vector3(0f, -0.11f, 0f), 0.025f, 0.22f, Mats.Lit(Mats.Steel, 0.9f, 0.55f), Mats.Lit(new Color(0.3f, 0.3f, 0.32f), 0.9f, 0.4f));
                     tip = new Vector3(0f, 0.11f + fuseLen, 0f);
                     break;
+                case "rocket":
+                    // A red tube with a paper cone and a long guide stick.
+                    Tube(root, new Vector3(0f, -0.05f, 0f), 0.014f, 0.11f, Mats.Lit(new Color(0.75f, 0.1f, 0.08f), 0f, 0.4f), cap);
+                    Part(root, MeshKit.Lathe("rocketcone", new[] { new Vector2(0.015f, 0f), new Vector2(0f, 0.045f) }, 12, false, true), new Vector3(0f, 0.06f, 0f), Mats.Lit(new Color(0.9f, 0.75f, 0.2f), 0.3f, 0.5f));
+                    Part(root, MeshKit.RoundedBox(new Vector3(0.006f, 0.42f, 0.006f), 0.002f), new Vector3(0.017f, -0.2f, 0f), Mats.Surface("wood", Color.white, 0f, 0.4f));
+                    tip = new Vector3(0f, -0.05f - fuseLen * 0.2f, 0f);
+                    break;
                 case "timer":
                     // Two sticks taped to a black kitchen-timer box with a green display and a red LED.
                     for (int i = 0; i < 2; i++) Tube(root, new Vector3((i - 0.5f) * 0.03f, -0.09f, -0.012f), 0.0145f, 0.18f, Mats.Lit(new Color(0.62f, 0.12f, 0.08f), 0f, 0.3f), cap);
@@ -115,6 +122,7 @@ namespace BoomYard.Game
                 case "keg": return Mats.Wood;
                 case "pipe": return Mats.Steel;
                 case "timer": return new Color(0.12f, 0.35f, 0.18f);
+                case "rocket": return new Color(0.75f, 0.1f, 0.08f);
                 case "remote": return new Color(0.18f, 0.3f, 0.6f);
                 default: return new Color(0.61f, 0.16f, 0.13f);
             }
@@ -201,6 +209,7 @@ namespace BoomYard.Game
                 cap.height = def.Id == "keg" ? 0.5f : 0.08f;
             }
             go.layer = Layers.Default;
+            if (def.Id == "rocket") rb.constraints = RigidbodyConstraints.FreezeRotation;   // a set-down rocket stays upright
 
             Active.Add(live);
             if (lit) live.Light();
@@ -301,11 +310,23 @@ namespace BoomYard.Game
             }
             Airborne = false;
             if (Def.Fuse <= 0f && Lit) Detonate();   // molotov: breaks on contact
+            if (Motor != null && Motor.Missile && Motor.Armed) Detonate();   // a thrown rocket bursts on impact
         }
+
+        /// <summary>Set when a lit rocket was thrown: it flies under power and bursts on impact.</summary>
+        public RocketMotor Motor;
 
         public void Detonate()
         {
             if (done) return;
+            // A rocket whose fuse burns down on the ground goes up as a firework instead.
+            if (Def.Id == "rocket" && Motor == null && !Airborne)
+            {
+                Motor = gameObject.AddComponent<RocketMotor>();
+                Motor.Launch(this, RocketMotor.Kind.Shell, (transform.up + Random.insideUnitSphere * 0.12f).normalized);
+                Remaining = 99f;   // the motor decides when it bursts
+                return;
+            }
             done = true;
             var pos = transform.position;
             var placement = Placement;
@@ -388,6 +409,71 @@ namespace BoomYard.Game
             next = interval;
             source.volume = 0.6f * (Sfx.I != null ? Sfx.I.Volume : 1f);
             source.Play();
+        }
+    }
+
+    /// <summary>
+    /// A rocket under power. Thrown lit, it is a missile: it flies along the aim and bursts on impact. Lit standing
+    /// on the ground, it is a firework: it climbs for 1.4 s, then bursts into coloured stars high over the street.
+    /// </summary>
+    public sealed class RocketMotor : MonoBehaviour
+    {
+        public enum Kind { Missile, Shell }
+
+        public bool Missile { get { return kind == Kind.Missile; } }
+        /// <summary>A missile only bursts on impact once it is clear of the hand.</summary>
+        public bool Armed { get { return age > 0.12f; } }
+
+        LiveExplosive live;
+        Kind kind;
+        Vector3 dir;
+        Rigidbody rb;
+        float age;
+
+        static readonly Color[] Stars = { new Color(1f, 0.25f, 0.2f), new Color(0.3f, 1f, 0.4f), new Color(0.35f, 0.55f, 1f), new Color(1f, 0.85f, 0.3f), new Color(1f, 0.4f, 1f), new Color(1f, 1f, 1f) };
+
+        public void Launch(LiveExplosive l, Kind k, Vector3 direction)
+        {
+            live = l;
+            kind = k;
+            dir = direction;
+            rb = GetComponent<Rigidbody>();
+            rb.useGravity = k == Kind.Missile;
+            rb.isKinematic = false;
+            rb.constraints = RigidbodyConstraints.None;
+            transform.rotation = Quaternion.FromToRotation(Vector3.up, dir);
+            var tip = transform.Find("FuseTip");
+            Fx.FuseSparks(tip != null ? tip : transform);
+            var hiss = gameObject.AddComponent<AudioSource>();
+            hiss.clip = StreetSounds.Whistle;
+            hiss.pitch = Random.Range(1.1f, 1.35f);
+            hiss.spatialBlend = 1f;
+            hiss.minDistance = 3f;
+            hiss.maxDistance = 90f;
+            hiss.volume = 0.6f * Sfx.I.Volume;
+            hiss.Play();
+        }
+
+        void FixedUpdate()
+        {
+            age += Time.fixedDeltaTime;
+            if (kind == Kind.Missile)
+            {
+                // Thrust along the aim for a second, so it flies flat and far instead of arcing like a throw.
+                if (age < 1f) rb.AddForce(dir * 16f, ForceMode.Acceleration);
+                if (age > 3f) live.Detonate();
+                return;
+            }
+#if UNITY_6000_0_OR_NEWER
+            rb.linearVelocity = dir * Mathf.Lerp(8f, 26f, Mathf.Clamp01(age * 2f));
+#else
+            rb.velocity = dir * Mathf.Lerp(8f, 26f, Mathf.Clamp01(age * 2f));
+#endif
+            if (age < 1.4f) return;
+            var c = Stars[Random.Range(0, Stars.Length)];
+            Fx.Shell(transform.position, c, Random.value < 0.4f ? Stars[Random.Range(0, Stars.Length)] : c);
+            Sfx.I.Boom(transform.position, 0.6f);
+            Destroy(gameObject);
         }
     }
 }
