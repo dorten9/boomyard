@@ -126,16 +126,18 @@ namespace BoomYard.Game
             var save = SaveService.Data;
             Pocket.Slots.Clear();
             Pocket.Selected = 0;
-            int slots = Core.Pocket.BaseSlots + (save.Has("vest") ? 1 : 0);
+            int slots = Core.Pocket.BaseSlots + (save.Has("vest") ? 2 : 0);
             var counts = new Dictionary<string, int>();
             var order = new List<string>();
+            // The level's kit first, then every kind the player has unlocked in the shop, and the Black Cat always.
             foreach (var k in Level.Kit) { if (!counts.ContainsKey(k.id)) { counts[k.id] = 0; order.Add(k.id); } counts[k.id] += k.count; }
             foreach (var s in save.inventory)
             {
-                if (s.count <= 0 || Catalog.Explosive(s.id) == null) continue;
-                if (!counts.ContainsKey(s.id)) { if (order.Count >= slots) continue; counts[s.id] = 0; order.Add(s.id); }
-                counts[s.id] += s.count;
+                if (s.count <= 0 || Catalog.Explosive(s.id) == null || counts.ContainsKey(s.id)) continue;
+                counts[s.id] = 1;
+                order.Add(s.id);
             }
+            if (!counts.ContainsKey("blackcat")) { counts["blackcat"] = 1; order.Add("blackcat"); }
             foreach (var id in order)
             {
                 if (Pocket.Slots.Count >= slots) break;
@@ -526,16 +528,6 @@ namespace BoomYard.Game
             save.roundsPlayed++;
             save.totalDestroyed += destroyed;
             save.bestChain = Mathf.Max(save.bestChain, Chain.LongestChain);
-            // Bought items that were used come out of the inventory (the level's own kit is free).
-            foreach (var slot in Pocket.Slots)
-            {
-                int kit = 0;
-                foreach (var k in Level.Kit) if (k.id == slot.id) kit += k.count;
-                int owned = save.Count(slot.id);
-                int used = (kit + owned) - slot.count;
-                int fromOwned = Mathf.Max(0, used - kit);
-                if (fromOwned > 0) save.Add(slot.id, -fromOwned);
-            }
             SaveService.Save();
             return sum;
         }
@@ -556,6 +548,7 @@ namespace BoomYard.Game
             var save = SaveService.Data;
             if (item.Kind == "lighter" && save.lighters.Contains(item.Grants)) { save.lighter = item.Grants; SaveService.Save(); return true; }
             if (item.Kind == "upgrade" && save.Has(item.Grants)) return false;
+            if (item.Kind == "explosive" && save.Count(item.Grants) > 0) return false;   // unlocked already
             if (item.Kind == "glove" || item.Kind == "lighterskin")
             {
                 bool own = item.Coins == 0 || save.styles.Contains(item.Id);
@@ -576,7 +569,7 @@ namespace BoomYard.Game
             save.shekels -= item.Coins;
             switch (item.Kind)
             {
-                case "explosive": save.Add(item.Grants, item.Amount); break;
+                case "explosive": save.Add(item.Grants, 1); break;
                 case "lighter": save.lighters.Add(item.Grants); save.lighter = item.Grants; break;
                 case "upgrade": save.upgrades.Add(item.Grants); break;
             }

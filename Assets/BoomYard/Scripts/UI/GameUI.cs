@@ -465,7 +465,7 @@ namespace BoomYard.UI
                 slotFrames[i].color = i == g.Pocket.Selected ? new Color(0.36f, 0.18f, 0.05f, 0.9f) : new Color(0.03f, 0.03f, 0.035f, 0.7f);
                 slotChips[i].color = s.count > 0 ? ItemModel.Chip(s.id) : new Color(0.3f, 0.3f, 0.3f, 0.4f);
                 string name = def != null ? def.NameEn : s.id;
-                slotCounts[i].text = name + "\n×" + s.count;
+                slotCounts[i].text = g.Pocket.Unlimited ? name : name + "\n×" + s.count;
                 slotCounts[i].fontSize = name.Length > 10 ? 15 : 18;
             }
 

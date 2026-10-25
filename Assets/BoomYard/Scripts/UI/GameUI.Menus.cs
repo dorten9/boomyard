@@ -293,15 +293,15 @@ namespace BoomYard.UI
         static string KitSummary(PocketSlot[] kit)
         {
             var parts = new List<string>();
-            foreach (var k in kit) parts.Add(k.count + "× " + Catalog.Explosive(k.id).NameEn);
+            foreach (var k in kit) parts.Add(Catalog.Explosive(k.id).NameEn);
             return string.Join(", ", parts.ToArray());
         }
 
         static string Owned()
         {
             int n = 0;
-            foreach (var s in SaveService.Data.inventory) n += s.count;
-            return n > 0 ? "  (+ " + n + " of your own)" : "";
+            foreach (var s in SaveService.Data.inventory) if (s.count > 0) n++;
+            return n > 0 ? "  (+ " + n + " unlocked kind" + (n == 1 ? "" : "s") + ")" : "";
         }
 
         // ---------- shop ----------
@@ -341,7 +341,8 @@ namespace BoomYard.UI
                 card.rectTransform.anchoredPosition = new Vector2(col * (cw + 24f), -row * (ch + 24f));
                 card.rectTransform.sizeDelta = new Vector2(cw, ch);
                 bool locked = item.UnlockLevel > save.unlocked;
-                bool owned = style ? item.Coins == 0 || save.styles.Contains(item.Id) : item.Kind != "explosive" && (save.lighters.Contains(item.Grants) || save.Has(item.Grants));
+                bool owned = style ? item.Coins == 0 || save.styles.Contains(item.Id)
+                    : item.Kind == "explosive" ? save.Count(item.Grants) > 0 : save.lighters.Contains(item.Grants) || save.Has(item.Grants);
                 bool equipped = item.Kind == "lighter" && save.lighter == item.Grants
                     || item.Kind == "glove" && save.glove == item.Grants || item.Kind == "lighterskin" && save.lighterSkin == item.Grants;
                 var chip = UIKit.Image(card.transform, "Chip", style ? StyleColor(item) : item.Kind == "explosive" ? ItemModel.Chip(item.Grants) : item.Kind == "lighter" ? UIKit.Flame : UIKit.SteelBlue, style ? UIKit.Circle : item.Kind == "explosive" ? UIKit.Rounded : item.Kind == "lighter" ? UIKit.FlameIcon : UIKit.Star);
@@ -353,11 +354,11 @@ namespace BoomYard.UI
                 desc.horizontalOverflow = HorizontalWrapMode.Wrap;
                 if (item.Kind == "explosive")
                 {
-                    var have = UIKit.Label(card.transform, "Have", "You have " + save.Count(item.Grants), 19, UIKit.Muted, TextAnchor.LowerLeft);
-                    UIKit.Place(have.rectTransform, new Vector2(0f, 0f), new Vector2(24f, 26f), new Vector2(240f, 30f));
+                    var have = UIKit.Label(card.transform, "Have", owned ? "Unlimited in every level" : "Unlock for good", 19, owned ? UIKit.Ok : UIKit.Muted, TextAnchor.LowerLeft);
+                    UIKit.Place(have.rectTransform, new Vector2(0f, 0f), new Vector2(24f, 26f), new Vector2(260f, 30f));
                 }
-                string label = locked ? "LEVEL " + item.UnlockLevel : equipped ? "EQUIPPED" : owned ? (item.Kind == "upgrade" ? "OWNED" : "EQUIP") : Loc.Coins(item.Coins);
-                bool canBuy = !locked && !equipped && !(owned && item.Kind == "upgrade");
+                string label = locked ? "LEVEL " + item.UnlockLevel : equipped ? "EQUIPPED" : owned ? (item.Kind == "upgrade" || item.Kind == "explosive" ? "OWNED" : "EQUIP") : Loc.Coins(item.Coins);
+                bool canBuy = !locked && !equipped && !(owned && (item.Kind == "upgrade" || item.Kind == "explosive"));
                 var price = UIKit.Button(card.transform, "Buy", label, canBuy ? UIKit.Ember : new Color(0.2f, 0.19f, 0.2f), canBuy ? Dark : UIKit.Muted, () =>
                 {
                     if (!canBuy) return;
@@ -451,7 +452,7 @@ namespace BoomYard.UI
             }
             switch (item.Grants)
             {
-                case "vest": return "Carry five kinds of explosives into every level.";
+                case "vest": return "Carry eight kinds of explosives into every level.";
                 case "legs": return "Sprint faster and keep the lighter lit while you jog.";
                 case "watch": return "Every level's clock starts 10 seconds higher.";
                 default: return "";

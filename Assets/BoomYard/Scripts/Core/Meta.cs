@@ -17,19 +17,20 @@ namespace BoomYard.Core
     {
         public static readonly ShopItem[] Items =
         {
-            new ShopItem { Id = "pack_blackcat", Name = "Black Cats ×10", Kind = "explosive", Grants = "blackcat", Amount = 10, Coins = 200 },
-            new ShopItem { Id = "pack_string", Name = "Firecracker String ×2", Kind = "explosive", Grants = "string50", Amount = 2, Coins = 400 },
-            new ShopItem { Id = "pack_sparkler", Name = "Sparkler Bombs ×3", Kind = "explosive", Grants = "sparkler", Amount = 3, Coins = 350 },
-            new ShopItem { Id = "pack_m80", Name = "M-80 ×3", Kind = "explosive", Grants = "m80", Amount = 3, Coins = 800, UnlockLevel = 2 },
-            new ShopItem { Id = "pack_cherry", Name = "Cherry Bombs ×3", Kind = "explosive", Grants = "cherry", Amount = 3, Coins = 650, UnlockLevel = 3 },
-            new ShopItem { Id = "pack_pipe", Name = "Pipe Bomb ×1", Kind = "explosive", Grants = "pipe", Amount = 1, Coins = 1500, UnlockLevel = 6 },
-            new ShopItem { Id = "pack_dynamite", Name = "Dynamite ×2", Kind = "explosive", Grants = "dynamite", Amount = 2, Coins = 2000, UnlockLevel = 8 },
-            new ShopItem { Id = "pack_rocket", Name = "Rockets ×6", Kind = "explosive", Grants = "rocket", Amount = 6, Coins = 500, UnlockLevel = 3 },
-            new ShopItem { Id = "pack_timer", Name = "Timer Charges ×3", Kind = "explosive", Grants = "timer", Amount = 3, Coins = 900, UnlockLevel = 14 },
-            new ShopItem { Id = "pack_remote", Name = "Remote Charges ×4", Kind = "explosive", Grants = "remote", Amount = 4, Coins = 1400, UnlockLevel = 22 },
+            // Explosives are unlocked once and are then unlimited in every level.
+            new ShopItem { Id = "pack_string", Name = "Firecracker String", Kind = "explosive", Grants = "string50", Amount = 1, Coins = 600 },
+            new ShopItem { Id = "pack_sparkler", Name = "Sparkler Bomb", Kind = "explosive", Grants = "sparkler", Amount = 1, Coins = 500 },
+            new ShopItem { Id = "pack_rocket", Name = "Rocket", Kind = "explosive", Grants = "rocket", Amount = 1, Coins = 800, UnlockLevel = 3 },
+            new ShopItem { Id = "pack_m80", Name = "M-80", Kind = "explosive", Grants = "m80", Amount = 1, Coins = 1200, UnlockLevel = 2 },
+            new ShopItem { Id = "pack_cherry", Name = "Cherry Bomb", Kind = "explosive", Grants = "cherry", Amount = 1, Coins = 1000, UnlockLevel = 3 },
+            new ShopItem { Id = "pack_timer", Name = "Timer Charge", Kind = "explosive", Grants = "timer", Amount = 1, Coins = 1500, UnlockLevel = 14 },
+            new ShopItem { Id = "pack_pipe", Name = "Pipe Bomb", Kind = "explosive", Grants = "pipe", Amount = 1, Coins = 2500, UnlockLevel = 6 },
+            new ShopItem { Id = "pack_remote", Name = "Remote Charge", Kind = "explosive", Grants = "remote", Amount = 1, Coins = 2500, UnlockLevel = 22 },
+            new ShopItem { Id = "pack_dynamite", Name = "Dynamite", Kind = "explosive", Grants = "dynamite", Amount = 1, Coins = 3500, UnlockLevel = 8 },
+            new ShopItem { Id = "pack_keg", Name = "Powder Keg", Kind = "explosive", Grants = "keg", Amount = 1, Coins = 5000, UnlockLevel = 18 },
             new ShopItem { Id = "lighter_zippo", Name = "Zippo", Kind = "lighter", Grants = "zippo", Amount = 1, Coins = 2500 },
             new ShopItem { Id = "lighter_turbo", Name = "Turbo Lighter", Kind = "lighter", Grants = "turbo", Amount = 1, Coins = 5000 },
-            new ShopItem { Id = "up_vest", Name = "Vest: +1 pocket slot", Kind = "upgrade", Grants = "vest", Amount = 1, Coins = 2500 },
+            new ShopItem { Id = "up_vest", Name = "Vest: +2 pocket slots", Kind = "upgrade", Grants = "vest", Amount = 1, Coins = 2500 },
             new ShopItem { Id = "up_legs", Name = "Lungs: run longer & faster", Kind = "upgrade", Grants = "legs", Amount = 1, Coins = 1800 },
             new ShopItem { Id = "up_watch", Name = "Watch: +10 s every level", Kind = "upgrade", Grants = "watch", Amount = 1, Coins = 3000 },
             // Style: what your hands and lighter look like. Looks only.

@@ -96,10 +96,14 @@ namespace BoomYard.Core
         public int count;
     }
 
-    /// <summary>What the player carries into a round: 4 slots, up to 8 with the vest upgrade (spec §13).</summary>
+    /// <summary>
+    /// What the player carries into a round: a slot per kind of explosive, 6 kinds, 8 with the vest. Every kind is
+    /// unlimited (the owner's call: no counting charges); a slot's count is only kept for the tutorial's kit.
+    /// </summary>
     public sealed class Pocket
     {
-        public const int BaseSlots = 4, MaxSlots = 8;
+        public const int BaseSlots = 6, MaxSlots = 8;
+        public bool Unlimited = true;
         public readonly List<PocketSlot> Slots = new List<PocketSlot>();
         public int Selected;
 
@@ -107,7 +111,11 @@ namespace BoomYard.Core
 
         public int TotalLeft
         {
-            get { int n = 0; foreach (var s in Slots) n += s.count; return n; }
+            get
+            {
+                if (Unlimited) return Slots.Count > 0 ? int.MaxValue : 0;
+                int n = 0; foreach (var s in Slots) n += s.count; return n;
+            }
         }
 
         /// <summary>Takes one of the selected item; returns its id or null when the slot is empty.</summary>
@@ -115,7 +123,7 @@ namespace BoomYard.Core
         {
             var s = Current;
             if (s == null || s.count <= 0) return null;
-            s.count--;
+            if (!Unlimited) s.count--;
             return s.id;
         }
 

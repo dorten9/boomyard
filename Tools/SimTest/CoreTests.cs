@@ -161,7 +161,12 @@ static class CoreTests
         lr.Tick(10f, false);
         Check(lr.TimeLeft == 20f, "level time limit");
 
-        var p = new Pocket();
+        var u = new Pocket();
+        u.Slots.Add(new PocketSlot { id = "m80", count = 1 });
+        for (int i = 0; i < 50; i++) u.Take();
+        Check(u.Take() == "m80" && u.TotalLeft > 0, "unlimited pocket never runs out");
+
+        var p = new Pocket { Unlimited = false };
         p.Slots.Add(new PocketSlot { id = "blackcat", count = 1 });
         p.Slots.Add(new PocketSlot { id = "m80", count = 2 });
         Check(p.Take() == "blackcat", "take the selected item");
