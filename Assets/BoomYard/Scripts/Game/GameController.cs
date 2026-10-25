@@ -66,6 +66,8 @@ namespace BoomYard.Game
             I = this;
             Mark("start");
             var save = SaveService.Load();
+            Purchases.Init();
+            Purchases.Granted += pack => { Sfx.I.Coin(); if (UI != null) UI.Toast("+" + Loc.Coins(pack.Coins) + " coins. Thank you!", 3f); };
             Loc.Init("en");
             var tier = save.settings.quality >= 0 ? (QualityTier)save.settings.quality : Quality.Detect();
             Quality.Apply(tier);

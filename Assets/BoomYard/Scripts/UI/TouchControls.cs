@@ -147,12 +147,12 @@ namespace BoomYard.UI
                 for (int i = 0; i < Input.touchCount; i++)
                 {
                     var t = Input.GetTouch(i);
-                    pointers.Add(new Pointer { Id = t.fingerId, Phase = t.phase, Pos = t.position });
+                    pointers.Add(new Pointer { Id = t.fingerId, Phase = t.phase, Pos = WebLandscape.Fix(t.position) });
                 }
                 return;
             }
             if (!Input.mousePresent) return;
-            Vector2 m = Input.mousePosition;
+            Vector2 m = WebLandscape.Fix(Input.mousePosition);
             if (Input.GetMouseButtonDown(0)) pointers.Add(new Pointer { Id = -1, Phase = TouchPhase.Began, Pos = m });
             else if (Input.GetMouseButtonUp(0)) pointers.Add(new Pointer { Id = -1, Phase = TouchPhase.Ended, Pos = m });
             else if (Input.GetMouseButton(0)) pointers.Add(new Pointer { Id = -1, Phase = m == lastMouse ? TouchPhase.Stationary : TouchPhase.Moved, Pos = m });
