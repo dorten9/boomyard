@@ -15,7 +15,8 @@ namespace BoomYard
 
         public static string F(string key, params object[] args) { return string.Format(T(key), args); }
 
-        public static string Money(long v) { return "$" + v.ToString("#,0"); }
+        /// <summary>Damage shown as what it earns: coins (one currency, see ScoreCalculator.DamagePerCoin).</summary>
+        public static string Money(long damage) { return Coins(BoomYard.Core.ScoreCalculator.CoinsFromDamage(damage)); }
         public static string Coins(long v) { return v.ToString("#,0"); }
 
         public static string Time(float seconds)
@@ -40,10 +41,26 @@ namespace BoomYard
             { "toast.contained", "Contained ×1.8" },
             { "toast.placed", "Placed. Hold LIGHT next to it" },
             { "toast.runaway", "RUN!" },
-            { "bonus.CloseCall", "Close call +$5,000" },
-            { "bonus.Multi", "Multi-kill +$8,000" },
-            { "bonus.LastSecond", "Last second +$3,000" },
-            { "bonus.HandBurn", "Went off in your hand −$2,000" },
+            { "toast.fizzle", "The rain put a fuse out. Light it again" },
+            { "toast.timer", "Timer set: {0} s. Walk away" },
+            { "toast.timerset", "Timer: {0} s" },
+            { "toast.remote", "Remote charge placed. Press BOOM when you're clear" },
+            { "rule.Rain", "RAIN: fuses are slow to catch and can fizzle out" },
+            { "rule.Windy", "STRONG WIND: keep your back to it when you light" },
+            { "rule.Spare", "DON'T BREAK THE {0}" },
+            { "rule.Matches", "NO LIGHTER TODAY: matches only" },
+            { "fail.spare", "YOU BROKE IT" },
+            { "tip.spare", "Tip: smaller charges and placing them away from it keep it in one piece" },
+            { "bonus.CloseCall", "Close call +100 coins" },
+            { "bonus.Multi", "Multi-kill +160 coins" },
+            { "bonus.LastSecond", "Last second +60 coins" },
+            { "bonus.HandBurn", "Went off in your hand −40 coins" },
+            { "bonus.AirTime", "Air time +50 coins" },
+            { "bonus.Domino", "Domino! Five in a row +120 coins" },
+            { "bonus.HoleInOne", "Hole in one! +80 coins" },
+            { "flight", "The {0} flew {1} m!" },
+            { "show.intro", "Set rockets down around the yard, then press SHOW to launch them all" },
+            { "goldgnome", "Golden gnome! +{0} coins  ({1} of {2} found)" },
             { "tip.chain", "Tip: hit things that explode by themselves. Every chain link adds ×0.5" },
             { "tip.again", "Tip: place charges under cars for ×1.8 containment" },
             { "tip.time", "Tip: light several charges before you run, and let the blasts chain" },

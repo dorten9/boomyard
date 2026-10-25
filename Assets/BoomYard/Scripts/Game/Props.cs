@@ -7,7 +7,7 @@ namespace BoomYard.Game
     /// The destructible objects, modelled in code: bevelled panels, lathe-turned tyres and cylinders and PBR
     /// surfaces, in real dimensions. <see cref="Spawn"/> places one by its catalog id; levels are lists of these.
     /// </summary>
-    public static class Props
+    public static partial class Props
     {
         public static Destructible Spawn(string id, Transform parent, Vector3 pos, float yaw, int variant = 0)
         {
@@ -30,7 +30,7 @@ namespace BoomYard.Game
                 case "barrel": d = Barrel(t, variant); break;
                 case "fence": d = Fence(t); break;
                 case "crate": d = Crate(t); break;
-                default: d = Crate(t); break;
+                default: d = Street(id, t, variant) ?? Crate(t); break;
             }
             return d;
         }

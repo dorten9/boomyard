@@ -33,5 +33,12 @@ public Dictionary<string, AudioClip> All() { return new Dictionary<string, Audio
 }""" % (consts, fields.strip(), awake, ", ".join('{ "%s", %s }' % (n, n) for n in names), synth)
 open(sys.argv[2], "w").write(out)
 PY
-mcs -nologo -optimize+ -out:"$here/bin/SfxExport.exe" "$here/bin/SfxGen.cs" "$here/Shim.cs" "$here/Main.cs"
+# The street's own sounds (car alarm, barks, whistle, rain) live in StreetLife.cs as a self-contained class.
+python3 - "$here/../../Assets/BoomYard/Scripts/Game/StreetLife.cs" "$here/bin/StreetGen.cs" <<'PY'
+import sys
+s = open(sys.argv[1]).read()
+body = s[s.index("    /// <summary>The street's own sounds"):s.rindex("}")]
+open(sys.argv[2], "w").write("using UnityEngine;\nnamespace BoomYard.Game {\n" + body + "}\n")
+PY
+mcs -nologo -optimize+ -out:"$here/bin/SfxExport.exe" "$here/bin/SfxGen.cs" "$here/bin/StreetGen.cs" "$here/Shim.cs" "$here/Main.cs"
 mono "$here/bin/SfxExport.exe" "$out"

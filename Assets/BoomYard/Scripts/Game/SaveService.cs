@@ -45,8 +45,15 @@ namespace BoomYard.Game
     {
         public const int CurrentSchema = 2;
         public int schema = CurrentSchema;
-        public long shekels;              // coins (dollars; the field keeps its name so saves still load)
-        public int gems;
+        public long shekels;              // coins (the field keeps its old name so saves still load)
+        public float bestGnome;           // longest gnome flight, metres
+        public List<int> goldGnomes = new List<int>();   // levels whose golden gnome was found
+        public string glove = "", lighterSkin = "";     // style (looks only)
+        public int challengeDate;                         // the daily challenge: day played (Daily.Seed), best and whether cleared
+        public long challengeBest;
+        public bool challengeCleared;
+        public List<string> styles = new List<string>();  // style items bought (shop ids)
+        public int gems;                  // retired: gems became coins (100 each) on load
         public string lighter = "basic";
         public List<string> lighters = new List<string> { "basic" };
         public List<string> upgrades = new List<string>();
@@ -134,6 +141,7 @@ namespace BoomYard.Game
             }
             catch (Exception e) { Debug.LogWarning("BoomYard: save unreadable, starting fresh. " + e.Message); }
             if (Data == null) Data = Fresh();
+            if (Data.gems > 0) { Data.shekels += Data.gems * 100L; Data.gems = 0; }   // one currency now
             return Data;
         }
 
@@ -141,8 +149,7 @@ namespace BoomYard.Game
         static SaveData Fresh()
         {
             var d = new SaveData();
-            d.shekels = 300;
-            d.gems = 5;
+            d.shekels = 500;
             return d;
         }
 

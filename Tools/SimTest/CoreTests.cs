@@ -52,7 +52,8 @@ static class CoreTests
         Check(ScoreCalculator.Stars(yard, 59999) == 2, "2 stars under the threshold");
         Check(ScoreCalculator.Stars(yard, 60000) == 3, "3 stars at the threshold");
         Check(ScoreCalculator.Stars(yard, 1000) == 0, "no stars");
-        Near(ScoreCalculator.CoinsFromDamage(200000), 4000, "2% coins");
+        Near(ScoreCalculator.CoinsFromDamage(200000), 4000, "a coin per $50 of damage");
+        Near(ScoreCalculator.CoinsFromDamage(74), 1, "coins round to the nearest");
     }
 
     static void Chains()
@@ -176,7 +177,7 @@ static class CoreTests
 
     static void CatalogChecks()
     {
-        Check(Catalog.Explosives.Length == 14, "14 explosives");
+        Check(Catalog.Explosives.Length == 16, "16 explosives (with the timer and remote charges)");
         Check(Catalog.Objects.Length >= 28, "28+ objects");
         Check(Catalog.Arenas.Length == 6, "6 arenas");
         foreach (var o in Catalog.Objects)
@@ -212,7 +213,7 @@ static class MetaTests
             foreach (var k in l.Kit) check(Catalog.Explosive(k.id) != null, "level " + l.Number + " kit item exists: " + k.id);
         }
         foreach (var it in Shop.Items)
-            check((it.Coins > 0) != (it.Gems > 0), "shop item has one price: " + it.Id);
+            check(it.Coins > 0 || it.Id.EndsWith("_none"), "shop item has a price in coins: " + it.Id);
 
         var a = Missions.ForDay(20261024);
         var b = Missions.ForDay(20261024);
@@ -229,7 +230,8 @@ static class MetaTests
         check(DailyReward.NextDay(20261023, 2, new System.DateTime(2026, 10, 24)) == 3, "streak continues");
         check(DailyReward.NextDay(20261024, 2, new System.DateTime(2026, 10, 24)) == -1, "claimed today");
         check(DailyReward.NextDay(20261020, 4, new System.DateTime(2026, 10, 24)) == 0, "missed day restarts");
-        check(Progress.LevelCoins(lvl, true, 3, 100000) == lvl.Reward + 120 + 200, "level coins");
+        check(Progress.LevelCoins(lvl, true, true, 3, 100000) == 2000 + lvl.Reward + 120, "level coins: wreckage, reward, stars");
+        check(Progress.LevelCoins(lvl, false, false, 0, 100000) == 2000, "a failed round keeps the wreckage coins");
 
         foreach (var side in new[] { 1f, -1f })
         {
@@ -244,5 +246,37 @@ static class MetaTests
             }
             check(bones == 14, "four fingers of three bones and a thumb of two");
         }
+
+        check(Levels.All.Length == 50, "50 levels");
+        foreach (var l in Levels.All)
+        {
+            check(Streets.ForLevel(l.Number).FirstLevel <= l.Number && l.Number <= Streets.ForLevel(l.Number).LastLevel, "level " + l.Number + " is on a street");
+            if (l.Rule == LevelRule.Spare) check(l.Spare >= 0 && l.Spare < l.Props.Length && !l.IsTarget(l.Spare), "level " + l.Number + " spares a real prop");
+            int targets = 0;
+            for (int k = 0; k < l.Props.Length; k++) if (l.IsTarget(k)) targets++;
+            check(targets >= 3, "level " + l.Number + " has targets");
+            foreach (var p in l.Props)
+            {
+                check(Math.Abs(p.X) <= 12.6f, "level " + l.Number + " " + p.Id + " inside the lot");
+                check((p.Z <= 12f || p.Id == "acunit") && p.Z >= -20f, "level " + l.Number + " " + p.Id + " clear of the houses");
+                check(Math.Sqrt(p.X * p.X + (p.Z + 8) * (p.Z + 8)) >= 2.4, "level " + l.Number + " " + p.Id + " not on the player's start");
+            }
+        }
+        foreach (var st in Streets.All)
+        {
+            check(Levels.Get(st.LastLevel).Boss, st.Name + " ends with a boss level");
+            check(st.Walls.Length > 0 && st.Roof.Length == 3, st.Name + " has colours");
+        }
+        int prev = 0;
+        foreach (var st in Streets.All) { check(st.FirstLevel == prev + 1, st.Name + " follows on"); prev = st.LastLevel; }
+        check(prev == Levels.All.Length, "streets cover every level");
+
+        var dc1 = Levels.DailyChallenge(20261025);
+        var dc2 = Levels.DailyChallenge(20261025);
+        check(dc1.Number == dc2.Number && dc1.Rule == dc2.Rule && dc1.Daily, "the daily challenge is the same all day");
+        check(dc1.Number >= 2 && dc1.Time < Levels.Get(dc1.Number).Time, "the daily challenge is a real level with less time");
+        int differ = 0;
+        for (int d = 1; d <= 20; d++) if (Levels.DailyChallenge(20261100 + d).Number != dc1.Number) differ++;
+        check(differ >= 15, "the daily challenge changes from day to day");
     }
 }

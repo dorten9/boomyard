@@ -71,8 +71,8 @@ namespace BoomYard.Core
             // Ball of the thumb on the inner side, then the thumb crossing over the index finger.
             parts.Add(Blob("ThumbBall", At(side, 222f, -0.022f, Radius + 0.01f), new Vec3(0.032f, 0.05f, 0.034f), -(222f + Turn) * side));
             var t0 = At(side, 214f, -0.006f, Radius + 0.011f);
-            var t1 = At(side, 178f, 0.014f, Radius + 0.006f);
-            var t2 = At(side, 142f, 0.021f, Radius + 0.004f);
+            var t1 = At(side, 178f, 0.01f, Radius + 0.006f);
+            var t2 = At(side, 140f, 0.013f, Radius + 0.004f);
             parts.Add(Bone("Thumb0", t0, t1, 0.0205f));
             parts.Add(Bone("Thumb1", t1, t2, 0.0185f));
             return parts;

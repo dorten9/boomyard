@@ -11,7 +11,7 @@ namespace BoomYard.UI
     /// </summary>
     public sealed class TouchControls : MonoBehaviour
     {
-        public RectTransform LighterButton, ThrowButton, PlaceButton, PauseButton;
+        public RectTransform LighterButton, ThrowButton, PlaceButton, PauseButton, DetonateButton;
         public readonly List<RectTransform> PocketSlots = new List<RectTransform>();
 
         public bool JoystickActive { get; private set; }
@@ -24,7 +24,7 @@ namespace BoomYard.UI
         const float JoyRadiusShare = 0.11f;   // of the screen height
         const float TapSeconds = 0.25f;
 
-        enum Role { None, Move, Look, Lighter, Throw, Place, Ui }
+        enum Role { None, Move, Look, Lighter, Throw, Place, Detonate, Ui }
 
         sealed class Finger
         {
@@ -126,6 +126,7 @@ namespace BoomYard.UI
             if (Hit(LighterButton, pos)) return Role.Lighter;
             if (Hit(ThrowButton, pos)) return Role.Throw;
             if (Hit(PlaceButton, pos)) return Role.Place;
+            if (Hit(DetonateButton, pos)) { input.Detonate = true; return Role.Ui; }
             bool mouse = Input.touchCount == 0;
             bool left = SaveService.Data.settings.leftHanded;
             if (!mouse && (left ? pos.x > Screen.width * 0.58f : pos.x < Screen.width * 0.42f)) return Role.Move;
@@ -189,6 +190,7 @@ namespace BoomYard.UI
             if (Input.GetKeyDown(KeyCode.E)) { input.Place = true; input.PlaceScreen = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f); }
             for (int i = 0; i < 8; i++) if (Input.GetKeyDown(KeyCode.Alpha1 + i)) input.Select = i;
             if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.P)) input.Pause = true;
+            if (Input.GetKeyDown(KeyCode.R)) input.Detonate = true;
         }
     }
 }

@@ -23,9 +23,10 @@ namespace BoomYard.UI
 
         // HUD
         Text timer, targets, damage, chain, wind, prompt, fuseTime, tutText;
-        Image chainBadge, windArrow, joyBase, joyKnob, catchRing, powerFill, tutCard, targetsPill;
+        Image chainBadge, windArrow, joyBase, joyKnob, catchRing, powerFill, tutCard, targetsPill, hudCoin;
         RectTransform fuseBar, fusePointer, powerBar, markers;
-        RectTransform lightBtn, throwBtn, placeBtn;
+        RectTransform lightBtn, throwBtn, placeBtn, boomBtn;
+        Text boomCaption;
         Image fuseRed, fuseOrange, fuseGreen;
         readonly List<Image> slotFrames = new List<Image>();
         readonly List<Text> slotCounts = new List<Text>();
@@ -149,7 +150,7 @@ namespace BoomYard.UI
         /// <summary>Left-handed: the action buttons move to the left edge and the pocket to the right.</summary>
         void ApplyHanded(bool left)
         {
-            foreach (var b in new[] { lightBtn, throwBtn, placeBtn, fuseBar })
+            foreach (var b in new[] { lightBtn, throwBtn, placeBtn, boomBtn, fuseBar })
             {
                 var x = Mathf.Abs(b.anchoredPosition.x);
                 b.anchorMin = b.anchorMax = new Vector2(left ? 0f : 1f, 0f);
@@ -183,11 +184,13 @@ namespace BoomYard.UI
             targets = UIKit.Label(targetsPill.transform, "Text", "", 24, new Color(0.07f, 0.04f, 0.02f), TextAnchor.MiddleCenter, true);
             UIKit.Stretch(targets.rectTransform);
 
-            // Top right: damage in dollars and the chain multiplier.
+            // Top right: the coins this round's wreckage is worth, and the chain multiplier.
             damage = UIKit.Label(hud, "Damage", Loc.Money(0), 40, UIKit.Fg, TextAnchor.UpperRight, true);
-            UIKit.Place(damage.rectTransform, new Vector2(1f, 1f), new Vector2(-40f, -22f), new Vector2(460f, 52f));
+            UIKit.Place(damage.rectTransform, new Vector2(1f, 1f), new Vector2(-40f, -22f), new Vector2(400f, 52f));
             damage.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.6f);
-            var dl = UIKit.Label(hud, "DamageLabel", "DAMAGE", 18, UIKit.Muted, TextAnchor.UpperRight);
+            hudCoin = UIKit.Image(hud, "Coin", Color.white, UIKit.Coin);
+            UIKit.Place(hudCoin.rectTransform, new Vector2(1f, 1f), new Vector2(-40f, -26f), new Vector2(40f, 40f));
+            var dl = UIKit.Label(hud, "DamageLabel", "COINS", 18, UIKit.Muted, TextAnchor.UpperRight);
             UIKit.Place(dl.rectTransform, new Vector2(1f, 1f), new Vector2(-42f, -72f), new Vector2(300f, 24f));
             chainBadge = UIKit.Image(hud, "Chain", UIKit.Ember, UIKit.Pill);
             UIKit.Place(chainBadge.rectTransform, new Vector2(1f, 1f), new Vector2(-40f, -104f), new Vector2(210f, 44f));
@@ -259,6 +262,10 @@ namespace BoomYard.UI
             controls.LighterButton = lightBtn;
             controls.ThrowButton = throwBtn;
             controls.PlaceButton = placeBtn;
+            // The detonator: shows while remote charges are waiting.
+            boomBtn = RoundButton("Boom", new Vector2(-330f, 300f), 128f, UIKit.Danger, UIKit.FlameIcon, "BOOM");
+            controls.DetonateButton = boomBtn;
+            boomCaption = boomBtn.GetComponentInChildren<Text>();
             powerBar = UIKit.Rect(throwBtn, "Power");
             UIKit.Place(powerBar, new Vector2(0.5f, 1f), new Vector2(0f, 36f), new Vector2(14f, 150f));
             powerBar.pivot = new Vector2(0.5f, 0f);
@@ -332,10 +339,19 @@ namespace BoomYard.UI
 
         // ---------- feedback ----------
 
-        public void Toast(string text)
+        public void Toast(string text, float seconds = 2.2f)
         {
             toast.text = text;
-            toastLeft = 2.2f;
+            toastLeft = seconds;
+        }
+
+        /// <summary>The level's twist, shown for a few seconds as the round starts.</summary>
+        public void RuleCard(LevelDef level, Destructible spare)
+        {
+            string text = level.Rule == LevelRule.Spare
+                ? Loc.F("rule.Spare", spare != null ? spare.Name.ToUpperInvariant() : "IT")
+                : Loc.T("rule." + level.Rule);
+            Toast(text, 4.5f);
         }
 
         public void Bonus(BonusKind kind) { Toast(Loc.T("bonus." + kind)); }
@@ -353,10 +369,10 @@ namespace BoomYard.UI
             targetPulse = 1f;
         }
 
-        /// <summary>"+$4,680" rising from what broke; chain links also show their multiplier.</summary>
+        /// <summary>"+94" coins rising from what broke; chain links also show their multiplier.</summary>
         public void Popup(Vector3 world, long value, float chainMult)
         {
-            if (value <= 0) return;
+            if (ScoreCalculator.CoinsFromDamage(value) <= 0) return;
             if (pops.Count > 24) { Destroy(pops[0].Text.gameObject); pops.RemoveAt(0); }
             string s = "+" + Loc.Money(value) + (chainMult > 1f ? "  ×" + chainMult.ToString("0.0") : "");
             var t = UIKit.Label(markers, "Pop", s, value >= 5000 ? 34 : 26, chainMult > 1f ? UIKit.Ember : UIKit.Flame, TextAnchor.MiddleCenter, true);
@@ -419,8 +435,13 @@ namespace BoomYard.UI
             var g = game;
             var player = Player.I;
             damage.text = Loc.Money(g.Score.Total);
+            boomBtn.gameObject.SetActive(LiveExplosive.RemoteCount > 0 || g.Level.Show && LiveExplosive.UnlitCount > 0);
+            boomCaption.text = g.Level.Show ? "SHOW" : "BOOM";
+            if (g.Level.Show) { targets.text = "FIREWORKS SHOW"; }
+            // The coin sits just left of the number, however wide it is.
+            hudCoin.rectTransform.anchoredPosition = new Vector2(-40f - damage.preferredWidth - 30f, -26f);
             float tl = g.Round.TimeLeft;
-            timer.text = Loc.Time(tl);
+            timer.text = g.Level.Show ? "NO CLOCK" : Loc.Time(tl);
             bool urgent = tl <= 10f && !g.Round.Frozen;
             timer.color = urgent ? Color.Lerp(UIKit.Danger, UIKit.Fg, Mathf.PingPong(Time.unscaledTime * 2f, 1f)) : UIKit.Fg;
             targetPulse = Mathf.MoveTowards(targetPulse, 0f, dt * 2f);
@@ -532,7 +553,23 @@ namespace BoomYard.UI
                 img.color = off ? new Color(1f, 0.48f, 0.1f, 0.6f) : UIKit.Ember;
             }
             for (int i = used; i < markerPool.Count; i++) markerPool[i].gameObject.SetActive(false);
+
+            // The one to keep: a green KEEP label over it.
+            var spare = game.Arena.Spare;
+            if (spareLabel == null)
+            {
+                spareLabel = UIKit.Label(markers, "Keep", "KEEP", 22, UIKit.Ok, TextAnchor.MiddleCenter, true);
+                spareLabel.rectTransform.anchorMin = spareLabel.rectTransform.anchorMax = Vector2.zero;
+                spareLabel.rectTransform.sizeDelta = new Vector2(120f, 30f);
+                spareLabel.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.7f);
+            }
+            Vector2 at = Vector2.zero;
+            bool back = true;
+            bool show = spare != null && !spare.Destroyed && ToLocal(spare.transform.position + Vector3.up * (spare.Size().y + 0.35f), out at, out back) && !back;
+            spareLabel.gameObject.SetActive(show);
+            if (show) spareLabel.rectTransform.anchoredPosition = at;
         }
+        Text spareLabel;
 
         /// <summary>Zones are laid out by the predicted flight time of the current throw (spec §04).</summary>
         void UpdateFuse(Player player)

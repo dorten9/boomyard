@@ -114,7 +114,7 @@ namespace BoomYard.Game
             Fx.Debris(center, hit.Origin, Mathf.Clamp((int)(Def.Mass / 25f), 3, 10), baseColors.Length > 0 ? baseColors[0] : Color.grey, Mathf.Clamp(Size().magnitude * 0.4f, 0.4f, 2.5f));
             DetachParts(hit.Origin);
 
-            if ((reaction & Reaction.Launch) != 0) Launch(hit.Origin, hit.Amount);
+            if ((reaction & Reaction.Launch) != 0) Launch(hit.Origin, hit.Amount, hit.Placement);
             if ((reaction & Reaction.Douse) != 0) FireGrid.I.Douse(center, Def.BlastRadius);
             if ((reaction & Reaction.Explode) != 0) StartCoroutine(Secondary());
             else if ((reaction & Reaction.Burn) != 0) Ignite(Def.BurnSeconds);
@@ -125,7 +125,7 @@ namespace BoomYard.Game
         IEnumerator Secondary()
         {
             if (fire == null) fire = Fx.Fire(transform, FirePoint, FireSize);
-            var gas = Def.Id == "gascyl" && Random.value < 0.5f;
+            var gas = Def.Id == "gascyl";
             if (gas) StartCoroutine(Rocket(Def.BlastDelay + 0.6f));
             yield return new WaitForSeconds(Def.BlastDelay + (gas ? 0.6f : 0f));
             var pos = transform.TransformPoint(FirePoint);
@@ -153,6 +153,15 @@ namespace BoomYard.Game
         {
             var rb = MakeDynamic();
             var dir = (Vector3.up * 1.5f + Random.insideUnitSphere).normalized;
+            var whistle = gameObject.AddComponent<AudioSource>();
+            whistle.clip = StreetSounds.Whistle;
+            whistle.spatialBlend = 1f;
+            whistle.minDistance = 3f;
+            whistle.maxDistance = 80f;
+            whistle.volume = 0.7f * Sfx.I.Volume;
+            whistle.Play();
+            Fx.Smolder(transform, FirePoint, 0.4f);
+            StreetLife.TrackFlight(this);
             for (float t = 0f; t < seconds; t += Time.fixedDeltaTime)
             {
                 rb.AddForce(dir * rb.mass * 30f, ForceMode.Force);
@@ -160,11 +169,14 @@ namespace BoomYard.Game
             }
         }
 
-        void Launch(Vector3 origin, float power)
+        void Launch(Vector3 origin, float power, Placement placement)
         {
             var rb = MakeDynamic();
             float dv = Mathf.Clamp(power / 25f, 2f, 14f) * Mathf.Clamp(Mathf.Sqrt(40f / Mathf.Max(1f, rb.mass)), 0.15f, 1f);
             var dir = (transform.position - origin).normalized + Vector3.up * 0.7f;
+            // A charge inside a mailbox or a bin sends it straight up, high.
+            if (placement == Placement.Contained && Def.Mass < 100f) { dir = Vector3.up * 2.5f + Random.insideUnitSphere * 0.4f; dv = Mathf.Max(dv, 13f); }
+            StreetLife.TrackFlight(this);
             rb.AddForce(dir.normalized * dv, ForceMode.VelocityChange);
             rb.AddTorque(Random.insideUnitSphere * dv, ForceMode.VelocityChange);
             var impact = gameObject.GetComponent<ImpactDamage>();

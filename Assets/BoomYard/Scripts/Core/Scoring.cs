@@ -16,6 +16,11 @@ namespace BoomYard.Core
         public const float LastSecondFuse = 0.3f;
         public const float CleanSweepMult = 1.5f;   // the whole arena destroyed
         public const int HandBurnPenalty = -2000;   // went off in the hand
+        public const int AirTimeBonus = 2500;       // something launched stayed in the air 1.4 s or more
+        public const float AirTimeSeconds = 1.4f;
+        public const int DominoBonus = 6000;        // a chain reached five links
+        public const int DominoLinks = 5;
+        public const int HoleInOneBonus = 4000;     // a thrown charge dropped straight into a bin or a box
 
         public static float MaterialMult(Material m)
         {
@@ -58,11 +63,16 @@ namespace BoomYard.Core
             return 0;
         }
 
-        /// <summary>Soft currency earned from a round: 2% of the damage (spec §14).</summary>
-        public static long CoinsFromDamage(long damage) { return damage <= 0 ? 0 : damage * 2 / 100; }
+        /// <summary>
+        /// The game has one currency, coins, and damage is counted in them: every coin that rises from the
+        /// wreckage is yours. The values in the catalog are in dollars of damage, at 50 dollars a coin.
+        /// </summary>
+        public const int DamagePerCoin = 50;
+
+        public static long CoinsFromDamage(long damage) { return damage <= 0 ? 0 : (damage + DamagePerCoin / 2) / DamagePerCoin; }
     }
 
-    public enum BonusKind { CloseCall, Multi, LastSecond, HandBurn }
+    public enum BonusKind { CloseCall, Multi, LastSecond, HandBurn, AirTime, Domino, HoleInOne }
 
     /// <summary>The running total of one round, kept as the breakdown the results screen shows.</summary>
     public sealed class RoundScore
@@ -106,6 +116,9 @@ namespace BoomYard.Core
                 case BonusKind.CloseCall: v = ScoreCalculator.CloseCallBonus; break;
                 case BonusKind.Multi: v = ScoreCalculator.MultiBonus; break;
                 case BonusKind.LastSecond: v = ScoreCalculator.LastSecondBonus; break;
+                case BonusKind.AirTime: v = ScoreCalculator.AirTimeBonus; break;
+                case BonusKind.Domino: v = ScoreCalculator.DominoBonus; break;
+                case BonusKind.HoleInOne: v = ScoreCalculator.HoleInOneBonus; break;
                 default: v = ScoreCalculator.HandBurnPenalty; break;
             }
             Bonuses += v;

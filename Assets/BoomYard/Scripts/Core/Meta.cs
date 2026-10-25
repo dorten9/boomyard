@@ -3,13 +3,13 @@ using System.Collections.Generic;
 
 namespace BoomYard.Core
 {
-    /// <summary>What the shop sells: packs of explosives for coins, lighters and upgrades for coins or gems.</summary>
+    /// <summary>What the shop sells, all for coins: packs of explosives, lighters and upgrades.</summary>
     public sealed class ShopItem
     {
-        public string Id, Name, Kind;   // Kind: "explosive", "lighter", "upgrade"
+        public string Id, Name, Kind;   // Kind: "explosive", "lighter", "upgrade", "glove", "lighterskin"
         public string Grants;            // explosive / lighter / upgrade id
         public int Amount;               // units in the pack
-        public int Coins, Gems;          // price (one of them)
+        public int Coins;                // price
         public int UnlockLevel;          // shown from this level on
     }
 
@@ -17,18 +17,33 @@ namespace BoomYard.Core
     {
         public static readonly ShopItem[] Items =
         {
-            new ShopItem { Id = "pack_blackcat", Name = "Black Cats ×10", Kind = "explosive", Grants = "blackcat", Amount = 10, Coins = 120 },
-            new ShopItem { Id = "pack_string", Name = "Firecracker String ×2", Kind = "explosive", Grants = "string50", Amount = 2, Coins = 220 },
-            new ShopItem { Id = "pack_sparkler", Name = "Sparkler Bombs ×3", Kind = "explosive", Grants = "sparkler", Amount = 3, Coins = 200 },
-            new ShopItem { Id = "pack_m80", Name = "M-80 ×3", Kind = "explosive", Grants = "m80", Amount = 3, Coins = 450, UnlockLevel = 2 },
-            new ShopItem { Id = "pack_cherry", Name = "Cherry Bombs ×3", Kind = "explosive", Grants = "cherry", Amount = 3, Coins = 380, UnlockLevel = 3 },
-            new ShopItem { Id = "pack_pipe", Name = "Pipe Bomb ×1", Kind = "explosive", Grants = "pipe", Amount = 1, Coins = 900, UnlockLevel = 6 },
-            new ShopItem { Id = "pack_dynamite", Name = "Dynamite ×2", Kind = "explosive", Grants = "dynamite", Amount = 2, Coins = 1200, UnlockLevel = 8 },
-            new ShopItem { Id = "lighter_zippo", Name = "Zippo", Kind = "lighter", Grants = "zippo", Amount = 1, Gems = 20 },
-            new ShopItem { Id = "lighter_turbo", Name = "Turbo Lighter", Kind = "lighter", Grants = "turbo", Amount = 1, Gems = 45 },
-            new ShopItem { Id = "up_vest", Name = "Vest: +1 pocket slot", Kind = "upgrade", Grants = "vest", Amount = 1, Coins = 1500 },
-            new ShopItem { Id = "up_legs", Name = "Lungs: run longer & faster", Kind = "upgrade", Grants = "legs", Amount = 1, Coins = 1000 },
-            new ShopItem { Id = "up_watch", Name = "Watch: +10 s every level", Kind = "upgrade", Grants = "watch", Amount = 1, Gems = 30 },
+            new ShopItem { Id = "pack_blackcat", Name = "Black Cats ×10", Kind = "explosive", Grants = "blackcat", Amount = 10, Coins = 200 },
+            new ShopItem { Id = "pack_string", Name = "Firecracker String ×2", Kind = "explosive", Grants = "string50", Amount = 2, Coins = 400 },
+            new ShopItem { Id = "pack_sparkler", Name = "Sparkler Bombs ×3", Kind = "explosive", Grants = "sparkler", Amount = 3, Coins = 350 },
+            new ShopItem { Id = "pack_m80", Name = "M-80 ×3", Kind = "explosive", Grants = "m80", Amount = 3, Coins = 800, UnlockLevel = 2 },
+            new ShopItem { Id = "pack_cherry", Name = "Cherry Bombs ×3", Kind = "explosive", Grants = "cherry", Amount = 3, Coins = 650, UnlockLevel = 3 },
+            new ShopItem { Id = "pack_pipe", Name = "Pipe Bomb ×1", Kind = "explosive", Grants = "pipe", Amount = 1, Coins = 1500, UnlockLevel = 6 },
+            new ShopItem { Id = "pack_dynamite", Name = "Dynamite ×2", Kind = "explosive", Grants = "dynamite", Amount = 2, Coins = 2000, UnlockLevel = 8 },
+            new ShopItem { Id = "pack_rocket", Name = "Rockets ×6", Kind = "explosive", Grants = "rocket", Amount = 6, Coins = 500, UnlockLevel = 3 },
+            new ShopItem { Id = "pack_timer", Name = "Timer Charges ×3", Kind = "explosive", Grants = "timer", Amount = 3, Coins = 900, UnlockLevel = 14 },
+            new ShopItem { Id = "pack_remote", Name = "Remote Charges ×4", Kind = "explosive", Grants = "remote", Amount = 4, Coins = 1400, UnlockLevel = 22 },
+            new ShopItem { Id = "lighter_zippo", Name = "Zippo", Kind = "lighter", Grants = "zippo", Amount = 1, Coins = 2500 },
+            new ShopItem { Id = "lighter_turbo", Name = "Turbo Lighter", Kind = "lighter", Grants = "turbo", Amount = 1, Coins = 5000 },
+            new ShopItem { Id = "up_vest", Name = "Vest: +1 pocket slot", Kind = "upgrade", Grants = "vest", Amount = 1, Coins = 2500 },
+            new ShopItem { Id = "up_legs", Name = "Lungs: run longer & faster", Kind = "upgrade", Grants = "legs", Amount = 1, Coins = 1800 },
+            new ShopItem { Id = "up_watch", Name = "Watch: +10 s every level", Kind = "upgrade", Grants = "watch", Amount = 1, Coins = 3000 },
+            // Style: what your hands and lighter look like. Looks only.
+            new ShopItem { Id = "glove_none", Name = "Bare Hands", Kind = "glove", Grants = "", Amount = 1, Coins = 0 },
+            new ShopItem { Id = "glove_work", Name = "Work Gloves", Kind = "glove", Grants = "work", Amount = 1, Coins = 600 },
+            new ShopItem { Id = "glove_garden", Name = "Garden Gloves", Kind = "glove", Grants = "garden", Amount = 1, Coins = 700 },
+            new ShopItem { Id = "glove_black", Name = "Black Leather", Kind = "glove", Grants = "black", Amount = 1, Coins = 900 },
+            new ShopItem { Id = "glove_hivis", Name = "Hi-Vis Orange", Kind = "glove", Grants = "hivis", Amount = 1, Coins = 1200 },
+            new ShopItem { Id = "glove_gold", Name = "Gold Gloves", Kind = "glove", Grants = "gold", Amount = 1, Coins = 3000 },
+            new ShopItem { Id = "skin_none", Name = "Grey Lighter", Kind = "lighterskin", Grants = "", Amount = 1, Coins = 0 },
+            new ShopItem { Id = "skin_red", Name = "Red Lighter", Kind = "lighterskin", Grants = "red", Amount = 1, Coins = 400 },
+            new ShopItem { Id = "skin_chrome", Name = "Chrome Lighter", Kind = "lighterskin", Grants = "chrome", Amount = 1, Coins = 600 },
+            new ShopItem { Id = "skin_camo", Name = "Camo Lighter", Kind = "lighterskin", Grants = "camo", Amount = 1, Coins = 800 },
+            new ShopItem { Id = "skin_gold", Name = "Gold Lighter", Kind = "lighterskin", Grants = "gold", Amount = 1, Coins = 2500 },
         };
 
         public static ShopItem Get(string id)
@@ -38,13 +53,50 @@ namespace BoomYard.Core
         }
     }
 
+    /// <summary>Colour (RGB), metalness and smoothness of a glove or lighter style.</summary>
+    public struct Look
+    {
+        public float R, G, B, Metal, Smooth;
+        public Look(float r, float g, float b, float metal, float smooth) { R = r; G = g; B = b; Metal = metal; Smooth = smooth; }
+    }
+
+    public static class Styles
+    {
+        /// <summary>A glove's look, or false for bare hands.</summary>
+        public static bool Glove(string id, out Look look)
+        {
+            switch (id)
+            {
+                case "work": look = new Look(0.72f, 0.55f, 0.34f, 0f, 0.25f); return true;
+                case "garden": look = new Look(0.25f, 0.5f, 0.22f, 0f, 0.45f); return true;
+                case "black": look = new Look(0.06f, 0.06f, 0.065f, 0f, 0.55f); return true;
+                case "hivis": look = new Look(1f, 0.42f, 0.05f, 0f, 0.4f); return true;
+                case "gold": look = new Look(1f, 0.76f, 0.3f, 1f, 0.8f); return true;
+            }
+            look = default(Look);
+            return false;
+        }
+
+        public static Look Lighter(string id)
+        {
+            switch (id)
+            {
+                case "red": return new Look(0.72f, 0.08f, 0.06f, 0.2f, 0.65f);
+                case "chrome": return new Look(0.85f, 0.86f, 0.88f, 1f, 0.92f);
+                case "camo": return new Look(0.3f, 0.34f, 0.2f, 0f, 0.3f);
+                case "gold": return new Look(1f, 0.76f, 0.3f, 1f, 0.85f);
+                default: return new Look(0.36f, 0.37f, 0.4f, 0.3f, 0.5f);
+            }
+        }
+    }
+
     /// <summary>A daily mission: do something N times today.</summary>
     [Serializable]
     public sealed class Mission
     {
         public string kind;     // destroy, destroy_id, chain, clear, stars, contained, blasts
         public string target;   // object id for destroy_id
-        public int goal, progress, coins, gems;
+        public int goal, progress, coins;
         public bool claimed;
         public bool Done { get { return progress >= goal; } }
 
@@ -83,9 +135,9 @@ namespace BoomYard.Core
             {
                 new Mission { kind = "destroy", goal = 15 + r.Next(3) * 5, coins = 150 },
                 new Mission { kind = "destroy_id", target = r.Next(2) == 0 ? "van" : "sedan", goal = 2, coins = 250 },
-                new Mission { kind = "chain", goal = 3 + r.Next(2), coins = 200, gems = 2 },
+                new Mission { kind = "chain", goal = 3 + r.Next(2), coins = 400 },
                 new Mission { kind = "clear", goal = 2 + r.Next(2), coins = 200 },
-                new Mission { kind = "stars", goal = 4 + r.Next(3), gems = 3 },
+                new Mission { kind = "stars", goal = 4 + r.Next(3), coins = 300 },
                 new Mission { kind = "contained", goal = 3, coins = 180 },
                 new Mission { kind = "blasts", goal = 20, coins = 120 },
                 new Mission { kind = "destroy_id", target = "window", goal = 10, coins = 150 },
@@ -113,11 +165,10 @@ namespace BoomYard.Core
         }
     }
 
-    /// <summary>The 7-day login calendar: coins every day, gems on days 3 and 7.</summary>
+    /// <summary>The 7-day login calendar: coins every day, a big pile on day 7.</summary>
     public static class DailyReward
     {
-        public static readonly int[] Coins = { 100, 150, 0, 250, 300, 400, 0 };
-        public static readonly int[] Gems = { 0, 0, 5, 0, 0, 0, 15 };
+        public static readonly int[] Coins = { 100, 150, 500, 250, 300, 400, 1500 };
 
         /// <summary>Next streak day (0–6) given the last claim day and today (days as Daily.Seed values).</summary>
         public static int NextDay(int lastClaimDate, int streak, DateTime today)
@@ -133,11 +184,15 @@ namespace BoomYard.Core
 
     public static class Progress
     {
-        /// <summary>Coins for clearing a level: its reward the first time, a share on replays, plus 2% of the damage.</summary>
-        public static int LevelCoins(LevelDef level, bool firstClear, int newStars, long damage)
+        /// <summary>
+        /// Coins from a round: everything the wreckage was worth, plus on a clear the level's reward (in full the
+        /// first time, a fifth on replays) and 40 for every new star.
+        /// </summary>
+        public static int LevelCoins(LevelDef level, bool cleared, bool firstClear, int newStars, long damage)
         {
-            int baseCoins = firstClear ? level.Reward : level.Reward / 5;
-            return baseCoins + newStars * 40 + (int)(ScoreCalculator.CoinsFromDamage(damage) / 10);
+            int wreck = (int)ScoreCalculator.CoinsFromDamage(damage);
+            if (!cleared) return wreck;
+            return wreck + (firstClear ? level.Reward : level.Reward / 5) + newStars * 40;
         }
     }
 }
