@@ -19,7 +19,7 @@ namespace BoomYard.EditorTools
         const string DoneKey = "BoomYard.ProjectSetup.v1";
 
         /// <summary>Built-in shaders the UI uses (the world's URP materials come from PipelineSetup's templates).</summary>
-        public static readonly string[] RuntimeShaders = { "UI/Default", "Sprites/Default", "Hidden/Universal Render Pipeline/Edge Adaptive Spatial Upsampling" };
+        public static readonly string[] RuntimeShaders = { "UI/Default", "Sprites/Default" };
 
         static ProjectSetup()
         {
