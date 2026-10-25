@@ -48,6 +48,8 @@ namespace BoomYard.Game
         public long shekels;              // coins (the field keeps its old name so saves still load)
         public float bestGnome;           // longest gnome flight, metres
         public List<int> goldGnomes = new List<int>();   // levels whose golden gnome was found
+        public string glove = "", lighterSkin = "";     // style (looks only)
+        public List<string> styles = new List<string>();  // style items bought (shop ids)
         public int gems;                  // retired: gems became coins (100 each) on load
         public string lighter = "basic";
         public List<string> lighters = new List<string> { "basic" };

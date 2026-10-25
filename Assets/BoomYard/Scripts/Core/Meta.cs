@@ -6,7 +6,7 @@ namespace BoomYard.Core
     /// <summary>What the shop sells, all for coins: packs of explosives, lighters and upgrades.</summary>
     public sealed class ShopItem
     {
-        public string Id, Name, Kind;   // Kind: "explosive", "lighter", "upgrade"
+        public string Id, Name, Kind;   // Kind: "explosive", "lighter", "upgrade", "glove", "lighterskin"
         public string Grants;            // explosive / lighter / upgrade id
         public int Amount;               // units in the pack
         public int Coins;                // price
@@ -31,12 +31,61 @@ namespace BoomYard.Core
             new ShopItem { Id = "up_vest", Name = "Vest: +1 pocket slot", Kind = "upgrade", Grants = "vest", Amount = 1, Coins = 2500 },
             new ShopItem { Id = "up_legs", Name = "Lungs: run longer & faster", Kind = "upgrade", Grants = "legs", Amount = 1, Coins = 1800 },
             new ShopItem { Id = "up_watch", Name = "Watch: +10 s every level", Kind = "upgrade", Grants = "watch", Amount = 1, Coins = 3000 },
+            // Style: what your hands and lighter look like. Looks only.
+            new ShopItem { Id = "glove_none", Name = "Bare Hands", Kind = "glove", Grants = "", Amount = 1, Coins = 0 },
+            new ShopItem { Id = "glove_work", Name = "Work Gloves", Kind = "glove", Grants = "work", Amount = 1, Coins = 600 },
+            new ShopItem { Id = "glove_garden", Name = "Garden Gloves", Kind = "glove", Grants = "garden", Amount = 1, Coins = 700 },
+            new ShopItem { Id = "glove_black", Name = "Black Leather", Kind = "glove", Grants = "black", Amount = 1, Coins = 900 },
+            new ShopItem { Id = "glove_hivis", Name = "Hi-Vis Orange", Kind = "glove", Grants = "hivis", Amount = 1, Coins = 1200 },
+            new ShopItem { Id = "glove_gold", Name = "Gold Gloves", Kind = "glove", Grants = "gold", Amount = 1, Coins = 3000 },
+            new ShopItem { Id = "skin_none", Name = "Grey Lighter", Kind = "lighterskin", Grants = "", Amount = 1, Coins = 0 },
+            new ShopItem { Id = "skin_red", Name = "Red Lighter", Kind = "lighterskin", Grants = "red", Amount = 1, Coins = 400 },
+            new ShopItem { Id = "skin_chrome", Name = "Chrome Lighter", Kind = "lighterskin", Grants = "chrome", Amount = 1, Coins = 600 },
+            new ShopItem { Id = "skin_camo", Name = "Camo Lighter", Kind = "lighterskin", Grants = "camo", Amount = 1, Coins = 800 },
+            new ShopItem { Id = "skin_gold", Name = "Gold Lighter", Kind = "lighterskin", Grants = "gold", Amount = 1, Coins = 2500 },
         };
 
         public static ShopItem Get(string id)
         {
             foreach (var i in Items) if (i.Id == id) return i;
             return null;
+        }
+    }
+
+    /// <summary>Colour (RGB), metalness and smoothness of a glove or lighter style.</summary>
+    public struct Look
+    {
+        public float R, G, B, Metal, Smooth;
+        public Look(float r, float g, float b, float metal, float smooth) { R = r; G = g; B = b; Metal = metal; Smooth = smooth; }
+    }
+
+    public static class Styles
+    {
+        /// <summary>A glove's look, or false for bare hands.</summary>
+        public static bool Glove(string id, out Look look)
+        {
+            switch (id)
+            {
+                case "work": look = new Look(0.72f, 0.55f, 0.34f, 0f, 0.25f); return true;
+                case "garden": look = new Look(0.25f, 0.5f, 0.22f, 0f, 0.45f); return true;
+                case "black": look = new Look(0.06f, 0.06f, 0.065f, 0f, 0.55f); return true;
+                case "hivis": look = new Look(1f, 0.42f, 0.05f, 0f, 0.4f); return true;
+                case "gold": look = new Look(1f, 0.76f, 0.3f, 1f, 0.8f); return true;
+            }
+            look = default(Look);
+            return false;
+        }
+
+        public static Look Lighter(string id)
+        {
+            switch (id)
+            {
+                case "red": return new Look(0.72f, 0.08f, 0.06f, 0.2f, 0.65f);
+                case "chrome": return new Look(0.85f, 0.86f, 0.88f, 1f, 0.92f);
+                case "camo": return new Look(0.3f, 0.34f, 0.2f, 0f, 0.3f);
+                case "gold": return new Look(1f, 0.76f, 0.3f, 1f, 0.85f);
+                default: return new Look(0.36f, 0.37f, 0.4f, 0.3f, 0.5f);
+            }
         }
     }
 

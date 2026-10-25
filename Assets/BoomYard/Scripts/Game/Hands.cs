@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using BoomYard.Core;
 using UnityEngine;
 
@@ -13,6 +14,9 @@ namespace BoomYard.Game
         public bool FlameOn, Lighting, Down;
 
         Transform left, right, item, flame, fuseTip;
+        readonly List<Renderer> handRenderers = new List<Renderer>();
+        Renderer lighterBody;
+        UnityEngine.Material skinMat;
         Light flameLight;
         ParticleSystem sparks;
         float throwT = 1f, lightT, downT, sway;
@@ -35,6 +39,7 @@ namespace BoomYard.Game
 
             // Lighter: body, steel top, flame and its light.
             var lighter = Part(h.left, PrimitiveType.Cube, new Vector3(0.012f, 0.05f, 0.02f), new Vector3(0.024f, 0.05f, 0.012f), Mats.Lit(new Color(0.36f, 0.37f, 0.4f), 0.3f, 0.5f));
+            h.lighterBody = lighter.GetComponent<Renderer>();
             Part(lighter.transform, PrimitiveType.Cube, new Vector3(0f, 0.6f, 0f), new Vector3(0.95f, 0.25f, 1f), Mats.Lit(Mats.Steel, 0.9f, 0.6f));
             // A quad with white vertex colours (primitive meshes have none, and the particle shader multiplies them in).
             var f = new GameObject("Flame");
@@ -64,7 +69,7 @@ namespace BoomYard.Game
             var arm = new GameObject(name).transform;
             arm.SetParent(transform, false);
             float side = isLeft ? -1f : 1f;
-            var skin = Mats.Lit(Mats.Skin, 0f, 0.35f);
+            var skin = skinMat != null ? skinMat : (skinMat = Mats.Lit(Mats.Skin, 0f, 0.35f));
             var sleeve = Mats.Lit(new Color(0.12f, 0.13f, 0.15f), 0f, 0.2f);
             // Forearm reaching in from the bottom corner and a sleeve.
             var fore = Part(arm, PrimitiveType.Capsule, new Vector3(side * 0.05f, -0.1f, -0.12f), new Vector3(0.06f, 0.14f, 0.06f), skin);
@@ -79,22 +84,34 @@ namespace BoomYard.Game
             grip.localRotation = isLeft ? Quaternion.identity : ItemTilt;
             foreach (var p in HandRig.Fist(side))
             {
-                if (p.Kind == HandPartKind.Bone) Bone(grip, V(p.A), V(p.B), p.Diameter, skin);
+                GameObject piece;
+                if (p.Kind == HandPartKind.Bone) piece = Bone(grip, V(p.A), V(p.B), p.Diameter, skin);
                 else
                 {
-                    var blob = Part(grip, PrimitiveType.Sphere, V(p.A), V(p.Size), skin);
-                    blob.transform.localRotation = Quaternion.Euler(0f, p.Yaw, 0f);
+                    piece = Part(grip, PrimitiveType.Sphere, V(p.A), V(p.Size), skin);
+                    piece.transform.localRotation = Quaternion.Euler(0f, p.Yaw, 0f);
                 }
+                handRenderers.Add(piece.GetComponent<Renderer>());
             }
             // Wrist: from under the back of the hand to the top of the forearm.
             var wrist = arm.InverseTransformPoint(grip.TransformPoint(V(HandRig.WristTop(side))));
             var elbowSide = fore.transform.localPosition + fore.transform.localRotation * Vector3.up * 0.11f;
-            Bone(arm, wrist, elbowSide, 0.046f, skin);
+            handRenderers.Add(Bone(arm, wrist, elbowSide, 0.046f, skin).GetComponent<Renderer>());
             arm.localPosition = isLeft ? LeftRest : RightRest;
             return arm;
         }
 
         static Vector3 V(Vec3 v) { return new Vector3(v.X, v.Y, v.Z); }
+
+        /// <summary>Gloves on the fists (or bare skin) and the lighter's finish, from the shop's style items.</summary>
+        public void ApplyStyle(string glove, string lighterSkin)
+        {
+            Look g;
+            var hand = Styles.Glove(glove, out g) ? Mats.Lit(new Color(g.R, g.G, g.B), g.Metal, g.Smooth) : skinMat;
+            foreach (var r in handRenderers) if (r != null) r.sharedMaterial = hand;
+            var l = Styles.Lighter(lighterSkin);
+            if (lighterBody != null) lighterBody.sharedMaterial = Mats.Lit(new Color(l.R, l.G, l.B), l.Metal, l.Smooth);
+        }
 
         /// <summary>A capsule from a to b (both ends rounded), for finger bones and the wrist.</summary>
         static GameObject Bone(Transform parent, Vector3 a, Vector3 b, float d, UnityEngine.Material mat)

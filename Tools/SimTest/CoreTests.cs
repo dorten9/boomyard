@@ -213,7 +213,7 @@ static class MetaTests
             foreach (var k in l.Kit) check(Catalog.Explosive(k.id) != null, "level " + l.Number + " kit item exists: " + k.id);
         }
         foreach (var it in Shop.Items)
-            check(it.Coins > 0, "shop item has a price in coins: " + it.Id);
+            check(it.Coins > 0 || it.Id.EndsWith("_none"), "shop item has a price in coins: " + it.Id);
 
         var a = Missions.ForDay(20261024);
         var b = Missions.ForDay(20261024);

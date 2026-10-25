@@ -304,8 +304,8 @@ namespace BoomYard.UI
             ShowLayer(false);
             var s = NewScreen("Shop");
             TopBar(s, "SHOP", () => game.GoHome());
-            string[] tabs = { "explosive", "lighter", "upgrade" };
-            string[] names = { "EXPLOSIVES", "LIGHTERS", "UPGRADES" };
+            string[] tabs = { "explosive", "lighter", "upgrade", "style" };
+            string[] names = { "EXPLOSIVES", "LIGHTERS", "UPGRADES", "STYLE" };
             for (int i = 0; i < tabs.Length; i++)
             {
                 string tab = tabs[i];
@@ -321,7 +321,8 @@ namespace BoomYard.UI
             const float cw = 500f, ch = 230f;
             foreach (var item in Shop.Items)
             {
-                if (item.Kind != shopTab) continue;
+                bool style = item.Kind == "glove" || item.Kind == "lighterskin";
+                if (shopTab == "style" ? !style : item.Kind != shopTab) continue;
                 int col = idx % 3, row = idx / 3;
                 idx++;
                 var card = UIKit.Image(content, item.Id, Card, UIKit.Rounded);
@@ -330,9 +331,10 @@ namespace BoomYard.UI
                 card.rectTransform.anchoredPosition = new Vector2(col * (cw + 24f), -row * (ch + 24f));
                 card.rectTransform.sizeDelta = new Vector2(cw, ch);
                 bool locked = item.UnlockLevel > save.unlocked;
-                bool owned = item.Kind != "explosive" && (save.lighters.Contains(item.Grants) || save.Has(item.Grants));
-                bool equipped = item.Kind == "lighter" && save.lighter == item.Grants;
-                var chip = UIKit.Image(card.transform, "Chip", item.Kind == "explosive" ? ItemModel.Chip(item.Grants) : item.Kind == "lighter" ? UIKit.Flame : UIKit.SteelBlue, item.Kind == "explosive" ? UIKit.Rounded : item.Kind == "lighter" ? UIKit.FlameIcon : UIKit.Star);
+                bool owned = style ? item.Coins == 0 || save.styles.Contains(item.Id) : item.Kind != "explosive" && (save.lighters.Contains(item.Grants) || save.Has(item.Grants));
+                bool equipped = item.Kind == "lighter" && save.lighter == item.Grants
+                    || item.Kind == "glove" && save.glove == item.Grants || item.Kind == "lighterskin" && save.lighterSkin == item.Grants;
+                var chip = UIKit.Image(card.transform, "Chip", style ? StyleColor(item) : item.Kind == "explosive" ? ItemModel.Chip(item.Grants) : item.Kind == "lighter" ? UIKit.Flame : UIKit.SteelBlue, style ? UIKit.Circle : item.Kind == "explosive" ? UIKit.Rounded : item.Kind == "lighter" ? UIKit.FlameIcon : UIKit.Star);
                 UIKit.Place(chip.rectTransform, new Vector2(0f, 1f), new Vector2(24f, -24f), item.Kind == "explosive" ? new Vector2(38f, 70f) : new Vector2(70f, 70f));
                 var title = UIKit.Label(card.transform, "Name", item.Name, 28, UIKit.Fg, TextAnchor.UpperLeft, true);
                 UIKit.Place(title.rectTransform, new Vector2(0f, 1f), new Vector2(118f, -24f), new Vector2(360f, 40f));
@@ -344,7 +346,7 @@ namespace BoomYard.UI
                     var have = UIKit.Label(card.transform, "Have", "You have " + save.Count(item.Grants), 19, UIKit.Muted, TextAnchor.LowerLeft);
                     UIKit.Place(have.rectTransform, new Vector2(0f, 0f), new Vector2(24f, 26f), new Vector2(240f, 30f));
                 }
-                string label = locked ? "LEVEL " + item.UnlockLevel : equipped ? "EQUIPPED" : owned ? (item.Kind == "lighter" ? "EQUIP" : "OWNED") : Loc.Coins(item.Coins);
+                string label = locked ? "LEVEL " + item.UnlockLevel : equipped ? "EQUIPPED" : owned ? (item.Kind == "upgrade" ? "OWNED" : "EQUIP") : Loc.Coins(item.Coins);
                 bool canBuy = !locked && !equipped && !(owned && item.Kind == "upgrade");
                 var price = UIKit.Button(card.transform, "Buy", label, canBuy ? UIKit.Ember : new Color(0.2f, 0.19f, 0.2f), canBuy ? Dark : UIKit.Muted, () =>
                 {
@@ -365,8 +367,18 @@ namespace BoomYard.UI
             content.sizeDelta = new Vector2(0f, ((idx + 2) / 3) * (ch + 24f));
         }
 
+        static Color StyleColor(ShopItem item)
+        {
+            Look l;
+            if (item.Kind == "glove") return Styles.Glove(item.Grants, out l) ? new Color(l.R, l.G, l.B) : Mats.Skin;
+            l = Styles.Lighter(item.Grants);
+            return new Color(l.R, l.G, l.B);
+        }
+
         static string Describe(ShopItem item)
         {
+            if (item.Kind == "glove") return item.Grants == "" ? "Just your hands." : "Gloves for both hands. Looks only.";
+            if (item.Kind == "lighterskin") return "A new finish for your lighter. Looks only.";
             if (item.Kind == "explosive")
             {
                 var e = Catalog.Explosive(item.Grants);

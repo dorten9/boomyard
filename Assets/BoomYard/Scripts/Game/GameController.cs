@@ -93,6 +93,7 @@ namespace BoomYard.Game
             Player = Player.Create(Arena.Spawn, Arena.SpawnYaw);
             Player.ResetForRound(Arena.Spawn, Arena.SpawnYaw, Catalog.Lighter(save.lighter), seed);
             Player.Sensitivity = save.settings.sensitivity;
+            Player.Hands.ApplyStyle(save.glove, save.lighterSkin);
             Rendering.SetupCamera(Player.Cam, Quality.Tier);
             Tutorial = gameObject.AddComponent<Tutorial>();
 
@@ -517,6 +518,22 @@ namespace BoomYard.Game
             var save = SaveService.Data;
             if (item.Kind == "lighter" && save.lighters.Contains(item.Grants)) { save.lighter = item.Grants; SaveService.Save(); return true; }
             if (item.Kind == "upgrade" && save.Has(item.Grants)) return false;
+            if (item.Kind == "glove" || item.Kind == "lighterskin")
+            {
+                bool own = item.Coins == 0 || save.styles.Contains(item.Id);
+                if (!own)
+                {
+                    if (save.shekels < item.Coins) return false;
+                    save.shekels -= item.Coins;
+                    save.styles.Add(item.Id);
+                    Sfx.I.Coin();
+                }
+                else Sfx.I.Confirm();
+                if (item.Kind == "glove") save.glove = item.Grants; else save.lighterSkin = item.Grants;
+                SaveService.Save();
+                Player.Hands.ApplyStyle(save.glove, save.lighterSkin);
+                return true;
+            }
             if (save.shekels < item.Coins) return false;
             save.shekels -= item.Coins;
             switch (item.Kind)
