@@ -17,6 +17,10 @@ namespace UnityEngine
         public static float Sin(float f) { return (float)System.Math.Sin(f); }
         public static float Exp(float f) { return (float)System.Math.Exp(f); }
         public static float Cos(float f) { return (float)System.Math.Cos(f); }
+        public static float Sqrt(float f) { return (float)System.Math.Sqrt(f); }
+        public static float Pow(float f, float p) { return (float)System.Math.Pow(f, p); }
+        public static float Log(float f) { return (float)System.Math.Log(f); }
+        public static int Max(int a, int b) { return a > b ? a : b; }
         public static float Abs(float f) { return System.Math.Abs(f); }
         public static float Max(float a, float b) { return a > b ? a : b; }
         public static float Min(float a, float b) { return a < b ? a : b; }
