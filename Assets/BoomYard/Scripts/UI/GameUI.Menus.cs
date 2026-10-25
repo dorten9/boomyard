@@ -402,9 +402,9 @@ namespace BoomYard.UI
                     UIKit.Place(c.rectTransform, new Vector2(0.5f, 1f), new Vector2((k - (coins - 1) * 0.5f) * 30f, -54f - (k % 2) * 8f), new Vector2(52f, 52f));
                 }
                 var amount = UIKit.Label(card.transform, "Amount", Loc.Coins(pack.Coins), 44, UIKit.Fg, TextAnchor.MiddleCenter, true);
-                UIKit.Place(amount.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -132f), new Vector2(cw, 54f));
+                UIKit.Place(amount.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -116f), new Vector2(cw, 54f));
                 var name = UIKit.Label(card.transform, "Name", pack.Name, 20, UIKit.Muted, TextAnchor.MiddleCenter, true);
-                UIKit.Place(name.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -178f), new Vector2(cw, 28f));
+                UIKit.Place(name.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -158f), new Vector2(cw, 28f));
                 bool can = Purchases.Available;
                 // On the web the packs show their prices like in the app, marked APP ONLY (as in Overlane).
                 bool lit = can || web;
