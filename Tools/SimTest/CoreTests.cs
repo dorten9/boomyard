@@ -230,5 +230,19 @@ static class MetaTests
         check(DailyReward.NextDay(20261024, 2, new System.DateTime(2026, 10, 24)) == -1, "claimed today");
         check(DailyReward.NextDay(20261020, 4, new System.DateTime(2026, 10, 24)) == 0, "missed day restarts");
         check(Progress.LevelCoins(lvl, true, 3, 100000) == lvl.Reward + 120 + 200, "level coins");
+
+        foreach (var side in new[] { 1f, -1f })
+        {
+            var hand = HandRig.Fist(side);
+            int bones = 0;
+            foreach (var part in hand)
+            {
+                if (part.Kind != HandPartKind.Bone) continue;
+                bones++;
+                foreach (var e in new[] { part.A, part.B })
+                    check(Math.Sqrt(e.X * e.X + e.Z * e.Z) - part.Diameter / 2 >= 0.009, "hand bone " + part.Name + " clears the held object");
+            }
+            check(bones == 14, "four fingers of three bones and a thumb of two");
+        }
     }
 }

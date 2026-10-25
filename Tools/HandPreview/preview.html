@@ -1,0 +1,59 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:#9fb3c8">
+<script src="three.min.js"></script>
+<script>
+(async () => {
+  const rig = await (await fetch('hand.json')).json();
+  const W = 1200, H = 400;
+  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+  renderer.setSize(W, H); document.body.appendChild(renderer.domElement);
+  renderer.setScissorTest(true);
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xfff1dd, 0x554433, 0.9));
+  const sun = new THREE.DirectionalLight(0xffd2a0, 1.3); sun.position.set(-1, 2, 1.5); scene.add(sun);
+  const skin = new THREE.MeshStandardMaterial({ color: 0xc79473, roughness: 0.6 });
+  const U = v => new THREE.Vector3(v[0], v[1], -v[2]);   // Unity (left-handed) to three
+  function hand(parts, side) {
+    const g = new THREE.Group();
+    for (const p of parts) {
+      let m;
+      if (p.kind === 'Bone') {
+        const a = U(p.a), b = U(p.b), dir = b.clone().sub(a);
+        m = new THREE.Mesh(new THREE.CapsuleGeometry(p.d / 2, dir.length(), 6, 12), skin);
+        m.position.copy(a.clone().add(b).multiplyScalar(0.5));
+        m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+      } else {
+        m = new THREE.Mesh(new THREE.SphereGeometry(0.5, 20, 14), skin);
+        m.scale.set(p.size[0], p.size[1], p.size[2]);
+        m.position.copy(U(p.a));
+        m.rotation.y = -p.yaw * Math.PI / 180;
+      }
+      g.add(m);
+    }
+    const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.085, 16), new THREE.MeshStandardMaterial({ color: 0xb02020 }));
+    stick.position.y = 0.015; g.add(stick);
+    const w = U(rig.wrist), elbow = new THREE.Vector3(side * 0.06, -0.16, 0.1), dir = elbow.clone().sub(w);
+    const fore = new THREE.Mesh(new THREE.CapsuleGeometry(0.026, dir.length(), 6, 12), skin);
+    fore.position.copy(w.clone().add(elbow).multiplyScalar(0.5)); fore.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+    g.add(fore);
+    return g;
+  }
+  // Game view: the camera at the origin looking down Unity +Z; right hand rest + grip offset, rolled like the item.
+  const right = hand(rig.right, 1), left = hand(rig.left, -1);
+  right.position.copy(U([0.2, -0.22, 0.455])); right.rotation.order = 'YXZ'; right.rotation.set(10 * Math.PI / 180, 0, 28 * Math.PI / 180);
+  left.position.copy(U([-0.198, -0.235, 0.44]));
+  scene.add(right, left);
+  const c = [0.2, -0.22, -0.455];
+  const views = [
+    { pos: [c[0] - 0.05, c[1] + 0.09, c[2] + 0.16], look: c, fov: 35 },
+    { pos: [c[0] + 0.18, c[1] + 0.01, c[2]], look: c, fov: 35 },
+    { pos: [c[0] - 0.03, c[1] + 0.04, c[2] - 0.18], look: c, fov: 35 },
+  ];
+  views.forEach((v, i) => {
+    const cam = new THREE.PerspectiveCamera(v.fov, (W / 3) / H, 0.01, 10);
+    cam.position.set(...v.pos); cam.lookAt(...v.look);
+    renderer.setViewport(i * W / 3, 0, W / 3, H); renderer.setScissor(i * W / 3, 0, W / 3, H);
+    renderer.render(scene, cam);
+  });
+  window.done = true;
+})();
+</script>
