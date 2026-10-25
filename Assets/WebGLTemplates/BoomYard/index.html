@@ -75,11 +75,39 @@
       } catch (e) {}
     }
     if (matchMedia("(pointer: coarse)").matches) window.addEventListener("pointerdown", goLandscape, { once: true });
+    // Landscape only, always. A phone held upright (or one whose rotation is locked) gets the game turned a quarter
+    // turn to fill the screen sideways, instead of a squeezed portrait view. The game is told, so it turns the
+    // touches back (WebLandscape.cs); Unity reads touches relative to the canvas's box, which is reported unturned.
+    var frame = document.getElementById("frame"), rotated = false;
+    var boxOf = canvas.getBoundingClientRect.bind(canvas);
+    canvas.getBoundingClientRect = function () {
+      if (!rotated) return boxOf();
+      var w = innerHeight, h = innerWidth;
+      return { left: 0, top: 0, right: w, bottom: h, width: w, height: h, x: 0, y: 0 };
+    };
+    function tellGame() {
+      if (window.unityInstance) try { unityInstance.SendMessage("WebLandscape", "SetRotated", rotated ? "1" : "0"); } catch (e) {}
+    }
+    function fit() {
+      rotated = matchMedia("(pointer: coarse)").matches && innerHeight > innerWidth;
+      var st = frame.style;
+      if (rotated) {
+        st.position = "fixed"; st.left = "0"; st.top = "0"; st.right = "auto"; st.bottom = "auto"; st.margin = "0";
+        st.width = innerHeight + "px"; st.height = innerWidth + "px"; st.maxHeight = "none";
+        st.transformOrigin = "top left"; st.transform = "rotate(90deg) translate(0, -100%)";
+      } else {
+        frame.removeAttribute("style");
+      }
+      tellGame();
+    }
+    window.addEventListener("resize", fit);
+    window.addEventListener("orientationchange", function () { setTimeout(fit, 150); });
+    fit();
     var script = document.createElement("script");
     script.src = "Build/{{{ LOADER_FILENAME }}}";
     script.onload = function () {
       createUnityInstance(canvas, config, function (p) { document.getElementById("fill").style.width = (100 * p) + "%"; })
-        .then(function (instance) { window.unityInstance = instance; document.getElementById("loader").remove(); })
+        .then(function (instance) { window.unityInstance = instance; document.getElementById("loader").remove(); tellGame(); })
         .catch(function (message) { window.unityError = String(message); showCrash(message); });
     };
     document.body.appendChild(script);

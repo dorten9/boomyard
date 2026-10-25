@@ -56,7 +56,9 @@ namespace BoomYard.UI
                 var es = new GameObject("EventSystem");
                 DontDestroyOnLoad(es);
                 es.AddComponent<EventSystem>();
-                es.AddComponent<StandaloneInputModule>();
+                var module = es.AddComponent<StandaloneInputModule>();
+                module.inputOverride = es.AddComponent<LandscapeInput>();
+                WebLandscape.Create();
             }
             var ui = go.AddComponent<GameUI>();
             ui.game = game;

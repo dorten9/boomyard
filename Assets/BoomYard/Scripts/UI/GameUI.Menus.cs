@@ -313,12 +313,12 @@ namespace BoomYard.UI
             ShowLayer(false);
             var s = NewScreen("Shop");
             TopBar(s, "SHOP", () => game.GoHome());
-            string[] tabs = { "explosive", "lighter", "upgrade", "style" };
-            string[] names = { "EXPLOSIVES", "LIGHTERS", "UPGRADES", "STYLE" };
+            string[] tabs = { "explosive", "lighter", "upgrade", "style", "coins" };
+            string[] names = { "EXPLOSIVES", "LIGHTERS", "UPGRADES", "STYLE", "COINS" };
             for (int i = 0; i < tabs.Length; i++)
             {
                 string tab = tabs[i];
-                var b = Btn(s, names[i], tab == shopTab, () => { shopTab = tab; ShowShop(); }, new Vector2(0f, 1f), new Vector2(180f + i * 250f, -150f), new Vector2(230f, 62f), 24);
+                var b = Btn(s, names[i], tab == shopTab, () => { shopTab = tab; ShowShop(); }, new Vector2(0f, 1f), new Vector2(160f + i * 236f, -150f), new Vector2(220f, 62f), 24);
             }
             ScrollRect sr;
             var content = UIKit.Scroll(s, "Items", true, out sr);
@@ -328,6 +328,7 @@ namespace BoomYard.UI
             var save = SaveService.Data;
             int idx = 0;
             const float cw = 500f, ch = 230f;
+            if (shopTab == "coins") { CoinPacks(content); return; }
             foreach (var item in Shop.Items)
             {
                 bool style = item.Kind == "glove" || item.Kind == "lighterskin";
@@ -374,6 +375,49 @@ namespace BoomYard.UI
                 }
             }
             content.sizeDelta = new Vector2(0f, ((idx + 2) / 3) * (ch + 24f));
+        }
+
+        /// <summary>The COINS tab: packs of coins for real money (the app stores; the web build only shows them).</summary>
+        void CoinPacks(RectTransform content)
+        {
+            const float cw = 360f, ch = 300f;
+            bool web = Purchases.Status == Purchases.State.NotSupported;
+            for (int i = 0; i < Purchases.Packs.Length; i++)
+            {
+                var pack = Purchases.Packs[i];
+                var card = UIKit.Image(content, pack.Id, Card, UIKit.Rounded);
+                card.rectTransform.anchorMin = card.rectTransform.anchorMax = new Vector2(0f, 1f);
+                card.rectTransform.pivot = new Vector2(0f, 1f);
+                card.rectTransform.anchoredPosition = new Vector2(i * (cw + 24f), 0f);
+                card.rectTransform.sizeDelta = new Vector2(cw, ch);
+                if (!string.IsNullOrEmpty(pack.Badge))
+                {
+                    var badge = UIKit.Label(card.transform, "Badge", pack.Badge, 18, UIKit.Ember, TextAnchor.UpperCenter, true);
+                    UIKit.Place(badge.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -16f), new Vector2(cw, 26f));
+                }
+                int coins = Mathf.Min(5, i + 2);
+                for (int k = 0; k < coins; k++)
+                {
+                    var c = UIKit.Image(card.transform, "Coin", Color.white, UIKit.Coin);
+                    UIKit.Place(c.rectTransform, new Vector2(0.5f, 1f), new Vector2((k - (coins - 1) * 0.5f) * 30f, -54f - (k % 2) * 8f), new Vector2(52f, 52f));
+                }
+                var amount = UIKit.Label(card.transform, "Amount", Loc.Coins(pack.Coins), 44, UIKit.Fg, TextAnchor.MiddleCenter, true);
+                UIKit.Place(amount.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -132f), new Vector2(cw, 54f));
+                var name = UIKit.Label(card.transform, "Name", pack.Name, 20, UIKit.Muted, TextAnchor.MiddleCenter, true);
+                UIKit.Place(name.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -178f), new Vector2(cw, 28f));
+                bool can = Purchases.Available;
+                var buy = UIKit.Button(card.transform, "Buy", web ? "IN THE APP" : Purchases.PriceOf(pack), can ? UIKit.Ember : new Color(0.2f, 0.19f, 0.2f), can ? Dark : UIKit.Muted, () =>
+                {
+                    if (!Purchases.Available) { Sfx.I.Fail(); Toast(web ? "Coins are bought in the BoomYard app" : "The store is not available right now"); return; }
+                    Sfx.I.Tap();
+                    Purchases.Buy(pack, (ok, message) => { if (ok) ShowShop(); else if (message != null) Toast(message); });
+                }, 28);
+                UIKit.Place((RectTransform)buy.transform, new Vector2(0.5f, 0f), new Vector2(0f, 20f), new Vector2(cw - 60f, 68f));
+            }
+            var note = UIKit.Label(content, "Note", web ? "Coin packs are sold in the iPhone and Android apps. In the browser you can see them, but not buy them."
+                : Purchases.Status == Purchases.State.Connecting ? "Connecting to the store..." : "Payments go through " + (Application.platform == RuntimePlatform.IPhonePlayer ? "the App Store" : "Google Play") + ". Coins arrive as soon as the store confirms.", 20, UIKit.Muted, TextAnchor.UpperLeft);
+            UIKit.Place(note.rectTransform, new Vector2(0f, 1f), new Vector2(0f, -ch - 26f), new Vector2(1500f, 30f));
+            content.sizeDelta = new Vector2(0f, ch + 70f);
         }
 
         static Color StyleColor(ShopItem item)

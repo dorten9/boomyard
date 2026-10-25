@@ -49,6 +49,7 @@ namespace BoomYard.Game
         public float bestGnome;           // longest gnome flight, metres
         public List<int> goldGnomes = new List<int>();   // levels whose golden gnome was found
         public string glove = "", lighterSkin = "";     // style (looks only)
+        public int purchases;                             // coin packs bought for real money
         public int challengeDate;                         // the daily challenge: day played (Daily.Seed), best and whether cleared
         public long challengeBest;
         public bool challengeCleared;
