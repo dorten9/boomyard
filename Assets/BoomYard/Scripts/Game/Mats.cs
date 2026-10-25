@@ -158,7 +158,7 @@ namespace BoomYard.Game
         public static Material SprayPaint(bool glow, bool stencil)
         {
             var tex = stencil ? StencilTexture : SprayTexture;
-            return Tinted("BoomYard/ParticleAlpha", tex, "spray" + glow + stencil, glow ? new Color(2.4f, 2.4f, 2.4f, 1f) : new Color(0.92f, 0.92f, 0.92f, 1f));
+            return Tinted("BoomYard/ParticleAlpha", tex, "spray" + glow + stencil, glow ? new Color(1.5f, 1.5f, 1.5f, 1f) : new Color(0.92f, 0.92f, 0.92f, 1f));
         }
 
         static Texture2D sprayTex, stencilTex;

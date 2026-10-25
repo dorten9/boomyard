@@ -244,8 +244,8 @@ namespace BoomYard.Game
             Spawn("scooter", b, new Vector3(10.5f, 0f, 17.6f), 90f, rng.Next(3));
             Spawn("bicycle", b, new Vector3(13f, 0f, 17.6f), 90f);
             Spawn("planter", b, new Vector3(-13f, 0f, 17.2f), 0f, rng.Next(9));
-            Spawn("parkingmeter", b, new Vector3(-4f, 0f, 18.4f), 180f);
-            Spawn("parkingmeter", b, new Vector3(1f, 0f, 18.4f), 180f);
+            Spawn("parkingmeter", b, new Vector3(-6f, 0f, 18.4f), 180f);
+            Spawn("parkingmeter", b, new Vector3(6f, 0f, 18.4f), 180f);
         }
 
         /// <summary>An office tower: a glass lobby (its panes break) under a curtain-wall shaft 50 m high.</summary>
