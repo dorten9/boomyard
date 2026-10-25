@@ -3,10 +3,10 @@ using System.Collections.Generic;
 
 namespace BoomYard.Core
 {
-    /// <summary>What the shop sells, all for coins: packs of explosives, lighters and upgrades.</summary>
+    /// <summary>What the shop sells, all for coins: explosives, lighters, upgrades, styles and graffiti gear.</summary>
     public sealed class ShopItem
     {
-        public string Id, Name, Kind;   // Kind: "explosive", "lighter", "upgrade", "glove", "lighterskin"
+        public string Id, Name, Kind;   // Kind: "explosive", "lighter", "upgrade", "glove", "lighterskin", "spray", "cap", "stencil", "maker"
         public string Grants;            // explosive / lighter / upgrade id
         public int Amount;               // units in the pack
         public int Coins;                // price
@@ -17,19 +17,20 @@ namespace BoomYard.Core
     {
         public static readonly ShopItem[] Items =
         {
-            new ShopItem { Id = "pack_blackcat", Name = "Black Cats ×10", Kind = "explosive", Grants = "blackcat", Amount = 10, Coins = 200 },
-            new ShopItem { Id = "pack_string", Name = "Firecracker String ×2", Kind = "explosive", Grants = "string50", Amount = 2, Coins = 400 },
-            new ShopItem { Id = "pack_sparkler", Name = "Sparkler Bombs ×3", Kind = "explosive", Grants = "sparkler", Amount = 3, Coins = 350 },
-            new ShopItem { Id = "pack_m80", Name = "M-80 ×3", Kind = "explosive", Grants = "m80", Amount = 3, Coins = 800, UnlockLevel = 2 },
-            new ShopItem { Id = "pack_cherry", Name = "Cherry Bombs ×3", Kind = "explosive", Grants = "cherry", Amount = 3, Coins = 650, UnlockLevel = 3 },
-            new ShopItem { Id = "pack_pipe", Name = "Pipe Bomb ×1", Kind = "explosive", Grants = "pipe", Amount = 1, Coins = 1500, UnlockLevel = 6 },
-            new ShopItem { Id = "pack_dynamite", Name = "Dynamite ×2", Kind = "explosive", Grants = "dynamite", Amount = 2, Coins = 2000, UnlockLevel = 8 },
-            new ShopItem { Id = "pack_rocket", Name = "Rockets ×6", Kind = "explosive", Grants = "rocket", Amount = 6, Coins = 500, UnlockLevel = 3 },
-            new ShopItem { Id = "pack_timer", Name = "Timer Charges ×3", Kind = "explosive", Grants = "timer", Amount = 3, Coins = 900, UnlockLevel = 14 },
-            new ShopItem { Id = "pack_remote", Name = "Remote Charges ×4", Kind = "explosive", Grants = "remote", Amount = 4, Coins = 1400, UnlockLevel = 22 },
+            // Explosives are unlocked once and are then unlimited in every level.
+            new ShopItem { Id = "pack_string", Name = "Firecracker String", Kind = "explosive", Grants = "string50", Amount = 1, Coins = 600 },
+            new ShopItem { Id = "pack_sparkler", Name = "Sparkler Bomb", Kind = "explosive", Grants = "sparkler", Amount = 1, Coins = 500 },
+            new ShopItem { Id = "pack_rocket", Name = "Rocket", Kind = "explosive", Grants = "rocket", Amount = 1, Coins = 800, UnlockLevel = 3 },
+            new ShopItem { Id = "pack_m80", Name = "M-80", Kind = "explosive", Grants = "m80", Amount = 1, Coins = 1200, UnlockLevel = 2 },
+            new ShopItem { Id = "pack_cherry", Name = "Cherry Bomb", Kind = "explosive", Grants = "cherry", Amount = 1, Coins = 1000, UnlockLevel = 3 },
+            new ShopItem { Id = "pack_timer", Name = "Timer Charge", Kind = "explosive", Grants = "timer", Amount = 1, Coins = 1500, UnlockLevel = 14 },
+            new ShopItem { Id = "pack_pipe", Name = "Pipe Bomb", Kind = "explosive", Grants = "pipe", Amount = 1, Coins = 2500, UnlockLevel = 6 },
+            new ShopItem { Id = "pack_remote", Name = "Remote Charge", Kind = "explosive", Grants = "remote", Amount = 1, Coins = 2500, UnlockLevel = 22 },
+            new ShopItem { Id = "pack_dynamite", Name = "Dynamite", Kind = "explosive", Grants = "dynamite", Amount = 1, Coins = 3500, UnlockLevel = 8 },
+            new ShopItem { Id = "pack_keg", Name = "Powder Keg", Kind = "explosive", Grants = "keg", Amount = 1, Coins = 5000, UnlockLevel = 18 },
             new ShopItem { Id = "lighter_zippo", Name = "Zippo", Kind = "lighter", Grants = "zippo", Amount = 1, Coins = 2500 },
             new ShopItem { Id = "lighter_turbo", Name = "Turbo Lighter", Kind = "lighter", Grants = "turbo", Amount = 1, Coins = 5000 },
-            new ShopItem { Id = "up_vest", Name = "Vest: +1 pocket slot", Kind = "upgrade", Grants = "vest", Amount = 1, Coins = 2500 },
+            new ShopItem { Id = "up_vest", Name = "Vest: +2 pocket slots", Kind = "upgrade", Grants = "vest", Amount = 1, Coins = 2500 },
             new ShopItem { Id = "up_legs", Name = "Lungs: run longer & faster", Kind = "upgrade", Grants = "legs", Amount = 1, Coins = 1800 },
             new ShopItem { Id = "up_watch", Name = "Watch: +10 s every level", Kind = "upgrade", Grants = "watch", Amount = 1, Coins = 3000 },
             // Style: what your hands and lighter look like. Looks only.
@@ -44,7 +45,47 @@ namespace BoomYard.Core
             new ShopItem { Id = "skin_chrome", Name = "Chrome Lighter", Kind = "lighterskin", Grants = "chrome", Amount = 1, Coins = 600 },
             new ShopItem { Id = "skin_camo", Name = "Camo Lighter", Kind = "lighterskin", Grants = "camo", Amount = 1, Coins = 800 },
             new ShopItem { Id = "skin_gold", Name = "Gold Lighter", Kind = "lighterskin", Grants = "gold", Amount = 1, Coins = 2500 },
+            // Graffiti: spray colours and caps, stencils, and the stencil maker for your own. Each is bought once.
+            new ShopItem { Id = "spray_red", Name = "Fire Red Spray", Kind = "spray", Grants = "red", Amount = 1, Coins = 0 },
+            new ShopItem { Id = "spray_black", Name = "Black Spray", Kind = "spray", Grants = "black", Amount = 1, Coins = 200 },
+            new ShopItem { Id = "spray_white", Name = "White Spray", Kind = "spray", Grants = "white", Amount = 1, Coins = 200 },
+            new ShopItem { Id = "spray_yellow", Name = "Sun Yellow Spray", Kind = "spray", Grants = "yellow", Amount = 1, Coins = 300 },
+            new ShopItem { Id = "spray_orange", Name = "Orange Spray", Kind = "spray", Grants = "orange", Amount = 1, Coins = 300 },
+            new ShopItem { Id = "spray_blue", Name = "Sky Blue Spray", Kind = "spray", Grants = "blue", Amount = 1, Coins = 300 },
+            new ShopItem { Id = "spray_green", Name = "Lime Spray", Kind = "spray", Grants = "green", Amount = 1, Coins = 300 },
+            new ShopItem { Id = "spray_pink", Name = "Bubblegum Spray", Kind = "spray", Grants = "pink", Amount = 1, Coins = 400 },
+            new ShopItem { Id = "spray_purple", Name = "Purple Spray", Kind = "spray", Grants = "purple", Amount = 1, Coins = 400 },
+            new ShopItem { Id = "spray_chrome", Name = "Chrome Spray", Kind = "spray", Grants = "chrome", Amount = 1, Coins = 800 },
+            new ShopItem { Id = "spray_gold", Name = "Gold Spray", Kind = "spray", Grants = "gold", Amount = 1, Coins = 1500 },
+            new ShopItem { Id = "spray_neongreen", Name = "Neon Green Spray", Kind = "spray", Grants = "neongreen", Amount = 1, Coins = 2000 },
+            new ShopItem { Id = "spray_neonpink", Name = "Neon Pink Spray", Kind = "spray", Grants = "neonpink", Amount = 1, Coins = 2000 },
+            new ShopItem { Id = "cap_standard", Name = "Standard Cap", Kind = "cap", Grants = "standard", Amount = 1, Coins = 0 },
+            new ShopItem { Id = "cap_skinny", Name = "Skinny Cap", Kind = "cap", Grants = "skinny", Amount = 1, Coins = 400 },
+            new ShopItem { Id = "cap_fat", Name = "Fat Cap", Kind = "cap", Grants = "fat", Amount = 1, Coins = 800 },
+            new ShopItem { Id = "maker", Name = "Stencil Maker", Kind = "maker", Grants = "maker", Amount = 1, Coins = 1500 },
+            new ShopItem { Id = "stencil_heart", Name = "Heart Stencil", Kind = "stencil", Grants = "heart", Amount = 1, Coins = 300 },
+            new ShopItem { Id = "stencil_star", Name = "Star Stencil", Kind = "stencil", Grants = "star", Amount = 1, Coins = 300 },
+            new ShopItem { Id = "stencil_smiley", Name = "Smiley Stencil", Kind = "stencil", Grants = "smiley", Amount = 1, Coins = 400 },
+            new ShopItem { Id = "stencil_bolt", Name = "Lightning Stencil", Kind = "stencil", Grants = "bolt", Amount = 1, Coins = 500 },
+            new ShopItem { Id = "stencil_boom", Name = "BOOM Lettering", Kind = "stencil", Grants = "boom", Amount = 1, Coins = 500 },
+            new ShopItem { Id = "stencil_skull", Name = "Skull Stencil", Kind = "stencil", Grants = "skull", Amount = 1, Coins = 600 },
+            new ShopItem { Id = "stencil_flame", Name = "Flame Stencil", Kind = "stencil", Grants = "flame", Amount = 1, Coins = 700 },
+            new ShopItem { Id = "stencil_cat", Name = "Cat Stencil", Kind = "stencil", Grants = "cat", Amount = 1, Coins = 700 },
+            new ShopItem { Id = "stencil_crown", Name = "Crown Stencil", Kind = "stencil", Grants = "crown", Amount = 1, Coins = 900 },
+            new ShopItem { Id = "stencil_bomb", Name = "Bomb Stencil", Kind = "stencil", Grants = "bomb", Amount = 1, Coins = 900 },
+            new ShopItem { Id = "stencil_tag", Name = "WAS HERE Lettering", Kind = "stencil", Grants = "tag", Amount = 1, Coins = 1000 },
+            new ShopItem { Id = "stencil_kaboom", Name = "KABOOM! Lettering", Kind = "stencil", Grants = "kaboom", Amount = 1, Coins = 1200 },
         };
+
+        /// <summary>Bought once and kept (styles and graffiti gear); the free ones are owned from the start.</summary>
+        public static bool Keepsake(ShopItem item)
+        {
+            switch (item.Kind)
+            {
+                case "glove": case "lighterskin": case "spray": case "cap": case "stencil": case "maker": return true;
+                default: return false;
+            }
+        }
 
         public static ShopItem Get(string id)
         {
@@ -194,5 +235,10 @@ namespace BoomYard.Core
             if (!cleared) return wreck;
             return wreck + (firstClear ? level.Reward : level.Reward / 5) + newStars * 40;
         }
+
+        /// <summary>The big city pays a quarter of what its wreckage is worth (there is a whole downtown of it).</summary>
+        public const int CityShare = 4;
+
+        public static int CityCoins(long damage) { return (int)(ScoreCalculator.CoinsFromDamage(damage) / CityShare); }
     }
 }

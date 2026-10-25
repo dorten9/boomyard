@@ -154,6 +154,43 @@ namespace BoomYard.Game
             fuseTip = go.transform.Find("FuseTip");
         }
 
+        /// <summary>The spray can in the right hand (its cap the paint's colour), or null to put it away.</summary>
+        public void SetCan(SprayColor c)
+        {
+            if (can != null) { Destroy(can.gameObject); can = null; mist = null; }
+            if (c == null) return;
+            SetItem(null);
+            var go = new GameObject("SprayCan");
+            go.transform.SetParent(right, false);
+            go.transform.localPosition = new Vector3(0f, -0.04f, 0.035f);
+            go.transform.localRotation = Quaternion.Euler(12f, 0f, 8f);   // upright, the nozzle facing ahead
+            var paint = Mats.Lit(new Color(c.R, c.G, c.B), c.Id == "chrome" || c.Id == "gold" ? 0.9f : 0.3f, 0.7f);
+            var steel = Mats.Lit(Mats.Steel, 0.9f, 0.6f);
+            Can(go.transform, MeshKit.Lathe("spraycan", new[] { new Vector2(0.024f, 0f), new Vector2(0.026f, 0.006f), new Vector2(0.026f, 0.15f), new Vector2(0.02f, 0.165f), new Vector2(0.008f, 0.172f), new Vector2(0f, 0.172f) }, 18, true, true), Vector3.zero, paint);
+            Can(go.transform, MeshKit.Lathe("spraycap", new[] { new Vector2(0.007f, 0f), new Vector2(0.007f, 0.014f), new Vector2(0f, 0.015f) }, 10, true), new Vector3(0f, 0.17f, 0f), Mats.Lit(new Color(0.9f, 0.9f, 0.88f), 0f, 0.4f));
+            Can(go.transform, MeshKit.RoundedBox(new Vector3(0.054f, 0.03f, 0.054f), 0.02f, 2), new Vector3(0f, 0.12f, 0f), steel);
+            can = go.transform;
+            mist = Fx.SprayMist(can, new Vector3(0f, 0.18f, 0.01f), new Color(c.R, c.G, c.B, 0.35f));
+        }
+
+        static void Can(Transform parent, Mesh mesh, Vector3 at, UnityEngine.Material mat)
+        {
+            var go = new GameObject(mesh.name);
+            go.layer = Layers.NoRaycast;
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = at;
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var r = go.AddComponent<MeshRenderer>();
+            r.sharedMaterial = mat;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
+
+        Transform can;
+        ParticleSystem mist;
+        /// <summary>The nozzle is pressed: the arm reaches forward and the mist comes out.</summary>
+        public bool Spraying;
+        float sprayT;
+
         public void SetLit(bool lit)
         {
             if (lit && fuseTip != null && sparks == null) sparks = Fx.FuseSparks(fuseTip);
@@ -168,6 +205,13 @@ namespace BoomYard.Game
             lightT = Mathf.MoveTowards(lightT, Lighting ? 1f : 0f, dt * 5f);
             downT = Mathf.MoveTowards(downT, Down ? 1f : 0f, dt * 4f);
             throwT = Mathf.Min(1f, throwT + dt * 3.5f);
+            sprayT = Mathf.MoveTowards(sprayT, can != null ? (Spraying ? 1f : 0.5f) : 0f, dt * 5f);
+            if (mist != null)
+            {
+                var em = mist.emission;
+                em.enabled = Spraying && can != null;
+                mist.transform.rotation = transform.parent.rotation;   // straight ahead, at the crosshair
+            }
             sway += dt;
 
             float l = Mathf.SmoothStep(0f, 1f, lightT);
@@ -178,6 +222,8 @@ namespace BoomYard.Game
             // Throw: the right hand swings forward and up, then comes back.
             float swing = Mathf.Sin(throwT * Mathf.PI);
             rp += new Vector3(-0.05f, 0.15f, 0.2f) * swing;
+            // The can held up and out towards the wall, the nozzle pointing ahead.
+            rp += new Vector3(-0.05f, 0.06f, 0.08f) * sprayT;
 
             // Hands shake after a close blast and drop out of view on the ground.
             var tremble = new Vector3(Mathf.PerlinNoise(sway * 14f, 0f) - 0.5f, Mathf.PerlinNoise(0f, sway * 14f) - 0.5f, 0f) * 0.02f * downT;
@@ -187,7 +233,7 @@ namespace BoomYard.Game
             left.localPosition = lp + tremble + drop + breathe;
             right.localPosition = rp - tremble + drop + breathe;
             left.localRotation = Quaternion.Euler(-10f * l, 10f * l, -12f * l);
-            right.localRotation = Quaternion.Euler(-25f * swing - 8f * l, -12f * l, 20f * l);
+            right.localRotation = Quaternion.Euler(-25f * swing - 8f * l - 8f * sprayT, -12f * l, 20f * l - 24f * sprayT);
 
             flame.gameObject.SetActive(FlameOn);
             if (FlameOn)

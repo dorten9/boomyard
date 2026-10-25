@@ -151,6 +151,47 @@ namespace BoomYard.Game
         public static Material ShockRing { get { return Tinted("BoomYard/ParticleAdd", RingTexture, "shock", new Color(1f, 0.9f, 0.8f, 0.5f)); } }
         public static Material Scorch { get { return Tinted("BoomYard/ParticleAlpha", ScorchTexture, "scorch", new Color(0.05f, 0.04f, 0.035f, 0.85f)); } }
 
+        /// <summary>
+        /// Spray paint: a soft dab with overspray speckle for freehand, a crisper rounded square for stencils.
+        /// Glow paint is drawn over-bright so the bloom picks it up.
+        /// </summary>
+        public static Material SprayPaint(bool glow, bool stencil)
+        {
+            var tex = stencil ? StencilTexture : SprayTexture;
+            return Tinted("BoomYard/ParticleAlpha", tex, "spray" + glow + stencil, glow ? new Color(1.5f, 1.5f, 1.5f, 1f) : new Color(0.92f, 0.92f, 0.92f, 1f));
+        }
+
+        static Texture2D sprayTex, stencilTex;
+
+        static Texture2D SprayTexture
+        {
+            get
+            {
+                if (sprayTex == null)
+                    sprayTex = Radial(64, (d, x, y) =>
+                    {
+                        float core = Mathf.Clamp01((1f - d) * 2.2f);
+                        float speck = Mathf.PerlinNoise(x * 40f, y * 40f) > 0.62f ? 0.6f : 0f;
+                        return Mathf.Max(core * core, speck * Mathf.Clamp01(1.15f - d));
+                    });
+                return sprayTex;
+            }
+        }
+
+        static Texture2D StencilTexture
+        {
+            get
+            {
+                if (stencilTex == null)
+                    stencilTex = Radial(32, (d, x, y) =>
+                    {
+                        float e = Mathf.Max(Mathf.Abs(x - 0.5f), Mathf.Abs(y - 0.5f)) * 2f;
+                        return Mathf.Clamp01((1f - e) * 5f);
+                    });
+                return stencilTex;
+            }
+        }
+
         static Material Tinted(string shader, Texture2D tex, string key, Color tint)
         {
             Material m;

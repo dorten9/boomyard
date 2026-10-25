@@ -25,8 +25,12 @@ namespace BoomYard.UI
         Text timer, targets, damage, chain, wind, prompt, fuseTime, tutText;
         Image chainBadge, windArrow, joyBase, joyKnob, catchRing, powerFill, tutCard, targetsPill, hudCoin;
         RectTransform fuseBar, fusePointer, powerBar, markers;
-        RectTransform lightBtn, throwBtn, placeBtn, boomBtn;
-        Text boomCaption;
+        RectTransform lightBtn, throwBtn, placeBtn, boomBtn, sprayBtn, strip;
+        Text boomCaption, lightCaption, placeCaption, sprayCaption;
+        Image lightIcon, sprayRing;
+        string stripKey = "";
+        float wreckedAt;
+        int wrecked;
         Image fuseRed, fuseOrange, fuseGreen;
         readonly List<Image> slotFrames = new List<Image>();
         readonly List<Text> slotCounts = new List<Text>();
@@ -152,7 +156,7 @@ namespace BoomYard.UI
         /// <summary>Left-handed: the action buttons move to the left edge and the pocket to the right.</summary>
         void ApplyHanded(bool left)
         {
-            foreach (var b in new[] { lightBtn, throwBtn, placeBtn, boomBtn, fuseBar })
+            foreach (var b in new[] { lightBtn, throwBtn, placeBtn, boomBtn, sprayBtn, fuseBar })
             {
                 var x = Mathf.Abs(b.anchoredPosition.x);
                 b.anchorMin = b.anchorMax = new Vector2(left ? 0f : 1f, 0f);
@@ -209,6 +213,14 @@ namespace BoomYard.UI
                 bar.rectTransform.pivot = new Vector2(0.5f, 0.5f);
             }
             controls.PauseButton = pauseBtn.rectTransform;
+            // The shop, open from inside a level (it pauses the game).
+            var shopBtn = UIKit.Image(hud, "Shop", new Color(0.03f, 0.03f, 0.035f, 0.6f), UIKit.Circle);
+            UIKit.Place(shopBtn.rectTransform, new Vector2(0f, 1f), new Vector2(450f, -20f), new Vector2(70f, 70f));
+            var bag = UIKit.Image(shopBtn.transform, "Bag", UIKit.Flame, UIKit.Bag);
+            UIKit.Place(bag.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(38f, 38f));
+            bag.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            controls.ShopButton = shopBtn.rectTransform;
+            controls.OpenShop = () => game.OpenShopInLevel();
             var windRing = UIKit.Image(hud, "Wind", new Color(1f, 1f, 1f, 0.25f), UIKit.Ring);
             UIKit.Place(windRing.rectTransform, new Vector2(0f, 1f), new Vector2(124f, -24f), new Vector2(60f, 60f));
             windArrow = UIKit.Image(windRing.transform, "Arrow", UIKit.SteelBlue, UIKit.Arrow);
@@ -268,6 +280,16 @@ namespace BoomYard.UI
             boomBtn = RoundButton("Boom", new Vector2(-330f, 300f), 128f, UIKit.Danger, UIKit.FlameIcon, "BOOM");
             controls.DetonateButton = boomBtn;
             boomCaption = boomBtn.GetComponentInChildren<Text>();
+            // The spray can: in and out of the hand. With it out, LIGHT sprays and PLACE stamps the stencil.
+            sprayBtn = RoundButton("Spray", new Vector2(-170f, 490f), 104f, UIKit.Ok, UIKit.Can, "SPRAY CAN");
+            controls.SprayButton = sprayBtn;
+            sprayCaption = sprayBtn.Find("Caption").GetComponent<Text>();
+            sprayRing = sprayBtn.Find("Ring").GetComponent<Image>();
+            lightCaption = lightBtn.Find("Caption").GetComponent<Text>();
+            lightIcon = lightBtn.Find("Icon").GetComponent<Image>();
+            placeCaption = placeBtn.Find("Caption").GetComponent<Text>();
+            strip = UIKit.Rect(hud, "SprayStrip");
+            UIKit.Place(strip, new Vector2(0f, 0f), new Vector2(30f, 262f), new Vector2(1000f, 64f));   // clear of the joystick
             powerBar = UIKit.Rect(throwBtn, "Power");
             UIKit.Place(powerBar, new Vector2(0.5f, 1f), new Vector2(0f, 36f), new Vector2(14f, 150f));
             powerBar.pivot = new Vector2(0.5f, 0f);
@@ -374,9 +396,10 @@ namespace BoomYard.UI
         /// <summary>"+94" coins rising from what broke; chain links also show their multiplier.</summary>
         public void Popup(Vector3 world, long value, float chainMult)
         {
-            if (ScoreCalculator.CoinsFromDamage(value) <= 0) return;
+            long coins = game.Level != null && game.Level.Show ? Progress.CityCoins(value) : ScoreCalculator.CoinsFromDamage(value);
+            if (coins <= 0) return;
             if (pops.Count > 24) { Destroy(pops[0].Text.gameObject); pops.RemoveAt(0); }
-            string s = "+" + Loc.Money(value) + (chainMult > 1f ? "  ×" + chainMult.ToString("0.0") : "");
+            string s = "+" + Loc.Coins(coins) + (chainMult > 1f ? "  ×" + chainMult.ToString("0.0") : "");
             var t = UIKit.Label(markers, "Pop", s, value >= 5000 ? 34 : 26, chainMult > 1f ? UIKit.Ember : UIKit.Flame, TextAnchor.MiddleCenter, true);
             t.rectTransform.anchorMin = t.rectTransform.anchorMax = Vector2.zero;
             t.rectTransform.sizeDelta = new Vector2(400f, 50f);
@@ -436,14 +459,25 @@ namespace BoomYard.UI
         {
             var g = game;
             var player = Player.I;
-            damage.text = Loc.Money(g.Score.Total);
+            damage.text = g.Level.Show ? Loc.Coins(Progress.CityCoins(g.Score.Total)) : Loc.Money(g.Score.Total);
             boomBtn.gameObject.SetActive(LiveExplosive.RemoteCount > 0 || g.Level.Show && LiveExplosive.UnlitCount > 0);
-            boomCaption.text = g.Level.Show ? "SHOW" : "BOOM";
-            if (g.Level.Show) { targets.text = "FIREWORKS SHOW"; }
+            boomCaption.text = g.Level.Show && LiveExplosive.RemoteCount == 0 ? "SHOW" : "BOOM";
+            if (g.Level.Show)
+            {
+                // How much of the city is wrecked so far (counted twice a second).
+                if (Time.unscaledTime > wreckedAt)
+                {
+                    wreckedAt = Time.unscaledTime + 0.5f;
+                    wrecked = 0;
+                    foreach (var d in g.Arena.Objects) if (d != null && d.Destroyed) wrecked++;
+                }
+                targets.text = "WRECKED  " + wrecked + " / " + g.Arena.Objects.Count;
+            }
+            UpdateSpray(player);
             // The coin sits just left of the number, however wide it is.
             hudCoin.rectTransform.anchoredPosition = new Vector2(-40f - damage.preferredWidth - 30f, -26f);
             float tl = g.Round.TimeLeft;
-            timer.text = g.Level.Show ? "NO CLOCK" : Loc.Time(tl);
+            timer.text = g.Level.Show ? "BIG CITY" : Loc.Time(tl);
             bool urgent = tl <= 10f && !g.Round.Frozen;
             timer.color = urgent ? Color.Lerp(UIKit.Danger, UIKit.Fg, Mathf.PingPong(Time.unscaledTime * 2f, 1f)) : UIKit.Fg;
             targetPulse = Mathf.MoveTowards(targetPulse, 0f, dt * 2f);
@@ -462,10 +496,10 @@ namespace BoomYard.UI
                 if (!has) continue;
                 var s = g.Pocket.Slots[i];
                 var def = Catalog.Explosive(s.id);
-                slotFrames[i].color = i == g.Pocket.Selected ? new Color(0.36f, 0.18f, 0.05f, 0.9f) : new Color(0.03f, 0.03f, 0.035f, 0.7f);
+                slotFrames[i].color = i == g.Pocket.Selected && !player.Spraying ? new Color(0.36f, 0.18f, 0.05f, 0.9f) : new Color(0.03f, 0.03f, 0.035f, 0.7f);
                 slotChips[i].color = s.count > 0 ? ItemModel.Chip(s.id) : new Color(0.3f, 0.3f, 0.3f, 0.4f);
                 string name = def != null ? def.NameEn : s.id;
-                slotCounts[i].text = name + "\n×" + s.count;
+                slotCounts[i].text = g.Pocket.Unlimited ? name : name + "\n×" + s.count;
                 slotCounts[i].fontSize = name.Length > 10 ? 15 : 18;
             }
 
@@ -496,10 +530,74 @@ namespace BoomYard.UI
             UpdateMarkers();
         }
 
+        // ---------- the spray can ----------
+
+        void UpdateSpray(Player player)
+        {
+            bool on = player.Spraying;
+            throwBtn.gameObject.SetActive(!on);
+            lightCaption.text = on ? "SPRAY" : "LIGHT";
+            lightIcon.sprite = on ? UIKit.Can : UIKit.FlameIcon;
+            lightIcon.color = on ? new Color(Spray.I.Color.R, Spray.I.Color.G, Spray.I.Color.B) : UIKit.Flame;
+            placeCaption.text = on ? "STENCIL" : "PLACE";
+            placeBtn.gameObject.SetActive(!on || Spray.I.Stencil != null);
+            sprayCaption.text = on ? "PUT AWAY" : "SPRAY CAN";
+            sprayRing.color = on ? UIKit.Flame : UIKit.Ok;
+            strip.gameObject.SetActive(on);
+            if (on) BuildStrip();
+        }
+
+        /// <summary>Above the pocket while the can is out: a swatch per colour owned, the stencil and the cap.</summary>
+        void BuildStrip()
+        {
+            var save = SaveService.Data;
+            var colours = new List<SprayColor>();
+            foreach (var c in Graffiti.Colors) if (save.Owns(Shop.Get("spray_" + c.Id))) colours.Add(c);
+            var st = Spray.I.Stencil;
+            string key = save.sprayColor + "|" + save.sprayCap + "|" + save.stencil + "|" + colours.Count + "|" + (st != null ? st.Name : "");
+            if (key == stripKey) return;
+            stripKey = key;
+            for (int i = strip.childCount - 1; i >= 0; i--) Destroy(strip.GetChild(i).gameObject);
+            controls.Taps.Clear();
+            float x = 0f;
+            foreach (var c in colours)
+            {
+                var col = c;
+                bool sel = c.Id == save.sprayColor;
+                var sw = UIKit.Image(strip, "Swatch", sel ? UIKit.Fg : new Color(0f, 0f, 0f, 0.5f), UIKit.Circle);
+                UIKit.Place(sw.rectTransform, new Vector2(0f, 0.5f), new Vector2(x, 0f), new Vector2(sel ? 60f : 52f, sel ? 60f : 52f));
+                sw.rectTransform.pivot = new Vector2(0f, 0.5f);
+                var dot = UIKit.Image(sw.transform, "Paint", new Color(c.R, c.G, c.B), UIKit.Circle);
+                UIKit.Place(dot.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(sel ? 48f : 44f, sel ? 48f : 44f));
+                dot.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+                controls.Taps.Add(new KeyValuePair<RectTransform, System.Action>(sw.rectTransform, () => { save.sprayColor = col.Id; Sfx.I.Tap(); Player.I.RefreshCan(); }));
+                x += sel ? 66f : 58f;
+            }
+            x += 10f;
+            Chip("STENCIL: " + (st != null ? st.Name.ToUpperInvariant() : "NONE"), ref x, 300f, game.CycleStencil);
+            Chip(Graffiti.Cap(save.sprayCap).Name.ToUpperInvariant(), ref x, 210f, game.CycleCap);
+        }
+
+        void Chip(string text, ref float x, float width, System.Action onTap)
+        {
+            var chip = UIKit.Image(strip, "Chip", new Color(0.03f, 0.03f, 0.035f, 0.75f), UIKit.Pill);
+            UIKit.Place(chip.rectTransform, new Vector2(0f, 0.5f), new Vector2(x, 0f), new Vector2(width, 52f));
+            chip.rectTransform.pivot = new Vector2(0f, 0.5f);
+            var t = UIKit.Label(chip.transform, "Text", text, 19, UIKit.Fg, TextAnchor.MiddleCenter, true);
+            UIKit.Stretch(t.rectTransform);
+            controls.Taps.Add(new KeyValuePair<RectTransform, System.Action>(chip.rectTransform, () => { Sfx.I.Tap(); onTap(); }));
+            x += width + 10f;
+        }
+
         /// <summary>What to do next, in a few words.</summary>
         string Prompt(Player p)
         {
             if (p.Knocked) return "";
+            if (p.Spraying)
+            {
+                if (Spray.I.Painting) return "";
+                return Spray.I.Stencil != null ? "Hold SPRAY to paint · tap a wall for the " + Spray.I.Stencil.Name.ToUpperInvariant() + " stencil" : "Hold SPRAY to paint the wall at the crosshair";
+            }
             if (p.HeldLit) return "THROW IT!";
             if (p.LightTarget != null) return p.Ignition != null && p.Ignition.Flame == FlameState.Lit ? "Keep the flame on the fuse…" : "Hold LIGHT to light the fuse";
             foreach (var l in LiveExplosive.Active)

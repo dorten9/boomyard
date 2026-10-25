@@ -13,6 +13,8 @@ const plans = {
   title: [8000],
   play: [9000, 12000],
   boom: [8000, 9500, 11000, 13000, 16000, 20000, 26000],
+  city: [12000],
+  spray: [16000],
 };
 for (const [shot, times] of Object.entries(plans)) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 590 } });

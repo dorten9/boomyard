@@ -114,7 +114,7 @@ namespace BoomYard.UI
             UIKit.Place(dsub.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 8f), new Vector2(400f, 26f));
             dsub.rectTransform.pivot = new Vector2(0.5f, 0f);
             ((RectTransform)daily.transform.Find("Label")).offsetMin = new Vector2(0f, 18f);
-            Btn(s, "FIREWORKS SHOW", false, () => game.StartShow(), new Vector2(0f, 0.5f), new Vector2(275f, -294f), new Vector2(410f, 72f), 26);
+            Btn(s, "BIG CITY", false, () => game.StartCity(), new Vector2(0f, 0.5f), new Vector2(275f, -294f), new Vector2(410f, 72f), 28);
             var missions = Btn(s, "MISSIONS", false, () => ShowMissions(), new Vector2(0f, 0.5f), new Vector2(380f, -92f), new Vector2(200f, 80f), 28);
             int ready = 0;
             foreach (var m in save.TodaysMissions()) if (m.Done && !m.claimed) ready++;
@@ -293,32 +293,36 @@ namespace BoomYard.UI
         static string KitSummary(PocketSlot[] kit)
         {
             var parts = new List<string>();
-            foreach (var k in kit) parts.Add(k.count + "× " + Catalog.Explosive(k.id).NameEn);
+            foreach (var k in kit) parts.Add(Catalog.Explosive(k.id).NameEn);
             return string.Join(", ", parts.ToArray());
         }
 
         static string Owned()
         {
             int n = 0;
-            foreach (var s in SaveService.Data.inventory) n += s.count;
-            return n > 0 ? "  (+ " + n + " of your own)" : "";
+            foreach (var s in SaveService.Data.inventory) if (s.count > 0) n++;
+            return n > 0 ? "  (+ " + n + " unlocked kind" + (n == 1 ? "" : "s") + ")" : "";
         }
 
         // ---------- shop ----------
 
+        public string ShopTab { get { return shopTab; } set { shopTab = value; } }
         string shopTab = "explosive";
+        bool shopInLevel;
 
-        public void ShowShop()
+        /// <summary>The shop. <paramref name="inLevel"/>: opened from inside a level (paused); BACK goes back to it.</summary>
+        public void ShowShop(bool inLevel = false)
         {
+            shopInLevel = inLevel;
             ShowLayer(false);
             var s = NewScreen("Shop");
-            TopBar(s, "SHOP", () => game.GoHome());
-            string[] tabs = { "explosive", "lighter", "upgrade", "style", "coins" };
-            string[] names = { "EXPLOSIVES", "LIGHTERS", "UPGRADES", "STYLE", "COINS" };
+            TopBar(s, "SHOP", () => { if (shopInLevel) BackToPause(); else game.GoHome(); });
+            string[] tabs = { "explosive", "graffiti", "lighter", "upgrade", "style", "coins" };
+            string[] names = { "EXPLOSIVES", "GRAFFITI", "LIGHTERS", "UPGRADES", "STYLE", "COINS" };
             for (int i = 0; i < tabs.Length; i++)
             {
                 string tab = tabs[i];
-                var b = Btn(s, names[i], tab == shopTab, () => { shopTab = tab; ShowShop(); }, new Vector2(0f, 1f), new Vector2(160f + i * 236f, -150f), new Vector2(220f, 62f), 24);
+                Btn(s, names[i], tab == shopTab, () => { shopTab = tab; ShowShop(shopInLevel); }, new Vector2(0f, 1f), new Vector2(140f + i * 220f, -150f), new Vector2(206f, 62f), 22);
             }
             ScrollRect sr;
             var content = UIKit.Scroll(s, "Items", true, out sr);
@@ -329,6 +333,7 @@ namespace BoomYard.UI
             int idx = 0;
             const float cw = 500f, ch = 230f;
             if (shopTab == "coins") { CoinPacks(content); return; }
+            if (shopTab == "graffiti") { GraffitiShop(content); return; }
             foreach (var item in Shop.Items)
             {
                 bool style = item.Kind == "glove" || item.Kind == "lighterskin";
@@ -341,7 +346,8 @@ namespace BoomYard.UI
                 card.rectTransform.anchoredPosition = new Vector2(col * (cw + 24f), -row * (ch + 24f));
                 card.rectTransform.sizeDelta = new Vector2(cw, ch);
                 bool locked = item.UnlockLevel > save.unlocked;
-                bool owned = style ? item.Coins == 0 || save.styles.Contains(item.Id) : item.Kind != "explosive" && (save.lighters.Contains(item.Grants) || save.Has(item.Grants));
+                bool owned = style ? item.Coins == 0 || save.styles.Contains(item.Id)
+                    : item.Kind == "explosive" ? save.Count(item.Grants) > 0 : save.lighters.Contains(item.Grants) || save.Has(item.Grants);
                 bool equipped = item.Kind == "lighter" && save.lighter == item.Grants
                     || item.Kind == "glove" && save.glove == item.Grants || item.Kind == "lighterskin" && save.lighterSkin == item.Grants;
                 var chip = UIKit.Image(card.transform, "Chip", style ? StyleColor(item) : item.Kind == "explosive" ? ItemModel.Chip(item.Grants) : item.Kind == "lighter" ? UIKit.Flame : UIKit.SteelBlue, style ? UIKit.Circle : item.Kind == "explosive" ? UIKit.Rounded : item.Kind == "lighter" ? UIKit.FlameIcon : UIKit.Star);
@@ -353,15 +359,15 @@ namespace BoomYard.UI
                 desc.horizontalOverflow = HorizontalWrapMode.Wrap;
                 if (item.Kind == "explosive")
                 {
-                    var have = UIKit.Label(card.transform, "Have", "You have " + save.Count(item.Grants), 19, UIKit.Muted, TextAnchor.LowerLeft);
-                    UIKit.Place(have.rectTransform, new Vector2(0f, 0f), new Vector2(24f, 26f), new Vector2(240f, 30f));
+                    var have = UIKit.Label(card.transform, "Have", owned ? "Unlimited in every level" : "Unlock for good", 19, owned ? UIKit.Ok : UIKit.Muted, TextAnchor.LowerLeft);
+                    UIKit.Place(have.rectTransform, new Vector2(0f, 0f), new Vector2(24f, 26f), new Vector2(260f, 30f));
                 }
-                string label = locked ? "LEVEL " + item.UnlockLevel : equipped ? "EQUIPPED" : owned ? (item.Kind == "upgrade" ? "OWNED" : "EQUIP") : Loc.Coins(item.Coins);
-                bool canBuy = !locked && !equipped && !(owned && item.Kind == "upgrade");
+                string label = locked ? "LEVEL " + item.UnlockLevel : equipped ? "EQUIPPED" : owned ? (item.Kind == "upgrade" || item.Kind == "explosive" ? "OWNED" : "EQUIP") : Loc.Coins(item.Coins);
+                bool canBuy = !locked && !equipped && !(owned && (item.Kind == "upgrade" || item.Kind == "explosive"));
                 var price = UIKit.Button(card.transform, "Buy", label, canBuy ? UIKit.Ember : new Color(0.2f, 0.19f, 0.2f), canBuy ? Dark : UIKit.Muted, () =>
                 {
                     if (!canBuy) return;
-                    if (game.Buy(item)) ShowShop();
+                    if (game.Buy(item)) ShowShop(shopInLevel);
                     else { Sfx.I.Fail(); Toast("Not enough coins"); }
                 }, 26);
                 var pr = (RectTransform)price.transform;
@@ -412,7 +418,7 @@ namespace BoomYard.UI
                 {
                     if (!Purchases.Available) { Sfx.I.Fail(); Toast(web ? "Coins are bought in the BoomYard app" : "The store is not available right now"); return; }
                     Sfx.I.Tap();
-                    Purchases.Buy(pack, (ok, message) => { if (ok) ShowShop(); else if (message != null) Toast(message); });
+                    Purchases.Buy(pack, (ok, message) => { if (ok) ShowShop(shopInLevel); else if (message != null) Toast(message); });
                 }, 28);
                 UIKit.Place((RectTransform)buy.transform, new Vector2(0.5f, 0f), new Vector2(0f, web ? 40f : 20f), new Vector2(cw - 60f, 68f));
                 if (web)
@@ -451,7 +457,7 @@ namespace BoomYard.UI
             }
             switch (item.Grants)
             {
-                case "vest": return "Carry five kinds of explosives into every level.";
+                case "vest": return "Carry eight kinds of explosives into every level.";
                 case "legs": return "Sprint faster and keep the lighter lit while you jog.";
                 case "watch": return "Every level's clock starts 10 seconds higher.";
                 default: return "";
@@ -666,13 +672,33 @@ namespace BoomYard.UI
 
         public void ShowPause(bool on)
         {
-            if (!on) { CloseModal(); return; }
-            var p = Modal("Pause", new Vector2(640f, 600f));
-            Text(p, "PAUSED", 60, UIKit.Fg, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(600f, 70f), true);
-            Btn(p, "RESUME", true, () => game.TogglePause(), new Vector2(0.5f, 1f), new Vector2(0f, -180f), new Vector2(420f, 82f), 34);
-            Btn(p, "RESTART", false, () => { game.TogglePause(); game.Restart(); }, new Vector2(0.5f, 1f), new Vector2(0f, -280f), new Vector2(420f, 76f), 30);
-            Btn(p, "SETTINGS", false, () => ShowSettings(true), new Vector2(0.5f, 1f), new Vector2(0f, -372f), new Vector2(420f, 76f), 30);
-            Btn(p, "QUIT TO MAP", false, () => game.GoMap(), new Vector2(0.5f, 1f), new Vector2(0f, -464f), new Vector2(420f, 76f), 30);
+            if (!on) { CloseModal(); if (shopInLevel) BackToPause(); return; }
+            bool city = game.Level != null && game.Level.Show;
+            var p = Modal("Pause", new Vector2(640f, city ? 620f : 690f));
+            Text(p, city ? "BIG CITY" : "PAUSED", 60, UIKit.Fg, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(600f, 70f), true);
+            float y = -170f;
+            Btn(p, "RESUME", true, () => game.TogglePause(), new Vector2(0.5f, 1f), new Vector2(0f, y), new Vector2(420f, 82f), 34);
+            y -= 96f;
+            Btn(p, "SHOP", false, () => ShowShop(true), new Vector2(0.5f, 1f), new Vector2(0f, y), new Vector2(420f, 76f), 30);
+            y -= 90f;
+            if (!city)
+            {
+                Btn(p, "RESTART", false, () => { game.TogglePause(); game.Restart(); }, new Vector2(0.5f, 1f), new Vector2(0f, y), new Vector2(420f, 76f), 30);
+                y -= 90f;
+            }
+            Btn(p, "SETTINGS", false, () => ShowSettings(true), new Vector2(0.5f, 1f), new Vector2(0f, y), new Vector2(420f, 76f), 30);
+            y -= 90f;
+            if (city) Btn(p, "CASH IN & LEAVE", false, () => game.CashIn(), new Vector2(0.5f, 1f), new Vector2(0f, y), new Vector2(420f, 76f), 28);
+            else Btn(p, "QUIT TO MAP", false, () => game.GoMap(), new Vector2(0.5f, 1f), new Vector2(0f, y), new Vector2(420f, 76f), 30);
+        }
+
+        /// <summary>Back from the shop opened inside a level: the level (still paused) and its pause menu.</summary>
+        void BackToPause()
+        {
+            shopInLevel = false;
+            for (int i = screen.childCount - 1; i >= 0; i--) Destroy(screen.GetChild(i).gameObject);
+            ShowLayer(true);
+            if (game.Paused) ShowPause(true);
         }
 
         // ---------- results ----------
@@ -682,6 +708,21 @@ namespace BoomYard.UI
             ShowLayer(false);
             var s = NewScreen("Results");
             var save = SaveService.Data;
+            if (r.Level.Show)
+            {
+                Text(s, "BIG CITY", 26, UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -60f), new Vector2(1200f, 36f), true);
+                Text(s, "CASHED IN!", 110, UIKit.Fg, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -140f), new Vector2(1200f, 120f), true);
+                Stat(s, 0, "WRECKED", r.Destroyed + " / " + r.Objects);
+                Stat(s, 1, "LONGEST CHAIN", r.LongestChain > 0 ? r.LongestChain + " links" : "–");
+                Stat(s, 2, "BONUSES", r.BonusLog.Count.ToString());
+                Stat(s, 3, "COINS EARNED", "+" + Loc.Coins(r.Coins));
+                Text(s, Loc.T(r.TipKey), 22, UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), new Vector2(0f, 190f), new Vector2(1300f, 34f));
+                Btn(s, "BACK TO THE CITY", true, () => game.StartCity(), new Vector2(0.5f, 0f), new Vector2(0f, 100f), new Vector2(440f, 100f), 38);
+                Btn(s, "SHOP", false, () => ShowShop(), new Vector2(0.5f, 0f), new Vector2(-360f, 100f), new Vector2(220f, 86f), 30);
+                Btn(s, "HOME", false, () => game.GoHome(), new Vector2(0.5f, 0f), new Vector2(360f, 100f), new Vector2(220f, 86f), 30);
+                Wallet(s);
+                return;
+            }
             if (r.Cleared)
             {
                 Text(s, (r.Level.Daily ? "DAILY CHALLENGE" : "LEVEL " + r.Level.Number) + " · " + r.Level.Name.ToUpperInvariant(), 26, UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -60f), new Vector2(1200f, 36f), true);

@@ -339,6 +339,43 @@ namespace BoomYard.Game
         }
 
         /// <summary>Fuse sparks at a point (child of the fuse tip).</summary>
+        /// <summary>The fine cloud out of a spray can's nozzle (emission off until the nozzle is pressed).</summary>
+        public static ParticleSystem SprayMist(Transform parent, Vector3 at, Color c)
+        {
+            var go = new GameObject("SprayMist");
+            go.layer = Layers.NoRaycast;
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = at;
+            var ps = go.AddComponent<ParticleSystem>();
+            var main = ps.main;
+            main.loop = true;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.2f, 0.45f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(1.5f, 3f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.02f, 0.06f);
+            main.startColor = c;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            var em = ps.emission;
+            em.rateOverTime = 60f;
+            em.enabled = false;
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 9f;
+            shape.radius = 0.002f;
+            var size = ps.sizeOverLifetime;
+            size.enabled = true;
+            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.5f, 1f, 3f));
+            var col = ps.colorOverLifetime;
+            col.enabled = true;
+            var g = new Gradient();
+            g.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) }, new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0f, 1f) });
+            col.color = g;
+            var r = go.GetComponent<ParticleSystemRenderer>();
+            r.sharedMaterial = Mats.ParticleAlpha;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            ps.Play();
+            return ps;
+        }
+
         public static ParticleSystem FuseSparks(Transform parent)
         {
             var go = new GameObject("FuseSparks");

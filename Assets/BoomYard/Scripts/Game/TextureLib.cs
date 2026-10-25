@@ -43,7 +43,7 @@ namespace BoomYard.Game
 
         static int Res(int n) { return System.Math.Max(64, (int)(n * Scale)); }
 
-        public static readonly string[] Names = { "asphalt", "concrete", "brick", "plaster", "wood", "paint", "rust", "grass", "tyre", "chainlink", "roof" };
+        public static readonly string[] Names = { "asphalt", "concrete", "brick", "plaster", "wood", "paint", "rust", "grass", "tyre", "chainlink", "roof", "facade", "curtain" };
 
         public static RawSurface Generate(string name)
         {
@@ -60,6 +60,8 @@ namespace BoomYard.Game
                 case "tyre": return Tyre();
                 case "chainlink": return ChainLink();
                 case "roof": return Roof();
+                case "facade": return Facade();
+                case "curtain": return Curtain();
                 default: return Concrete();
             }
         }
@@ -322,6 +324,81 @@ namespace BoomYard.Game
                     c[y * n + x] = new Color(tone * 1.05f, tone * 0.95f, tone * 0.92f, 0.15f);
                 }
             return Make("roof", n, c, h, 2f, 2.5f);
+        }
+
+        /// <summary>
+        /// A block of flats, 4 × 4 bays of 3 m (one storey each) per tile: plaster, a framed window per bay with a
+        /// sill, the glass dark with the sky in it or lit warm from inside.
+        /// </summary>
+        static RawSurface Facade()
+        {
+            int n = Res(512);
+            var h = new float[n * n];
+            var c = new Color[n * n];
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float u = x / (float)n, v = y / (float)n;
+                    int bx = Mathf.FloorToInt(u * 4f), by = Mathf.FloorToInt(v * 4f);
+                    float fu = u * 4f - bx, fv = v * 4f - by;
+                    float fine = Fbm(u, v, 64, 3, 201), large = Fbm(u, v, 4, 3, 203);
+                    float wallTone = 0.72f + 0.06f * (fine - 0.5f) + 0.06f * (large - 0.5f);
+                    var wall = new Color(wallTone, wallTone * 0.98f, wallTone * 0.95f, 0.2f);
+                    float hh = 0.6f + 0.1f * fine;
+                    // Window 1.4 × 1.7 m in the 3 m bay, sitting 0.8 m up.
+                    float wx = Mathf.Abs(fu - 0.5f), wy = fv - 0.27f;
+                    bool inFrame = wx < 0.26f && wy > -0.02f && wy < 0.6f;
+                    bool inGlass = wx < 0.235f && wy > 0f && wy < 0.57f;
+                    bool sill = wx < 0.29f && wy > -0.05f && wy <= -0.02f;
+                    Color col = wall;
+                    if (sill) { col = new Color(0.82f, 0.81f, 0.78f, 0.3f); hh = 0.85f; }
+                    else if (inGlass)
+                    {
+                        bool lit = Hash(bx, by, 207) > 0.72f;
+                        float sky = Mathf.Clamp01(wy / 0.57f);
+                        col = lit ? new Color(0.78f, 0.5f, 0.24f, 0.75f) : new Color(0.12f + 0.12f * sky, 0.14f + 0.12f * sky, 0.18f + 0.14f * sky, 0.92f);
+                        if (Mathf.Abs(fu - 0.5f) < 0.008f) { col = new Color(0.85f, 0.85f, 0.83f, 0.4f); hh = 0.75f; }   // mullion
+                        else hh = 0.2f;
+                    }
+                    else if (inFrame) { col = new Color(0.88f, 0.88f, 0.86f, 0.45f); hh = 0.78f; }
+                    // A floor band every storey.
+                    if (fv < 0.03f) { col = new Color(wallTone * 0.85f, wallTone * 0.84f, wallTone * 0.82f, 0.25f); hh = 0.7f; }
+                    h[y * n + x] = hh;
+                    c[y * n + x] = col;
+                }
+            return Make("facade", n, c, h, 12f, 2f);
+        }
+
+        /// <summary>An office tower's curtain wall: 3 m glass panels in aluminium mullions, a spandrel at each floor.</summary>
+        static RawSurface Curtain()
+        {
+            int n = Res(512);
+            var h = new float[n * n];
+            var c = new Color[n * n];
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float u = x / (float)n, v = y / (float)n;
+                    int bx = Mathf.FloorToInt(u * 4f), by = Mathf.FloorToInt(v * 4f);
+                    float fu = u * 4f - bx, fv = v * 4f - by;
+                    float tint = Hash(bx, by, 301) * 0.05f;
+                    bool mullion = fu < 0.025f || fu > 0.975f || Mathf.Abs(fu - 0.5f) < 0.012f;
+                    bool spandrel = fv < 0.16f;
+                    Color col;
+                    float hh;
+                    if (mullion || fv < 0.02f) { col = new Color(0.62f, 0.64f, 0.66f, 0.65f); hh = 0.8f; }
+                    else if (spandrel) { col = new Color(0.16f, 0.18f, 0.2f, 0.8f); hh = 0.4f; }
+                    else
+                    {
+                        bool lit = Hash(bx, by, 305) > 0.8f;
+                        float sky = Mathf.Clamp01((fv - 0.16f) / 0.84f);
+                        col = lit ? new Color(0.62f, 0.52f, 0.36f, 0.9f) : new Color(0.1f + 0.1f * sky + tint, 0.18f + 0.12f * sky + tint, 0.24f + 0.14f * sky + tint, 0.96f);
+                        hh = 0.3f;
+                    }
+                    h[y * n + x] = hh;
+                    c[y * n + x] = col;
+                }
+            return Make("curtain", n, c, h, 12f, 1.5f);
         }
 
         // ---------- texture assembly ----------

@@ -159,6 +159,12 @@ namespace BoomYard.Core
             new ObjectDef { Id = "cone", NameHe = "קונוס", NameEn = "Traffic cone", Hp = 5, Value = 120, Material = Material.Plastic, Reaction = Reaction.Launch, Mass = 3 },
             new ObjectDef { Id = "shed", NameHe = "מחסן גינה", NameEn = "Garden shed", Hp = 160, Value = 6000, Material = Material.Wood, Reaction = Reaction.Burn | Reaction.Collapse, BurnSeconds = 25f, Mass = 600 },
             new ObjectDef { Id = "fortress", NameHe = "המחסן המשוריין", NameEn = "Armoured shed", Hp = 1400, Value = 40000, Material = Material.Metal, Reaction = Reaction.Contain, Mass = 8000 },
+            // The big city's street furniture.
+            new ObjectDef { Id = "trafficlight", NameHe = "רמזור", NameEn = "Traffic light", Hp = 70, Value = 3500, Material = Material.Metal, Reaction = Reaction.Launch, Mass = 120 },
+            new ObjectDef { Id = "streetlamp", NameHe = "עמוד תאורה", NameEn = "Street lamp", Hp = 60, Value = 2200, Material = Material.Metal, Reaction = Reaction.Launch, Mass = 90 },
+            new ObjectDef { Id = "busstop", NameHe = "תחנת אוטובוס", NameEn = "Bus shelter glass", Hp = 10, Value = 4000, Material = Material.Glass, Reaction = Reaction.Shatter, Mass = 40 },
+            new ObjectDef { Id = "parkingmeter", NameHe = "מדחן", NameEn = "Parking meter", Hp = 20, Value = 700, Material = Material.Metal, Reaction = Reaction.Launch | Reaction.Contain, Mass = 20 },
+            new ObjectDef { Id = "planter", NameHe = "עציץ רחוב", NameEn = "Street planter", Hp = 30, Value = 500, Material = Material.Wood, Reaction = Reaction.Launch | Reaction.Burn, BurnSeconds = 8f, Mass = 60 },
             new ObjectDef { Id = "industrialtank", NameHe = "מיכל תעשייתי 50 קוב", NameEn = "Industrial tank", Hp = 900, Value = 900000, Material = Material.Metal, Reaction = Reaction.Explode, BlastRadius = 15f, BlastDamage = 5000, BlastDelay = 2f, ThermiteOnly = true, Mass = 20000 },
         };
 

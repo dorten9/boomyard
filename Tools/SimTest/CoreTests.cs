@@ -161,7 +161,12 @@ static class CoreTests
         lr.Tick(10f, false);
         Check(lr.TimeLeft == 20f, "level time limit");
 
-        var p = new Pocket();
+        var u = new Pocket();
+        u.Slots.Add(new PocketSlot { id = "m80", count = 1 });
+        for (int i = 0; i < 50; i++) u.Take();
+        Check(u.Take() == "m80" && u.TotalLeft > 0, "unlimited pocket never runs out");
+
+        var p = new Pocket { Unlimited = false };
         p.Slots.Add(new PocketSlot { id = "blackcat", count = 1 });
         p.Slots.Add(new PocketSlot { id = "m80", count = 2 });
         Check(p.Take() == "blackcat", "take the selected item");
@@ -197,6 +202,54 @@ static class CoreTests
 
 static class MetaTests
 {
+    static void GraffitiTests(System.Action<bool, string> check)
+    {
+        foreach (var it in Shop.Items)
+        {
+            if (it.Kind == "spray") check(Graffiti.Color(it.Grants).Id == it.Grants, "spray colour exists: " + it.Grants);
+            if (it.Kind == "cap") check(Graffiti.Cap(it.Grants).Id == it.Grants, "cap exists: " + it.Grants);
+            if (it.Kind == "stencil") check(Graffiti.Find(it.Grants) != null, "stencil exists: " + it.Grants);
+        }
+        foreach (var c in Graffiti.Colors) check(Shop.Get("spray_" + c.Id) != null, "every colour is sold: " + c.Id);
+        foreach (var c in Graffiti.Caps) check(Shop.Get("cap_" + c.Id) != null, "every cap is sold: " + c.Id);
+        foreach (var st in Graffiti.Stencils)
+        {
+            check(Shop.Get("stencil_" + st.Id) != null, "every stencil is sold: " + st.Id);
+            check(st.Width <= 50 && st.Height <= 16, "stencil fits a wall: " + st.Id);
+            var cells = Graffiti.Cells(st);
+            check(cells.Count > 20, "stencil has a picture: " + st.Id);
+            bool codesOk = true;
+            foreach (var row in st.Rows) foreach (var ch in row) if (ch != '.' && ch != '#' && Graffiti.Fixed(ch) == null) codesOk = false;
+            check(codesOk, "stencil uses known colours: " + st.Id);
+        }
+        // Lettering: every letter drawn, a shadow under it.
+        var boom = Graffiti.Lettering("t", "T", "BOOM");
+        check(boom.Width == 25 && boom.Height == 8, "lettering size");
+        check(boom.At(0, 0) == '#' && boom.At(1, 1) != '.', "letters with a shadow");
+        int letters = 0;
+        foreach (var ch in "ABCDEFGHIJKLMNOPQRSTUVWXYZ!")
+        {
+            var one = Graffiti.Lettering("x", "X", ch.ToString());
+            int painted = 0;
+            foreach (var c in Graffiti.Cells(one)) if (c.Code == '#') painted++;
+            if (painted >= 6) letters++;
+        }
+        check(letters == 27, "the stencil font has every letter");
+        // The stencil maker.
+        var g = Graffiti.Blank;
+        check(Graffiti.Valid(g) && Graffiti.Empty(g), "a blank custom stencil");
+        g = Graffiti.Set(g, 3, 2, 'r');
+        g = Graffiti.Set(g, 15, 15, '#');
+        g = Graffiti.Set(g, 16, 0, '#');   // off the grid: ignored
+        g = Graffiti.Set(g, 0, 0, 'z');    // not a colour: bare wall
+        check(Graffiti.Valid(g) && !Graffiti.Empty(g), "drawing on it");
+        var st2 = Graffiti.FromGrid("custom0", "Mine", g);
+        check(st2.At(3, 2) == 'r' && st2.At(15, 15) == '#' && st2.At(0, 0) == '.', "cells land where they were drawn");
+        check(Graffiti.Cells(st2).Count == 2, "two painted cells");
+        check(!Graffiti.Valid("abc") && Graffiti.Empty(null), "a broken save reads as blank");
+        check(Graffiti.Paint('#', Graffiti.Color("blue")).Id == "blue" && Graffiti.Paint('k', Graffiti.Color("blue")).Id == "black", "'#' is the can, letters are fixed");
+    }
+
     public static void Run(System.Action<bool, string> check)
     {
         var lvl = Levels.Get(1);
@@ -213,7 +266,11 @@ static class MetaTests
             foreach (var k in l.Kit) check(Catalog.Explosive(k.id) != null, "level " + l.Number + " kit item exists: " + k.id);
         }
         foreach (var it in Shop.Items)
-            check(it.Coins > 0 || it.Id.EndsWith("_none"), "shop item has a price in coins: " + it.Id);
+            check(it.Coins > 0 || Shop.Keepsake(it), "shop item has a price in coins: " + it.Id);
+        GraffitiTests(check);
+        var city = Levels.City();
+        check(city.Show && city.Props.Length == 0 && city.Kit.Length >= 3, "the big city: no targets, a kit to start");
+        check(Progress.CityCoins(50 * 400) == 100, "the city pays a quarter of the wreckage");
 
         var a = Missions.ForDay(20261024);
         var b = Missions.ForDay(20261024);
