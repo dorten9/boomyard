@@ -62,7 +62,7 @@ namespace BoomYard.Core
             new ShopItem { Id = "cap_standard", Name = "Standard Cap", Kind = "cap", Grants = "standard", Amount = 1, Coins = 0 },
             new ShopItem { Id = "cap_skinny", Name = "Skinny Cap", Kind = "cap", Grants = "skinny", Amount = 1, Coins = 400 },
             new ShopItem { Id = "cap_fat", Name = "Fat Cap", Kind = "cap", Grants = "fat", Amount = 1, Coins = 800 },
-            new ShopItem { Id = "maker", Name = "Stencil Maker", Kind = "maker", Grants = "maker", Amount = 1, Coins = 1500 },
+            new ShopItem { Id = "maker", Name = "Stencil Studio", Kind = "maker", Grants = "maker", Amount = 1, Coins = 0 },   // free: also on the home screen
             new ShopItem { Id = "stencil_heart", Name = "Heart Stencil", Kind = "stencil", Grants = "heart", Amount = 1, Coins = 300 },
             new ShopItem { Id = "stencil_star", Name = "Star Stencil", Kind = "stencil", Grants = "star", Amount = 1, Coins = 300 },
             new ShopItem { Id = "stencil_smiley", Name = "Smiley Stencil", Kind = "stencil", Grants = "smiley", Amount = 1, Coins = 400 },

@@ -28,7 +28,7 @@ namespace BoomYard.UI
         const float JoyRadiusShare = 0.11f;   // of the screen height
         const float TapSeconds = 0.25f;
 
-        enum Role { None, Move, Look, Lighter, Throw, Place, Detonate, Ui }
+        enum Role { None, Move, Look, Paint, Lighter, Throw, Place, Detonate, Ui }
 
         sealed class Finger
         {
@@ -59,6 +59,7 @@ namespace BoomYard.UI
             Gather();
             input.Move = Vector2.zero;
             input.LighterHeld = false;
+            input.PaintHeld = false;
             ThrowHeld = false;
             JoystickActive = false;
 
@@ -70,6 +71,8 @@ namespace BoomYard.UI
                     f = new Finger { Role = RoleAt(p.Pos, input), Start = p.Pos, Last = p.Pos, Time = Time.unscaledTime };
                     fingers[p.Id] = f;
                     if (f.Role == Role.Lighter) input.LighterDown = true;
+                    // With the spray can out, a finger on the view paints instead of turning it.
+                    if (f.Role == Role.Look && player.Spraying && p.Id != -2) f.Role = Role.Paint;
                     if (f.Role == Role.Move && Time.unscaledTime - lastMoveEnd < 0.3f) runLatched = true;
                 }
                 if (!fingers.TryGetValue(p.Id, out f)) continue;
@@ -97,6 +100,25 @@ namespace BoomYard.UI
                         {
                             input.Place = true;
                             input.PlaceScreen = p.Pos;
+                        }
+                        break;
+                    case Role.Paint:
+                        bool tap = Time.unscaledTime - f.Time < TapSeconds && f.Travel < Screen.height * 0.025f;
+                        if (ended)
+                        {
+                            if (tap) { input.Place = true; input.PlaceScreen = p.Pos; }
+                        }
+                        else if (!tap || Time.unscaledTime - f.Time > 0.12f)
+                        {
+                            input.PaintHeld = true;
+                            input.PaintScreen = p.Pos;
+                            // Near the edge of the screen the view turns that way, so a long wall can be painted in one go.
+                            float ex = p.Pos.x / Screen.width, ey = p.Pos.y / Screen.height;
+                            float pan = 70f * Time.unscaledDeltaTime;
+                            if (ex > 0.88f) input.Look.x += (ex - 0.88f) / 0.12f * pan;
+                            if (ex < 0.12f) input.Look.x -= (0.12f - ex) / 0.12f * pan;
+                            if (ey > 0.85f) input.Look.y += (ey - 0.85f) / 0.15f * pan * 0.7f;
+                            if (ey < 0.15f) input.Look.y -= (0.15f - ey) / 0.15f * pan * 0.7f;
                         }
                         break;
                     case Role.Lighter:

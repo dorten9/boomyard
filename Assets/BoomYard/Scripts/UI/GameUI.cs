@@ -596,7 +596,7 @@ namespace BoomYard.UI
             if (p.Spraying)
             {
                 if (Spray.I.Painting) return "";
-                return Spray.I.Stencil != null ? "Hold SPRAY to paint · tap a wall for the " + Spray.I.Stencil.Name.ToUpperInvariant() + " stencil" : "Hold SPRAY to paint the wall at the crosshair";
+                return Spray.I.Stencil != null ? "Drag on a wall to paint · tap it for the " + Spray.I.Stencil.Name.ToUpperInvariant() + " stencil" : "Drag your finger on a wall to paint it";
             }
             if (p.HeldLit) return "THROW IT!";
             if (p.LightTarget != null) return p.Ignition != null && p.Ignition.Flame == FlameState.Lit ? "Keep the flame on the fuse…" : "Hold LIGHT to light the fuse";

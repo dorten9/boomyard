@@ -164,8 +164,20 @@ namespace BoomYard.EditorTools
             EnsureShaders(RuntimeShaders);
             EnsureFogVariants();
             EnsureScene();
+            LinkPickerFrameworks();
             var scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
             return scenes.Length == 0 ? new[] { ScenePath } : scenes;
+        }
+
+        /// <summary>The iPhone picture picker (Plugins/BoomImagePicker.mm) needs PhotosUI linked into the Xcode project.</summary>
+        static void LinkPickerFrameworks()
+        {
+            var pi = AssetImporter.GetAtPath("Assets/BoomYard/Plugins/BoomImagePicker.mm") as PluginImporter;
+            if (pi == null) return;
+            pi.SetCompatibleWithAnyPlatform(false);
+            pi.SetCompatibleWithPlatform(BuildTarget.iOS, true);
+            pi.SetPlatformData(BuildTarget.iOS, "FrameworkDependencies", "PhotosUI;Photos;");
+            pi.SaveAndReimport();
         }
     }
 }

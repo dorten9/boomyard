@@ -22,28 +22,39 @@ namespace BoomYard.Core
 
     /// <summary>
     /// A stencil: a picture in cells, 10 cm each on the wall. '.' is bare wall, '#' is the can's colour and the
-    /// letters are fixed colours (see <see cref="Graffiti.Fixed"/>).
+    /// letters are fixed colours (see <see cref="Graffiti.Fixed"/>). A picture stencil (made from a photo) has
+    /// <see cref="Rgba"/> instead of rows: full colour, '*' in every cell that is not see-through.
     /// </summary>
     public sealed class Stencil
     {
         public string Id, Name;
         public string[] Rows;
-        public int Width { get { int w = 0; foreach (var r in Rows) w = Math.Max(w, r.Length); return w; } }
-        public int Height { get { return Rows.Length; } }
+        public byte[] Rgba;          // picture stencils: PicWidth × PicHeight pixels, top row first
+        public int PicWidth, PicHeight;
+
+        public bool Picture { get { return Rgba != null; } }
+        public int Width { get { if (Picture) return PicWidth; int w = 0; foreach (var r in Rows) w = Math.Max(w, r.Length); return w; } }
+        public int Height { get { return Picture ? PicHeight : Rows.Length; } }
 
         public char At(int x, int y)
         {
+            if (Picture)
+            {
+                if (x < 0 || y < 0 || x >= PicWidth || y >= PicHeight) return '.';
+                return Rgba[(y * PicWidth + x) * 4 + 3] >= 128 ? '*' : '.';
+            }
             if (y < 0 || y >= Rows.Length) return '.';
             var r = Rows[y];
             return x >= 0 && x < r.Length ? r[x] : '.';
         }
     }
 
-    /// <summary>One cell of a stencil to paint: column and row from the top left, and its colour code.</summary>
+    /// <summary>One cell of a stencil to paint: column and row from the top left, its colour code ('*' for a picture's own colour in R, G, B).</summary>
     public struct StencilCell
     {
         public int X, Y;
         public char Code;
+        public byte R, G, B;
     }
 
     /// <summary>
@@ -124,7 +135,12 @@ namespace BoomYard.Core
                 for (int x = 0; x < s.Width; x++)
                 {
                     char c = s.At(x, y);
-                    if (c != '.' && (c == '#' || Fixed(c) != null)) list.Add(new StencilCell { X = x, Y = y, Code = c });
+                    if (c == '*')
+                    {
+                        int i = (y * s.PicWidth + x) * 4;
+                        list.Add(new StencilCell { X = x, Y = y, Code = c, R = s.Rgba[i], G = s.Rgba[i + 1], B = s.Rgba[i + 2] });
+                    }
+                    else if (c != '.' && (c == '#' || Fixed(c) != null)) list.Add(new StencilCell { X = x, Y = y, Code = c });
                 }
             return list;
         }
@@ -168,6 +184,115 @@ namespace BoomYard.Core
 
         /// <summary>Id of the custom stencil in a save slot (0..2).</summary>
         public static string CustomId(int slot) { return "custom" + slot; }
+
+        // ---------- pictures: a photo as a stencil ----------
+
+        /// <summary>A picture stencil is at most this many cells across; on the wall it is about 2 m.</summary>
+        public const int PictureSize = 48, PictureSlots = 6, PicturePrice = 500;
+        public const float PictureMetres = 2f;
+
+        /// <summary>The first picture is free, every one after it costs <see cref="PicturePrice"/> coins.</summary>
+        public static int PictureCost(int madeBefore) { return madeBefore <= 0 ? 0 : PicturePrice; }
+
+        public static string PictureId(int slot) { return "picture" + slot; }
+
+        /// <summary>
+        /// Turns an image (RGBA, top row first) into a picture stencil: scaled down to fit
+        /// <see cref="PictureSize"/> (averaging the pixels under each cell), and, when its border is one plain
+        /// colour, that background cut away (a flood from the edges), so a logo or a face on a plain backdrop
+        /// comes out as just the shape.
+        /// </summary>
+        public static Stencil PictureFrom(byte[] src, int w, int h, string id, string name, bool cutBackground = true)
+        {
+            if (src == null || w <= 0 || h <= 0 || src.Length < w * h * 4) return null;
+            float scale = Math.Min(1f, PictureSize / (float)Math.Max(w, h));
+            int pw = Math.Max(1, (int)Math.Round(w * scale)), ph = Math.Max(1, (int)Math.Round(h * scale));
+            var dst = new byte[pw * ph * 4];
+            for (int y = 0; y < ph; y++)
+                for (int x = 0; x < pw; x++)
+                {
+                    int x0 = x * w / pw, x1 = Math.Max(x0 + 1, (x + 1) * w / pw), y0 = y * h / ph, y1 = Math.Max(y0 + 1, (y + 1) * h / ph);
+                    long r = 0, g = 0, b = 0, a = 0, n = 0;
+                    for (int sy = y0; sy < y1; sy++)
+                        for (int sx = x0; sx < x1; sx++)
+                        {
+                            int i = (sy * w + sx) * 4;
+                            int alpha = src[i + 3];
+                            r += src[i] * alpha; g += src[i + 1] * alpha; b += src[i + 2] * alpha; a += alpha; n++;
+                        }
+                    int o = (y * pw + x) * 4;
+                    if (a > 0) { dst[o] = (byte)(r / a); dst[o + 1] = (byte)(g / a); dst[o + 2] = (byte)(b / a); }
+                    dst[o + 3] = (byte)(a / n);
+                }
+            if (cutBackground) CutBackground(dst, pw, ph);
+            return new Stencil { Id = id, Name = name, Rgba = dst, PicWidth = pw, PicHeight = ph };
+        }
+
+        static void CutBackground(byte[] px, int w, int h)
+        {
+            // The backdrop: the average of the border, if the border is nearly one colour.
+            long r = 0, g = 0, b = 0, n = 0;
+            var border = new List<int>();
+            for (int x = 0; x < w; x++) { border.Add(x); border.Add((h - 1) * w + x); }
+            for (int y = 1; y < h - 1; y++) { border.Add(y * w); border.Add(y * w + w - 1); }
+            foreach (var p in border) { if (px[p * 4 + 3] < 128) continue; r += px[p * 4]; g += px[p * 4 + 1]; b += px[p * 4 + 2]; n++; }
+            if (n < border.Count / 2) return;   // the border is see-through already
+            int br = (int)(r / n), bg = (int)(g / n), bb = (int)(b / n);
+            int close = 0;
+            foreach (var p in border) if (Near(px, p, br, bg, bb, 60)) close++;
+            if (close < border.Count * 0.7f) return;   // a photo with no plain backdrop: keep it whole
+            var seen = new bool[w * h];
+            var stack = new Stack<int>();
+            foreach (var p in border) if (Near(px, p, br, bg, bb, 60)) { stack.Push(p); seen[p] = true; }
+            while (stack.Count > 0)
+            {
+                int p = stack.Pop();
+                px[p * 4 + 3] = 0;
+                int x = p % w, y = p / w;
+                if (x > 0) Visit(px, seen, stack, p - 1, br, bg, bb);
+                if (x < w - 1) Visit(px, seen, stack, p + 1, br, bg, bb);
+                if (y > 0) Visit(px, seen, stack, p - w, br, bg, bb);
+                if (y < h - 1) Visit(px, seen, stack, p + w, br, bg, bb);
+            }
+        }
+
+        static void Visit(byte[] px, bool[] seen, Stack<int> stack, int p, int r, int g, int b)
+        {
+            if (seen[p]) return;
+            seen[p] = true;
+            if (Near(px, p, r, g, b, 60)) stack.Push(p);
+        }
+
+        static bool Near(byte[] px, int p, int r, int g, int b, int tol)
+        {
+            if (px[p * 4 + 3] < 128) return true;
+            int dr = px[p * 4] - r, dg = px[p * 4 + 1] - g, db = px[p * 4 + 2] - b;
+            return dr * dr + dg * dg + db * db <= tol * tol;
+        }
+
+        /// <summary>A picture stencil as text for the save: "width,height,base64 of the RGBA".</summary>
+        public static string EncodePicture(Stencil s)
+        {
+            if (s == null || !s.Picture) return "";
+            return s.PicWidth + "," + s.PicHeight + "," + Convert.ToBase64String(s.Rgba);
+        }
+
+        public static Stencil DecodePicture(string text, string id, string name)
+        {
+            if (string.IsNullOrEmpty(text)) return null;
+            var parts = text.Split(new[] { ',' }, 3);
+            int w, h;
+            if (parts.Length != 3 || !int.TryParse(parts[0], out w) || !int.TryParse(parts[1], out h)) return null;
+            if (w <= 0 || h <= 0 || w > PictureSize || h > PictureSize) return null;
+            byte[] rgba;
+            try { rgba = Convert.FromBase64String(parts[2]); }
+            catch (FormatException) { return null; }
+            if (rgba.Length != w * h * 4) return null;
+            return new Stencil { Id = id, Name = name, Rgba = rgba, PicWidth = w, PicHeight = h };
+        }
+
+        /// <summary>Metres per cell on the wall: 10 cm for drawn stencils, a picture is about 2 m across.</summary>
+        public static float CellSize(Stencil s) { return s.Picture ? PictureMetres / Math.Max(s.Width, s.Height) : 0.1f; }
 
         // ---------- the stencils sold in the shop ----------
 

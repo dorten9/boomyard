@@ -56,6 +56,8 @@ namespace BoomYard.Game
         public List<string> styles = new List<string>();  // style and graffiti items bought (shop ids)
         public string sprayColor = "red", sprayCap = "standard", stencil = "";   // the can as last set; stencil "" = freehand
         public List<string> customStencils = new List<string>();                // the stencil maker's grids (Graffiti.Valid)
+        public List<string> pictures = new List<string>();                      // picture stencils from photos (Graffiti.EncodePicture); "" = empty slot
+        public int picturesMade;                                                 // pictures ever kept (the first is free)
         public int gems;                  // retired: gems became coins (100 each) on load
         public string lighter = "basic";
         public List<string> lighters = new List<string> { "basic" };
@@ -85,6 +87,24 @@ namespace BoomYard.Game
         {
             while (customStencils.Count < Graffiti.CustomSlots) customStencils.Add(Graffiti.Blank);
             return Graffiti.Valid(customStencils[slot]) ? customStencils[slot] : Graffiti.Blank;
+        }
+
+        /// <summary>The picture stencil in a slot, or null if the slot is empty.</summary>
+        public Stencil Picture(int slot)
+        {
+            if (slot < 0 || slot >= pictures.Count) return null;
+            return Graffiti.DecodePicture(pictures[slot], Graffiti.PictureId(slot), "Picture " + (slot + 1));
+        }
+
+        /// <summary>The stencil an id names: a shop stencil, a drawing (custom0..2) or a picture (picture0..5); null if none.</summary>
+        public Stencil StencilById(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return null;
+            for (int i = 0; i < Graffiti.CustomSlots; i++)
+                if (id == Graffiti.CustomId(i)) return Graffiti.Empty(Custom(i)) ? null : Graffiti.FromGrid(id, "Drawing " + (i + 1), Custom(i));
+            for (int i = 0; i < Graffiti.PictureSlots; i++)
+                if (id == Graffiti.PictureId(i)) return Picture(i);
+            return Graffiti.Find(id);
         }
 
         public ArenaRecord Arena(int number)

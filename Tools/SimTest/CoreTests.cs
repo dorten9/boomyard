@@ -248,6 +248,32 @@ static class MetaTests
         check(Graffiti.Cells(st2).Count == 2, "two painted cells");
         check(!Graffiti.Valid("abc") && Graffiti.Empty(null), "a broken save reads as blank");
         check(Graffiti.Paint('#', Graffiti.Color("blue")).Id == "blue" && Graffiti.Paint('k', Graffiti.Color("blue")).Id == "black", "'#' is the can, letters are fixed");
+        // Pictures: a red disc on a white backdrop, 200 × 100.
+        int pw = 200, ph = 100;
+        var img = new byte[pw * ph * 4];
+        for (int y = 0; y < ph; y++)
+            for (int x = 0; x < pw; x++)
+            {
+                int o = (y * pw + x) * 4;
+                bool disc = (x - 100) * (x - 100) + (y - 50) * (y - 50) < 40 * 40;
+                img[o] = 250; img[o + 1] = disc ? (byte)20 : (byte)250; img[o + 2] = disc ? (byte)20 : (byte)248; img[o + 3] = 255;
+            }
+        var pic = Graffiti.PictureFrom(img, pw, ph, "picture0", "P");
+        check(pic.Picture && pic.Width == Graffiti.PictureSize && pic.Height == Graffiti.PictureSize / 2, "a picture is scaled to fit, keeping its shape");
+        check(pic.At(0, 0) == '.' && pic.At(pic.Width / 2, pic.Height / 2) == '*', "a plain background is cut away, the subject stays");
+        var mid = Graffiti.Cells(pic).Find(c => c.X == pic.Width / 2 && c.Y == pic.Height / 2);
+        check(mid.R > 200 && mid.G < 60, "a picture keeps its own colours");
+        var back = Graffiti.DecodePicture(Graffiti.EncodePicture(pic), "picture0", "P");
+        check(back != null && back.Width == pic.Width && Graffiti.Cells(back).Count == Graffiti.Cells(pic).Count, "a picture survives the save");
+        check(Graffiti.DecodePicture("3,3,notbase64!!", "p", "P") == null && Graffiti.DecodePicture("", "p", "P") == null, "a broken picture reads as none");
+        // A photo with a busy border is kept whole.
+        var noise = new byte[64 * 64 * 4];
+        var rnd = new System.Random(3);
+        for (int i = 0; i < noise.Length; i++) noise[i] = (i % 4 == 3) ? (byte)255 : (byte)rnd.Next(256);
+        var photo = Graffiti.PictureFrom(noise, 64, 64, "picture1", "P");
+        check(Graffiti.Cells(photo).Count == photo.Width * photo.Height, "a photo without a plain backdrop keeps every cell");
+        check(Graffiti.PictureCost(0) == 0 && Graffiti.PictureCost(1) == Graffiti.PicturePrice && Graffiti.PictureCost(5) == Graffiti.PicturePrice, "the first picture is free, then each costs coins");
+        check(System.Math.Abs(Graffiti.CellSize(pic) * pic.Width - Graffiti.PictureMetres) < 0.01f, "a picture is about 2 m across on the wall");
     }
 
     public static void Run(System.Action<bool, string> check)
