@@ -18,6 +18,8 @@ namespace BoomYard.Game
         public bool Pause;
         public bool Detonate;         // the remote's BOOM button
         public bool SprayToggle;      // the can in or out of the hand
+        public bool PaintHeld;        // a finger painting with the can (at PaintScreen)
+        public Vector2 PaintScreen;
 
         public void ClearEdges()
         {
@@ -163,10 +165,16 @@ namespace BoomYard.Game
                     // The can: hold SPRAY to paint at the crosshair, tap a wall to stamp the stencil.
                     Ignition.Release();
                     LightTarget = null;
-                    if (act && (In.LighterHeld || spray.HeldForShot)) spray.Paint(Cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f)));
+                    if (act && In.PaintHeld) spray.Paint(Cam.ScreenPointToRay(In.PaintScreen));
+                    else if (act && (In.LighterHeld || spray.HeldForShot)) spray.Paint(Cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f)));
                     else if (spray.Painting) spray.Release();
-                    if (act && In.Place && !spray.Stamp(Cam.ScreenPointToRay(In.PlaceScreen)))
-                        game.Toast(spray.Stencil == null ? "toast.nostencil" : "toast.nowall");
+                    // A tap stamps the stencil; with none on the can, a tap is just a puff of paint.
+                    if (act && In.Place)
+                    {
+                        var ray = Cam.ScreenPointToRay(In.PlaceScreen);
+                        if (spray.Stencil == null) { spray.Paint(ray); spray.Release(); }
+                        else if (!spray.Stamp(ray)) game.Toast("toast.nowall");
+                    }
                     Hands.Spraying = spray.Painting;
                 }
                 else

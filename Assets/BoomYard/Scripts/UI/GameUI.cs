@@ -27,7 +27,7 @@ namespace BoomYard.UI
         RectTransform fuseBar, fusePointer, powerBar, markers;
         RectTransform lightBtn, throwBtn, placeBtn, boomBtn, sprayBtn, strip;
         Text boomCaption, lightCaption, placeCaption, sprayCaption;
-        Image lightIcon, sprayRing;
+        Image lightIcon, sprayRing, sprayMarker;
         string stripKey = "";
         float wreckedAt;
         int wrecked;
@@ -288,6 +288,12 @@ namespace BoomYard.UI
             lightCaption = lightBtn.Find("Caption").GetComponent<Text>();
             lightIcon = lightBtn.Find("Icon").GetComponent<Image>();
             placeCaption = placeBtn.Find("Caption").GetComponent<Text>();
+            // Where the paint lands while SPRAY is dragged.
+            sprayMarker = UIKit.Image(hud, "SprayMarker", Color.white, UIKit.Ring);
+            sprayMarker.rectTransform.anchorMin = sprayMarker.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            sprayMarker.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            sprayMarker.rectTransform.sizeDelta = new Vector2(44f, 44f);
+            sprayMarker.gameObject.SetActive(false);
             strip = UIKit.Rect(hud, "SprayStrip");
             UIKit.Place(strip, new Vector2(0f, 0f), new Vector2(30f, 262f), new Vector2(1000f, 64f));   // clear of the joystick
             powerBar = UIKit.Rect(throwBtn, "Power");
@@ -545,6 +551,15 @@ namespace BoomYard.UI
             sprayRing.color = on ? UIKit.Flame : UIKit.Ok;
             strip.gameObject.SetActive(on);
             if (on) BuildStrip();
+            Vector2 at = Vector2.zero;
+            bool marker = on && controls.SprayCursorActive && RectTransformUtility.ScreenPointToLocalPointInRectangle(hud, controls.SprayCursor, null, out at);
+            sprayMarker.gameObject.SetActive(marker);
+            if (marker)
+            {
+                sprayMarker.rectTransform.anchoredPosition = at;
+                var c = Spray.I.Color;
+                sprayMarker.color = new Color(c.R, c.G, c.B, 0.9f);
+            }
         }
 
         /// <summary>Above the pocket while the can is out: a swatch per colour owned, the stencil and the cap.</summary>
@@ -596,7 +611,7 @@ namespace BoomYard.UI
             if (p.Spraying)
             {
                 if (Spray.I.Painting) return "";
-                return Spray.I.Stencil != null ? "Hold SPRAY to paint · tap a wall for the " + Spray.I.Stencil.Name.ToUpperInvariant() + " stencil" : "Hold SPRAY to paint the wall at the crosshair";
+                return Spray.I.Stencil != null ? "Hold SPRAY and slide to paint · tap a wall for the " + Spray.I.Stencil.Name.ToUpperInvariant() + " stencil" : "Hold SPRAY and slide your finger to paint";
             }
             if (p.HeldLit) return "THROW IT!";
             if (p.LightTarget != null) return p.Ignition != null && p.Ignition.Flame == FlameState.Lit ? "Keep the flame on the fuse…" : "Hold LIGHT to light the fuse";

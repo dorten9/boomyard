@@ -9,10 +9,17 @@ namespace BoomYard.Game
             var gen = new SfxGen();
             gen.Build();
             var all = gen.All();
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             all["carAlarm"] = StreetSounds.CarAlarm;
             all["whistle"] = StreetSounds.Whistle;
             all["rain"] = StreetSounds.Rain;
             for (int i = 0; i < StreetSounds.Bark.Length; i++) all["bark" + i] = StreetSounds.Bark[i];
+            double streetMs = sw.Elapsed.TotalMilliseconds;
+            sw.Restart();
+            all["spray"] = SfxGen.SprayClip();
+            all["rattle"] = SfxGen.RattleClip();
+            double lazyMs = sw.Elapsed.TotalMilliseconds;
+            System.Console.WriteLine("time: Sfx startup " + gen.awakeMs.ToString("0") + " ms, music " + gen.musicMs.ToString("0") + " ms, street " + streetMs.ToString("0") + " ms, spray+rattle " + lazyMs.ToString("0") + " ms");
             foreach (var kv in all)
             {
                 var path = Path.Combine(args[0], kv.Key + ".wav");

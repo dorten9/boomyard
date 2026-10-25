@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Renders every synthesised sound and the music loop (Scripts/Game/Sfx.cs) to WAV files, with Mono, no Unity.
+# Renders every synthesised sound and the music loop (Scripts/Game/Sfx.cs, StreetSounds in StreetLife.cs, and the
+# lazily made spray and rattle) to WAV files, with Mono, no Unity, and prints how long the generation took.
 # The synthesis half of Sfx.cs is cut out as text and compiled against a tiny AudioClip/Mathf shim.
 # Usage: Tools/SfxExport/export.sh <outDir>
 set -euo pipefail
@@ -23,9 +24,13 @@ public sealed class SfxGen {
 %s
 public %s
 public AudioClip music;
+public double awakeMs, musicMs;
 public void Build() {
+var sw = System.Diagnostics.Stopwatch.StartNew();
 %s
+awakeMs = sw.Elapsed.TotalMilliseconds; sw.Restart();
 music = MakeMusic();
+musicMs = sw.Elapsed.TotalMilliseconds;
 }
 public Dictionary<string, AudioClip> All() { return new Dictionary<string, AudioClip> { %s, { "music", music } }; }
 %s

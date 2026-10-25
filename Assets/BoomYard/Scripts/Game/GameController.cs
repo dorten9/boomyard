@@ -78,6 +78,7 @@ namespace BoomYard.Game
             Mark("sound ready");
             gameObject.AddComponent<FireGrid>();
             Spray.Create(gameObject);
+            ImagePicker.Create();
             Rendering.Create(Quality.Tier);
             Mark("rendering ready");
 
@@ -652,6 +653,7 @@ namespace BoomYard.Game
             foreach (var st in Graffiti.Stencils) if (save.Owns(Shop.Get("stencil_" + st.Id))) ids.Add(st.Id);
             if (save.Owns(Shop.Get("maker")))
                 for (int i = 0; i < Graffiti.CustomSlots; i++) if (!Graffiti.Empty(save.Custom(i))) ids.Add(Graffiti.CustomId(i));
+            for (int i = 0; i < Graffiti.PictureSlots; i++) if (save.Picture(i) != null) ids.Add(Graffiti.PictureId(i));
             if (ids.Count == 1) { UI.Toast(Loc.T("toast.buystencil")); return; }
             int at = ids.IndexOf(save.stencil);
             save.stencil = ids[(at + 1) % ids.Count];
@@ -806,7 +808,38 @@ namespace BoomYard.Game
                 save.Custom(0);
                 save.customStencils[0] = smile;
                 GoHome();
-                UI.ShowMaker(0);
+                UI.ShowStudio(null);
+                yield break;
+            }
+            if (mode == "picture" || mode == "picturestamp")
+            {
+                // A made-up logo on a white backdrop: a red disc with a yellow ring, as if it came from the photos.
+                int px = 120;
+                var rgba = new byte[px * px * 4];
+                for (int y = 0; y < px; y++)
+                    for (int x = 0; x < px; x++)
+                    {
+                        float d = Vector2.Distance(new Vector2(x, y), new Vector2(px / 2f, px / 2f)) / (px / 2f);
+                        var c = d < 0.55f ? new Color32(200, 30, 30, 255) : d < 0.75f ? new Color32(250, 200, 30, 255) : new Color32(250, 250, 248, 255);
+                        if (d < 0.25f && Mathf.Abs(x - y) < 6) c = new Color32(20, 20, 20, 255);
+                        int o = (y * px + x) * 4;
+                        rgba[o] = c.r; rgba[o + 1] = c.g; rgba[o + 2] = c.b; rgba[o + 3] = 255;
+                    }
+                if (mode == "picture") { GoHome(); UI.ShowStudio(null); UI.OnPicture(rgba, px, px, 0); yield break; }
+                var save = SaveService.Data;
+                var st = Graffiti.PictureFrom(rgba, px, px, Graffiti.PictureId(0), "Picture 1");
+                while (save.pictures.Count < Graffiti.PictureSlots) save.pictures.Add("");
+                save.pictures[0] = Graffiti.EncodePicture(st);
+                save.stencil = Graffiti.PictureId(0);
+                Spray.StencilsVersion++;
+                StartCity();
+                yield return new WaitForSeconds(1f);
+                Player.Teleport(new Vector3(51f, 0.16f, -44.2f), 180f, -4f);
+                yield return null;
+                Player.SetCan(true);
+                yield return new WaitForSeconds(0.5f);
+                var eye = Player.Cam.transform.position;
+                Spray.I.Stamp(new Ray(eye, new Vector3(51f, 2.6f, -48f) - eye));
                 yield break;
             }
             if (mode == "inshop")

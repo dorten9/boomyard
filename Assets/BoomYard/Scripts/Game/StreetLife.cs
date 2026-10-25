@@ -244,181 +244,427 @@ namespace BoomYard.Game
         // ---------- synthesis ----------
 
         /// <summary>
-        /// A classic car alarm, 4 s loop: two rising whoops, a run of fast two-tone chirps, then a honking pulse.
-        /// A soft-clipped sine through a small speaker (band-limited), so it isn't a pure tone.
+        /// A cheap six-tone car alarm heard from across the street, 6 s loop cycling its patterns: slow rising
+        /// whoops, a fast warble, a two-tone hi-lo and a machine-gun chirp. The source is a pulse wave (a piezo
+        /// driver) with a little pitch wander, through a small horn speaker's resonances (about 1.6, 2.9 and
+        /// 3.9 kHz) and an overdriven amp; then 10-30 m of outdoor air: duller highs, the ground reflection, slapback
+        /// off the houses and a short tail. The effects run twice round the loop so the end flows into the start.
         /// </summary>
         public static float[] AlarmData()
         {
-            int n = Rate * 4;
+            var r = new System.Random(3);
+            int n = Rate * 6;
             var d = new float[n];
-            float ph = 0f;
+            float ph = 0f, wobble = 0f, wobT = 0f, jit = 0f, gate = 0f;
+            var buzz = new System.Random(4);
             for (int i = 0; i < n; i++)
             {
-                float t = i / (float)Rate, f, a = 1f;
-                if (t < 1.6f) { float k = Mathf.Repeat(t, 0.8f) / 0.8f; f = 550f + 1050f * k * k; }
-                else if (t < 3f) { f = Mathf.Repeat(t * 9f, 1f) < 0.5f ? 1450f : 1000f; }
-                else { f = 420f; a = Mathf.Repeat(t * 5f, 1f) < 0.6f ? 1f : 0f; }
-                ph += 2f * Mathf.PI * f / Rate;
-                if (ph > 2f * Mathf.PI) ph -= 2f * Mathf.PI;
-                float v = Tanh(3.2f * Mathf.Sin(ph)) * a;
-                d[i] = v;
+                float t = i / (float)Rate, f, on = 1f;
+                if (t < 1.5f)
+                {   // whoop: two slow sweeps up, each dropping straight back
+                    float k = Mathf.Repeat(t, 0.75f) / 0.75f;
+                    f = 620f * Mathf.Pow(2.9f, k * (2f - k) * 0.85f + k * 0.15f);
+                    on = Mathf.Repeat(t, 0.75f) < 0.71f ? 1f : 0.15f;
+                }
+                else if (t < 3f) f = 1500f + 420f * Tri((t - 1.5f) * 13f);                         // warble
+                else if (t < 4.5f) { float k = Mathf.Repeat((t - 3f) * 2.7f, 1f); f = k < 0.5f ? 1760f : 1290f; }  // hi-lo
+                else
+                {   // machine gun: 2.1 kHz chirps, 9 a second, the last one leading into silence before the loop
+                    float k = Mathf.Repeat((t - 4.5f) * 9f, 1f);
+                    f = 2050f * (1f + 0.06f * (1f - k));
+                    on = k < 0.55f && t < 5.92f ? 1f : 0f;
+                }
+                // Pitch wander of a cheap oscillator on a sagging battery.
+                if ((i & 255) == 0) wobT = (float)(r.NextDouble() * 2.0 - 1.0);
+                wobble += (wobT - wobble) * 0.0008f;
+                jit += ((float)(buzz.NextDouble() * 2.0 - 1.0) - jit) * 0.05f;
+                f *= 1f + 0.006f * wobble + 0.0015f * jit;
+                // The driver doesn't switch instantly (ramp up 2 ms, ring down 6 ms).
+                gate += (on - gate) * (on > gate ? 0.016f : 0.006f);
+                float dt = f / Rate;
+                ph += dt;
+                if (ph >= 1f) ph -= 1f;
+                d[i] = Pulse(ph, dt, 0.42f) * gate;
             }
-            d = Band(d, 380f, 3800f);
-            Normalize(d, 0.7f);
-            return Seam(d, Rate / 50);
+            // Horn speaker and amp.
+            var sp = new[] { Bi.Hp(520f, 0.9f), Bi.Peak(1600f, 2.5f, 6f), Bi.Peak(2900f, 3.5f, 10f), Bi.Peak(3900f, 4f, 8f), Bi.Lp(7000f, 0.8f) };
+            float[] o = new float[n];
+            var lp2 = Bi.Lp(7500f, 0.7f);
+            var air = new[] { Bi.Shelf(5000f, -4f), Bi.Lp(10000f, 0.6f), Bi.Hp(200f, 0.7f) };
+            for (int pass = 0; pass < 2; pass++)
+                for (int i = 0; i < n; i++)
+                {
+                    float v = d[i] * 0.5f;
+                    foreach (var b in sp) v = b.Run(v);
+                    v = lp2.Run(Tanh(2.4f * v));
+                    foreach (var b in air) v = b.Run(v);
+                    o[i] = v;
+                }
+            o = Outdoors(o, new[] { 0.0004f, 0.047f, 0.083f, 0.121f, 0.17f, 0.24f }, new[] { -0.45f, 0.42f, 0.33f, 0.24f, 0.16f, 0.1f }, 0.9f, 0.16f, true, r);
+            Normalize(o, 0.7f);
+            return o;
+        }
+
+        static float Tri(float x) { float k = Mathf.Repeat(x, 1f); return k < 0.5f ? 4f * k - 1f : 3f - 4f * k; }
+
+        /// <summary>Band-limited pulse wave (PolyBLEP at both edges), duty <paramref name="w"/>, phase step <paramref name="dt"/>.</summary>
+        static float Pulse(float ph, float dt, float w)
+        {
+            float v = ph < w ? 1f : -1f;
+            v += Blep(ph, dt);
+            float p2 = ph - w;
+            if (p2 < 0f) p2 += 1f;
+            v -= Blep(p2, dt);
+            return v - (2f * w - 1f);
+        }
+
+        static float Blep(float t, float dt)
+        {
+            if (t < dt) { t /= dt; return t + t - t * t - 1f; }
+            if (t > 1f - dt) { t = (t - 1f) / dt; return t * t + t + t + 1f; }
+            return 0f;
         }
 
         /// <summary>
-        /// One bark (~0.25 s): a buzzy pulse train whose pitch jumps up and falls, through two formants, with a
-        /// breathy noise attack. <paramref name="pitch"/> scales it for variety.
+        /// One bark of a medium dog next door (~0.2 s plus echoes). A glottal pulse train (Rosenberg pulses, the
+        /// pitch jumping up then falling fast, with jitter, shimmer and a rough period-doubled onset) plus breath
+        /// noise, through four formants that open and close with the mouth ("wuh-OOF"), then the garden: slightly
+        /// dull, with echoes off the houses. <paramref name="pitch"/> and <paramref name="seed"/> vary it.
         /// </summary>
         public static float[] BarkData(float pitch, int seed)
         {
             var r = new System.Random(seed);
-            int n = (int)(Rate * 0.26f);
-            var src = new float[n];
-            float ph = 0f;
+            float len = 0.15f + 0.07f * (float)r.NextDouble() / pitch;
+            float peak = (470f + 120f * (float)r.NextDouble()) * pitch, rough = 0.25f + 0.35f * (float)r.NextDouble();
+            float fs = Mathf.Pow(pitch, 0.6f);
+            float F1 = (720f + 140f * (float)r.NextDouble()) * fs, F2 = (1550f + 300f * (float)r.NextDouble()) * fs, F3 = 2700f * fs, F4 = 3700f * fs;
+            int n = (int)(Rate * (len + 0.03f));
+            var y = new float[n];
+            var f = new[] { new Bi(), new Bi(), new Bi(), new Bi() };
+            float[] fg = { 1f, 0.9f, 0.5f, 0.22f };
+            var chest = Bi.Lp(380f, 0.7f);
+            float ph = 0f, prevFlow = 0f, perAmp = 1f, perF = peak, lp = 0f;
+            int period = 0;
             for (int i = 0; i < n; i++)
             {
-                float t = i / (float)Rate;
-                float f0 = pitch * (380f + 260f * Mathf.Exp(-t * 18f) - 90f * t * 3f);
-                ph += f0 / Rate;
-                if (ph >= 1f) ph -= 1f;
-                float pulse = Mathf.Exp(-ph * 9f) - 0.11f;                      // glottal-ish pulse
-                float noise = (float)(r.NextDouble() * 2.0 - 1.0);
-                float env = Mathf.Clamp01(t * 140f) * Mathf.Exp(-t * 10f);
-                src[i] = (pulse * 1.4f + noise * (0.25f + 0.6f * Mathf.Exp(-t * 40f))) * env;
+                float t = i / (float)Rate, u = t / len;
+                // Pitch: up for 20 ms, then a quick fall.
+                float f0 = t < 0.02f ? peak * (0.82f + 0.18f * t / 0.02f) : peak * (0.58f + 0.42f * Mathf.Exp(-(t - 0.02f) * 14f));
+                if ((i & 31) == 0)
+                {
+                    float open = Mathf.Clamp01(t / 0.035f), close = Mathf.Clamp01((u - 0.45f) / 0.55f);
+                    float m = (0.72f + 0.28f * open) * (1f - 0.22f * close);
+                    f[0].SetBp(F1 * m, F1 * m / 110f);
+                    f[1].SetBp(F2 * (0.8f + 0.2f * open) * (1f - 0.25f * close), F2 / 170f);
+                    f[2].SetBp(F3 * (1f - 0.08f * close), F3 / 260f);
+                    f[3].SetBp(F4, F4 / 380f);
+                }
+                ph += perF / Rate;
+                if (ph >= 1f)
+                {
+                    ph -= 1f;
+                    period++;
+                    perF = f0 * (1f + 0.035f * N(r));                                   // jitter
+                    perAmp = (1f + 0.15f * N(r)) * (t < 0.07f && (period & 1) == 1 ? 1f - rough : 1f);   // shimmer, growl
+                }
+                float flow = Rosenberg(ph, 0.45f, 0.1f) * perAmp;
+                float dflow = (flow - prevFlow) * Rate / (perF * 6f);
+                prevFlow = flow;
+                // Voicing comes in a few ms after the breath; breath noise follows the glottis opening.
+                float voice = Mathf.Clamp01((t - 0.004f) / 0.008f);
+                float env = Mathf.Min(1f, t / 0.004f) * (u < 0.35f ? 1f : Mathf.Pow(Mathf.Max(0f, 1f - (u - 0.35f) / 0.65f), 1.4f));
+                float breath = N(r) * (0.25f + 0.5f * flow) * (t < 0.015f ? 1.6f : 0.6f);
+                float tail = u > 0.9f ? N(r) * 0.12f * Mathf.Exp(-(t - 0.9f * len) * 60f) : 0f;   // the exhale after
+                float x = (dflow * voice + breath) * env + tail;
+                float v = 0f;
+                for (int k = 0; k < 4; k++) v += f[k].Run(x) * fg[k];
+                v += chest.Run(flow * voice * env) * 0.35f;
+                lp += (v - lp) * 0.8f;   // a little dulled by the distance
+                y[i] = lp;
             }
-            var f1 = Resonator(src, 850f * pitch, 6f);
-            var f2 = Resonator(src, 1700f * pitch, 7f);
-            var f3 = Resonator(src, 3100f * pitch, 8f);
-            var d = new float[n];
-            for (int i = 0; i < n; i++) d[i] = f1[i] + 0.6f * f2[i] + 0.25f * f3[i];
-            Normalize(d, 0.8f);
-            int tail = Rate / 60;
-            for (int i = 0; i < tail; i++) d[n - 1 - i] *= i / (float)tail;   // no click at the end
-            return d;
+            y = Bi.Hp(110f, 0.7f).Apply(y);
+            Normalize(y, 1f);
+            for (int i = 0; i < n; i++) y[i] = Tanh(1.8f * y[i]);   // a bark is loud: the throat and the mic saturate a little
+            var o = Outdoors(y, new[] { 0.0006f, 0.029f, 0.058f, 0.093f, 0.15f }, new[] { -0.3f, 0.32f, 0.22f, 0.14f, 0.08f }, 0.4f, 0.1f, false, r);
+            Normalize(o, 0.8f);
+            Fade(o, 0.001f, 0.03f);
+            return o;
         }
 
-        /// <summary>A gas bottle venting as it flies: a high wavering whistle over a rushing hiss.</summary>
+        /// <summary>Glottal flow of one period (0..1): rises over <paramref name="tp"/>, falls over <paramref name="tn"/>, then closed.</summary>
+        static float Rosenberg(float p, float tp, float tn)
+        {
+            if (p < tp) return 0.5f * (1f - Mathf.Cos(Mathf.PI * p / tp));
+            if (p < tp + tn) return Mathf.Cos(0.5f * Mathf.PI * (p - tp) / tn);
+            return 0f;
+        }
+
+        /// <summary>
+        /// A gas bottle venting as it flies (1.6 s): a valve pop, a rushing jet of turbulent gas, and the whistle -
+        /// that jet's noise ringing a narrow, overdriven resonance whose pitch rises as the pressure changes and
+        /// wavers with the flow, with its octave and a low roar of thrust.
+        /// </summary>
         public static float[] WhistleData()
         {
             var r = new System.Random(5);
             int n = (int)(Rate * 1.6f);
-            var noise = new float[n];
-            for (int i = 0; i < n; i++) noise[i] = (float)(r.NextDouble() * 2.0 - 1.0);
-            var hiss = Band(noise, 1500f, 9000f);
             var d = new float[n];
-            float ph = 0f;
+            var jet = Bi.Bp(2200f, 0.5f);
+            var thrust = Bi.Lp(420f, 0.8f);
+            var w1 = new Bi();
+            var w2 = new Bi();
+            var hp = Bi.Hp(150f, 0.7f);
+            float wv = 0f, wvT = 0f, fl = 0f, flT = 0f, pop = 1f;
             for (int i = 0; i < n; i++)
             {
                 float t = i / (float)Rate;
-                float f = 2600f + 900f * t + 120f * Mathf.Sin(t * 37f) + 60f * Mathf.Sin(t * 91f);
-                ph += 2f * Mathf.PI * f / Rate;
-                float env = Mathf.Clamp01(t * 12f) * Mathf.Clamp01((1.6f - t) * 4f);
-                d[i] = (Mathf.Sin(ph) * 0.45f + hiss[i] * 0.7f) * env;
+                if ((i & 511) == 0) wvT = N(r);
+                if ((i & 63) == 0) flT = N(r);
+                wv += (wvT - wv) * 0.0025f;
+                fl += (flT - fl) * 0.02f;
+                if ((i & 15) == 0)
+                {
+                    float f = (2300f + 1300f * (1f - Mathf.Exp(-t * 1.6f))) * (1f + 0.025f * wv + 0.008f * fl);
+                    w1.SetBp(f, 70f);
+                    w2.SetBp(f * 2.01f, 50f);
+                }
+                float x = N(r);
+                float tone = Tanh(w1.Run(x) * 14f) * 0.5f + w2.Run(x) * 2.2f;
+                float flow = 1f + 0.18f * fl + 0.1f * wv;
+                float env = Mathf.Clamp01(t / 0.05f) * Mathf.Clamp01((1.6f - t) / 0.3f);
+                pop *= 0.9985f;
+                d[i] = hp.Run((tone * (0.4f + 0.6f * Mathf.Clamp01(t / 0.15f)) + jet.Run(x) * 0.55f + thrust.Run(x) * 0.5f) * flow * env + x * pop * 0.6f);
             }
+            Normalize(d, 1f);
+            for (int i = 0; i < n; i++) d[i] = Tanh(1.5f * d[i]);
             Normalize(d, 0.6f);
+            Fade(d, 0.001f, 0.02f);
             return d;
         }
 
         /// <summary>
-        /// Steady rain, 8 s loop: a bed of filtered noise that swells slowly, plus thousands of tiny drop ticks
-        /// (each a short resonant blip at a random pitch and level) hitting roofs, cars and leaves.
+        /// Steady rain, 8 s loop: a soft wash (filtered noise that swells a little) under thousands of drops of every
+        /// size - fine ticks on leaves and paving, duller pats, bright taps on car roofs and gutters, and bigger
+        /// drops in puddles that "plink" (a bubble ringing with rising pitch). Drops past the end wrap to the start
+        /// and the filters are warmed up on the loop's end, so there is no seam.
         /// </summary>
         public static float[] RainData()
         {
             var r = new System.Random(9);
             int n = Rate * 8;
-            var bed = new float[n];
-            for (int i = 0; i < n; i++) bed[i] = (float)(r.NextDouble() * 2.0 - 1.0);
-            bed = Band(bed, 500f, 7000f);
+            var wash = new float[n];
+            var ticks = new float[n];
+            var pats = new float[n];
             var d = new float[n];
-            for (int i = 0; i < n; i++)
-            {
-                float t = i / (float)Rate;
-                d[i] = bed[i] * (0.3f + 0.06f * Mathf.Sin(t * 0.8f) + 0.04f * Mathf.Sin(t * 2.3f));
-            }
-            int drops = 9000;
-            for (int k = 0; k < drops; k++)
+            for (int i = 0; i < n; i++) wash[i] = N(r);
+            for (int k = 0; k < 16000; k++)
             {
                 int at = r.Next(n);
-                float f = 1800f + (float)r.NextDouble() * 4500f;
-                float amp = 0.08f + 0.25f * (float)(r.NextDouble() * r.NextDouble());
-                float decay = 300f + (float)r.NextDouble() * 500f;
-                int len = Rate / 60;
-                for (int j = 0; j < len; j++)
-                {
-                    int idx = (at + j) % n;
-                    float tt = j / (float)Rate;
-                    d[idx] += Mathf.Sin(2f * Mathf.PI * f * tt) * Mathf.Exp(-tt * decay) * amp;
+                float s = (float)r.NextDouble();
+                s = s * s * s;   // most drops are small
+                double kind = r.NextDouble();
+                if (kind < 0.62)
+                {   // fine tick
+                    int m = 8 + (int)(s * 40f);
+                    float a = 0.04f + 0.4f * s;
+                    for (int j = 0; j < m; j++) ticks[(at + j) % n] += N(r) * a * (1f - j / (float)m);
+                }
+                else if (kind < 0.86)
+                {   // dull pat on soft ground or leaves
+                    int m = 40 + (int)(s * 120f);
+                    float a = 0.05f + 0.35f * s;
+                    for (int j = 0; j < m; j++) pats[(at + j) % n] += N(r) * a * Mathf.Exp(-j * 6f / m);
+                }
+                else if (kind < 0.95)
+                {   // tap on metal: a short ring
+                    float f = 1800f + 2600f * (float)r.NextDouble(), a = 0.03f + 0.2f * s, dec = 300f + 400f * (float)r.NextDouble();
+                    Ring(d, at, f, dec, a, false);
+                    Ring(d, at, f * 2.3f, dec * 1.6f, a * 0.4f, false);
+                }
+                else
+                {   // a bigger drop in a puddle: a splash tick and a bubble chirping up
+                    float f = 900f + 2500f * (1f - s) * (float)r.NextDouble() + 600f, a = 0.03f + 0.15f * s;
+                    for (int j = 0; j < 20; j++) ticks[(at + j) % n] += N(r) * a * 0.8f * (1f - j / 20f);
+                    if (r.NextDouble() < 0.6) Ring(d, (at + 30) % n, f, 70f + 80f * (float)r.NextDouble(), a, true);
                 }
             }
+            // Filter each layer round the loop (warm-up on its last half second).
+            Circular(wash, new[] { Bi.Hp(350f, 0.6f), Bi.Lp(5200f, 0.5f), Bi.Peak(1800f, 0.7f, -3f) });
+            Circular(ticks, new[] { Bi.Hp(2500f, 0.7f), Bi.Peak(5500f, 1f, 4f), Bi.Lp(11000f, 0.7f) });
+            Circular(pats, new[] { Bi.Bp(1300f, 0.8f), Bi.Lp(3500f, 0.7f) });
+            for (int i = 0; i < n; i++)
+            {
+                float u = i / (float)n;
+                float swell = 1f + 0.12f * Mathf.Sin(2f * Mathf.PI * u + 1f) + 0.06f * Mathf.Sin(6f * Mathf.PI * u + 2.3f) + 0.04f * Mathf.Sin(14f * Mathf.PI * u);
+                d[i] += wash[i] * 0.22f * swell + ticks[i] * 0.55f + pats[i] * 0.7f;
+            }
+            Circular(d, new[] { Bi.Hp(60f, 0.7f) });
+            Normalize(d, 1f);
+            for (int i = 0; i < n; i++) d[i] = Tanh(1.6f * d[i]);   // tame the odd big drop
             Normalize(d, 0.55f);
-            return Seam(d, Rate / 4);
+            return d;
         }
 
         // ---------- DSP helpers ----------
 
-        static float Tanh(float x) { float e = Mathf.Exp(2f * x); return (e - 1f) / (e + 1f); }
+        static float N(System.Random r) { return (float)(r.NextDouble() * 2.0 - 1.0); }
 
-        /// <summary>Two-pole resonant band-pass (a formant) at <paramref name="hz"/> with quality <paramref name="q"/>.</summary>
-        static float[] Resonator(float[] x, float hz, float q)
+        static float Tanh(float x) { return (float)System.Math.Tanh(x); }
+
+        /// <summary>RBJ biquad; its coefficients can be changed as it runs (for moving formants and whistles).</summary>
+        sealed class Bi
         {
-            float w = 2f * Mathf.PI * hz / Rate, alpha = Mathf.Sin(w) / (2f * q), cos = Mathf.Cos(w);
-            float b0 = alpha, b2 = -alpha, a0 = 1f + alpha, a1 = -2f * cos, a2 = 1f - alpha;
-            var y = new float[x.Length];
-            float x1 = 0f, x2 = 0f, y1 = 0f, y2 = 0f;
-            for (int i = 0; i < x.Length; i++)
+            float b0, b1, b2, a1, a2, z1, z2;
+
+            void Set(float c0, float c1, float c2, float d0, float d1, float d2) { b0 = c0 / d0; b1 = c1 / d0; b2 = c2 / d0; a1 = d1 / d0; a2 = d2 / d0; }
+
+            static void W(float hz, float q, out float cs, out float al)
             {
-                float v = (b0 * x[i] + b2 * x2 - a1 * y1 - a2 * y2) / a0;
-                x2 = x1; x1 = x[i]; y2 = y1; y1 = v;
-                y[i] = v;
+                float w = 2f * Mathf.PI * Mathf.Min(hz, Rate * 0.46f) / Rate;
+                cs = Mathf.Cos(w);
+                al = Mathf.Sin(w) / (2f * q);
             }
-            return y;
+
+            public Bi SetBp(float hz, float q) { float c, a; W(hz, q, out c, out a); Set(a, 0f, -a, 1f + a, -2f * c, 1f - a); return this; }
+            public static Bi Bp(float hz, float q) { return new Bi().SetBp(hz, q); }
+            public static Bi Lp(float hz, float q) { float c, a; W(hz, q, out c, out a); var b = new Bi(); b.Set((1f - c) / 2f, 1f - c, (1f - c) / 2f, 1f + a, -2f * c, 1f - a); return b; }
+            public static Bi Hp(float hz, float q) { float c, a; W(hz, q, out c, out a); var b = new Bi(); b.Set((1f + c) / 2f, -(1f + c), (1f + c) / 2f, 1f + a, -2f * c, 1f - a); return b; }
+            public static Bi Peak(float hz, float q, float db)
+            {
+                float c, a, A = Mathf.Pow(10f, db / 40f);
+                W(hz, q, out c, out a);
+                var b = new Bi();
+                b.Set(1f + a * A, -2f * c, 1f - a * A, 1f + a / A, -2f * c, 1f - a / A);
+                return b;
+            }
+            public static Bi Shelf(float hz, float db)
+            {
+                float c, a, A = Mathf.Pow(10f, db / 40f);
+                W(hz, 0.707f, out c, out a);
+                float s = 2f * Mathf.Sqrt(A) * a;
+                var b = new Bi();
+                b.Set(A * ((A + 1f) + (A - 1f) * c + s), -2f * A * ((A - 1f) + (A + 1f) * c), A * ((A + 1f) + (A - 1f) * c - s),
+                      (A + 1f) - (A - 1f) * c + s, 2f * ((A - 1f) - (A + 1f) * c), (A + 1f) - (A - 1f) * c - s);
+                return b;
+            }
+
+            public float Run(float x)
+            {
+                float y = b0 * x + z1;
+                z1 = b1 * x - a1 * y + z2;
+                z2 = b2 * x - a2 * y;
+                return y;
+            }
+
+            public float[] Apply(float[] d) { for (int i = 0; i < d.Length; i++) d[i] = Run(d[i]); return d; }
         }
 
-        /// <summary>Band-limits with a one-pole high-pass and a two-pass one-pole low-pass.</summary>
-        static float[] Band(float[] x, float lowHz, float highHz)
+        /// <summary>Runs a filter chain over a loop in place, warmed up on its last half second so the end flows into the start.</summary>
+        static void Circular(float[] d, Bi[] chain)
         {
-            float ah = Mathf.Exp(-2f * Mathf.PI * lowHz / Rate), al = 1f - Mathf.Exp(-2f * Mathf.PI * highHz / Rate);
-            var y = new float[x.Length];
-            float hp = 0f, prev = 0f, l1 = 0f, l2 = 0f;
-            for (int i = 0; i < x.Length; i++)
+            int n = d.Length, warm = Mathf.Min(n, Rate / 2);
+            for (int i = n - warm; i < n; i++) { float v = d[i]; foreach (var b in chain) v = b.Run(v); }
+            for (int i = 0; i < n; i++) { float v = d[i]; foreach (var b in chain) v = b.Run(v); d[i] = v; }
+        }
+
+        /// <summary>A decaying sine (a resonance struck) added at <paramref name="at"/>, wrapping round the buffer; optionally chirping up like a bubble.</summary>
+        static void Ring(float[] d, int at, float hz, float decay, float amp, bool bubble)
+        {
+            int n = d.Length, m = (int)(Mathf.Log(amp * 10000f + 1f) / decay * Rate) + 1;
+            float ph = 0f;
+            for (int j = 0; j < m; j++)
             {
-                hp = ah * (hp + x[i] - prev);
-                prev = x[i];
-                l1 += (hp - l1) * al;
-                l2 += (l1 - l2) * al;
-                y[i] = l2;
+                float t = j / (float)Rate;
+                ph += hz * (bubble ? 1f + t * decay * 0.35f : 1f) / Rate;
+                d[(at + j) % n] += Mathf.Sin(2f * Mathf.PI * ph) * Mathf.Exp(-t * decay) * amp * Mathf.Min(1f, j / 4f);
             }
-            return y;
+        }
+
+        /// <summary>
+        /// Outdoor acoustics: discrete reflections (<paramref name="delays"/> in s, <paramref name="gains"/>; a tiny
+        /// first delay with negative gain is the ground), each later one duller, plus a short diffuse tail of
+        /// <paramref name="rt"/> s at level <paramref name="wet"/>. A <paramref name="loop"/> wraps the echoes round
+        /// (same length out); otherwise the result is longer by the tail.
+        /// </summary>
+        static float[] Outdoors(float[] x, float[] delays, float[] gains, float rt, float wet, bool loop, System.Random r)
+        {
+            int n = x.Length, extra = loop ? 0 : (int)(rt * 0.6f * Rate), m = n + extra;
+            var o = new float[m];
+            var dull = (float[])x.Clone();
+            var lpA = Bi.Lp(4000f, 0.6f);
+            for (int i = 0; i < n; i++) dull[i] = lpA.Run(dull[i]);
+            if (loop) { lpA = Bi.Lp(4000f, 0.6f); Circular(dull = (float[])x.Clone(), new[] { lpA }); }
+            var diff = new float[m];
+            for (int i = 0; i < n; i++) o[i] = x[i];
+            for (int k = 0; k < delays.Length; k++)
+            {
+                int off = (int)(delays[k] * Rate);
+                var src = off < Rate / 200 ? x : dull;
+                for (int i = 0; i < n; i++)
+                {
+                    int j = i + off;
+                    if (j >= m) { if (!loop) break; j -= m; }
+                    o[j] += src[i] * gains[k];
+                    if (off > Rate / 200) diff[j] += src[i] * Mathf.Abs(gains[k]);
+                }
+            }
+            // Diffuse tail: two all-passes into four damped combs; for a loop, run twice round.
+            int[] combs = { 1116, 1188, 1277, 1356 };
+            int[] aps = { 225, 341 };
+            var sum = new float[m];
+            int passes = loop ? 2 : 1;
+            var cb = new float[combs.Length][];
+            var ci = new int[combs.Length];
+            var cl = new float[combs.Length];
+            var cf = new float[combs.Length];
+            for (int c = 0; c < combs.Length; c++) { cb[c] = new float[combs[c] + r.Next(17)]; cf[c] = Mathf.Pow(10f, -3f * cb[c].Length / (rt * Rate)); }
+            var ab = new float[aps.Length][];
+            var ai = new int[aps.Length];
+            for (int a = 0; a < aps.Length; a++) ab[a] = new float[aps[a]];
+            for (int p = 0; p < passes; p++)
+                for (int i = 0; i < m; i++)
+                {
+                    float v = diff[i];
+                    for (int a = 0; a < aps.Length; a++)
+                    {
+                        float b = ab[a][ai[a]], y = -0.6f * v + b;
+                        ab[a][ai[a]] = v + 0.6f * y;
+                        if (++ai[a] >= ab[a].Length) ai[a] = 0;
+                        v = y;
+                    }
+                    float s = 0f;
+                    for (int c = 0; c < combs.Length; c++)
+                    {
+                        var buf = cb[c];
+                        float y = buf[ci[c]];
+                        cl[c] += (y - cl[c]) * 0.45f;
+                        buf[ci[c]] = v + cl[c] * cf[c];
+                        if (++ci[c] >= buf.Length) ci[c] = 0;
+                        s += y;
+                    }
+                    if (p == passes - 1) sum[i] = s;
+                }
+            for (int i = 0; i < m; i++) o[i] += sum[i] * wet * 0.25f;
+            return o;
+        }
+
+        static void Fade(float[] d, float inS, float outS)
+        {
+            int a = Mathf.Min((int)(inS * Rate), d.Length / 2), b = Mathf.Min((int)(outS * Rate), d.Length / 2);
+            for (int i = 0; i < a; i++) d[i] *= 0.5f - 0.5f * Mathf.Cos(Mathf.PI * i / a);
+            for (int i = 0; i < b; i++) d[d.Length - 1 - i] *= 0.5f - 0.5f * Mathf.Cos(Mathf.PI * i / b);
         }
 
         static void Normalize(float[] d, float peak)
         {
-            float m = 0f;
+            float m = 0f, dc = 0f;
+            foreach (var v in d) dc += v;
+            dc /= d.Length;
+            for (int i = 0; i < d.Length; i++) d[i] -= dc;
             foreach (var v in d) m = Mathf.Max(m, Mathf.Abs(v));
             if (m <= 0f) return;
             float k = peak / m;
             for (int i = 0; i < d.Length; i++) d[i] *= k;
-        }
-
-        /// <summary>
-        /// Loops without a click: the last <paramref name="fade"/> samples are cross-faded into the start and cut
-        /// off, so the new last sample runs straight on into the first.
-        /// </summary>
-        static float[] Seam(float[] d, int fade)
-        {
-            int n = d.Length - fade;
-            var o = new float[n];
-            for (int i = 0; i < n; i++) o[i] = d[i];
-            for (int i = 0; i < fade; i++)
-            {
-                float k = i / (float)fade;
-                o[i] = d[i] * k + d[n + i] * (1f - k);
-            }
-            return o;
         }
     }
 }

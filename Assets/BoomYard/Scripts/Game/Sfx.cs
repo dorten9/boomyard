@@ -4,8 +4,9 @@ using UnityEngine;
 namespace BoomYard.Game
 {
     /// <summary>
-    /// All sound, synthesised in code (no recordings): physically-shaped layers (transient crack, noise body,
-    /// sub-bass thump, crackle tail) run through filters and an outdoor reverb with slapback off the houses.
+    /// All sound, synthesised in code (no recordings): physically-shaped layers (shock waves, noise shaped by
+    /// resonant filters, modal synthesis for metal, glass and mallets, randomised debris) run through distance
+    /// filtering and an outdoor reverb with slapback off the houses.
     /// Near and far versions of each blast, firecracker pops, glass, metal debris, fire, the lighter and fuse,
     /// an evening ambience, UI sounds and a menu music loop.
     /// </summary>
@@ -32,25 +33,25 @@ namespace BoomYard.Game
             flick = Lighter(r);
             flame = Loop(Rate, 1.6f, FlameWave(r), 0.5f);
             hiss = Loop(Rate, 1.2f, HissWave(r), 0.35f);
-            popNear = Reverb(Pop(r, 1f), 0.35f, 0.5f, r);
-            popFar = Reverb(LowPass(Pop(r, 0.6f), 2500f), 0.6f, 0.8f, r);
-            boomNear = Reverb(Boom(r, 1.6f, 70f, 1f), 0.4f, 1.1f, r);
-            boomFar = Reverb(LowPass(Boom(r, 1.8f, 60f, 0.6f), 1200f), 0.7f, 1.6f, r);
-            bigNear = Reverb(Boom(r, 3.2f, 45f, 1.4f), 0.45f, 2f, r);
-            bigFar = Reverb(LowPass(Boom(r, 3.4f, 40f, 0.9f), 900f), 0.8f, 2.6f, r);
-            glass = Reverb(Glass(r), 0.25f, 0.4f, r);
-            clang = Reverb(Clang(r), 0.3f, 0.6f, r);
-            debris = Debris(r);
+            popNear = Reverb(Pop(r, 0f), 0.35f, 0.55f, r, 1f);
+            popFar = Reverb(Pop(r, 1f), 0.6f, 0.85f, r, 1.8f);
+            boomNear = Reverb(Blast(r, 1.6f, 70f, 1f, 0f), 0.4f, 1.1f, r, 1.1f);
+            boomFar = Reverb(Blast(r, 1.8f, 60f, 0.6f, 1f), 0.7f, 1.6f, r, 2.2f);
+            bigNear = Reverb(Blast(r, 3.2f, 45f, 1.4f, 0f), 0.45f, 2f, r, 1.3f);
+            bigFar = Reverb(Blast(r, 3.4f, 40f, 0.9f, 1f), 0.8f, 2.6f, r, 2.6f);
+            glass = Reverb(Glass(r), 0.25f, 0.4f, r, 0.8f);
+            clang = Reverb(Clang(r), 0.3f, 0.6f, r, 0.8f);
+            debris = Reverb(Debris(r), 0.2f, 0.4f, r, 1f);
             crackle = Loop(Rate, 3f, CrackleWave(r), 0.6f);
-            ring = Make(Rate, 3.2f, (t, i) => 0.22f * Mathf.Sin(2f * Mathf.PI * (3650f + 30f * Mathf.Sin(t * 5f)) * t) * Mathf.Clamp01(t * 6f) * Mathf.Clamp01((3.2f - t) / 1.8f));
-            thud = Make(Rate, 0.5f, (t, i) => Mathf.Sin(2f * Mathf.PI * (65f - 35f * t) * t) * Mathf.Exp(-t * 9f) + 0.25f * N(r) * Mathf.Exp(-t * 35f));
+            ring = Tinnitus(r);
+            thud = Thud(r);
             ambience = Ambience(new System.Random(11));
-            uiTap = Make(Rate, 0.06f, (t, i) => Mathf.Sin(2f * Mathf.PI * 1900f * t) * Mathf.Exp(-t * 70f) * 0.5f);
-            uiConfirm = Make(Rate, 0.25f, (t, i) => (Mathf.Sin(2f * Mathf.PI * 660f * t) * (t < 0.08f ? 1f : 0f) + Mathf.Sin(2f * Mathf.PI * 990f * t) * (t >= 0.08f ? 1f : 0f)) * Mathf.Exp(-(t % 0.08f) * 20f) * 0.35f);
-            uiCoin = Make(Rate, 0.4f, (t, i) => (Mathf.Sin(2f * Mathf.PI * 1568f * t) + 0.5f * Mathf.Sin(2f * Mathf.PI * 2349f * t)) * Mathf.Exp(-t * 9f) * 0.3f);
-            uiStar = Reverb(Samples(Rate, 0.7f, (t, i) => (Mathf.Sin(2f * Mathf.PI * 1046f * t) + 0.6f * Mathf.Sin(2f * Mathf.PI * 1568f * t) + 0.3f * Mathf.Sin(2f * Mathf.PI * 2093f * t)) * Mathf.Exp(-t * 5f) * 0.28f), 0.2f, 0.6f, r);
-            winSting = Reverb(Chord(new[] { 523f, 659f, 784f, 1046f }, 1.6f, 0.06f), 0.3f, 1f, r);
-            failSting = Reverb(Chord(new[] { 392f, 370f, 349f, 311f }, 1.6f, 0.18f), 0.3f, 1f, r);
+            uiTap = UiTap(r);
+            uiConfirm = UiConfirm(r);
+            uiCoin = UiCoin(r);
+            uiStar = Reverb(UiStar(r), 0.2f, 0.6f, r, 0.5f);
+            winSting = Reverb(Sting(r, true), 0.3f, 1f, r, 0.6f);
+            failSting = Reverb(Sting(r, false), 0.3f, 1f, r, 0.6f);
 
             ui = gameObject.AddComponent<AudioSource>();
             flameLoop = Source(flame, 0.3f, true);
@@ -113,10 +114,7 @@ namespace BoomYard.Game
             if (sprayLoop == null)
             {
                 if (!on) return;
-                var r = new System.Random(23);
-                float lp = 0f;
-                var d = Samples(Rate, 1.4f, (t, i) => { float n = N(r); lp += (n - lp) * 0.35f; return (n - lp) * (0.8f + 0.2f * Mathf.Sin(t * 37f)); });
-                sprayLoop = Source(Loop(Rate, 1.2f, (t, i) => d[i % d.Length], 0.5f), 0.35f, true);
+                sprayLoop = Source(SprayClip(), 0.35f, true);
             }
             Toggle(sprayLoop, on);
             sprayLoop.volume = 0.35f * Volume;
@@ -126,15 +124,7 @@ namespace BoomYard.Game
         /// <summary>The ball rattling in the can as it is shaken.</summary>
         public void Rattle()
         {
-            if (rattle == null)
-            {
-                var r = new System.Random(29);
-                rattle = Make(Rate, 0.7f, (t, i) =>
-                {
-                    float k = (t * 9f) % 1f;   // nine knocks
-                    return (Mathf.Sin(2f * Mathf.PI * 2600f * t) * 0.5f + N(r) * 0.5f) * Mathf.Exp(-k * 40f) * 0.5f * (1f - t / 0.7f);
-                });
-            }
+            if (rattle == null) rattle = RattleClip();
             ui.PlayOneShot(rattle, 0.6f * Volume);
         }
         AudioClip rattle;
@@ -241,6 +231,8 @@ namespace BoomYard.Game
         delegate float Wave(float t, int i);
 
         static float N(System.Random r) { return (float)(r.NextDouble() * 2.0 - 1.0); }
+        static float U(System.Random r) { return (float)r.NextDouble(); }
+        static float U(System.Random r, float a, float b) { return a + (b - a) * (float)r.NextDouble(); }
 
         static float[] Samples(int rate, float seconds, Wave w)
         {
@@ -250,259 +242,831 @@ namespace BoomYard.Game
             return d;
         }
 
-        static AudioClip Clip(string name, int rate, float[] d)
+        /// <summary>A mono clip, kept below full scale; one-shots (<paramref name="fade"/>) get a short fade at both ends.</summary>
+        static AudioClip Clip(string name, int rate, float[] d, bool fade = true)
         {
+            if (fade) Fade(d, 0.0008f, 0.01f, rate);
             float peak = 0f;
             foreach (var v in d) peak = Mathf.Max(peak, Mathf.Abs(v));
-            if (peak > 0.98f) for (int i = 0; i < d.Length; i++) d[i] *= 0.98f / peak;
+            if (peak > 0.97f) for (int i = 0; i < d.Length; i++) d[i] *= 0.97f / peak;
             var c = AudioClip.Create(name, d.Length, 1, rate, false);
             c.SetData(d, 0);
             return c;
         }
 
+        /// <summary>Raised-cosine fade-in and fade-out of the given lengths (seconds), so a clip never clicks.</summary>
+        static void Fade(float[] d, float inS, float outS, int rate = Rate)
+        {
+            int a = Mathf.Min((int)(inS * rate), d.Length / 2), b = Mathf.Min((int)(outS * rate), d.Length / 2);
+            for (int i = 0; i < a; i++) d[i] *= 0.5f - 0.5f * Mathf.Cos(Mathf.PI * i / a);
+            for (int i = 0; i < b; i++) d[d.Length - 1 - i] *= 0.5f - 0.5f * Mathf.Cos(Mathf.PI * i / b);
+        }
+
         static AudioClip Make(int rate, float seconds, Wave w) { return Clip("sfx", rate, Samples(rate, seconds, w)); }
 
-        /// <summary>A loop with its ends cross-faded so it repeats without a click.</summary>
+        /// <summary>A loop with its ends cross-faded (equal power) so it repeats without a click.</summary>
         static AudioClip Loop(int rate, float seconds, Wave w, float gain)
         {
             int n = (int)(seconds * rate), fade = rate / 4;
             var raw = Samples(rate, seconds + fade / (float)rate, w);
             var d = new float[n];
+            float dc = 0f;
+            for (int i = 0; i < n + fade; i++) dc += raw[i];
+            dc /= n + fade;
             for (int i = 0; i < n; i++)
             {
-                float v = raw[i] * gain;
-                if (i < fade) { float k = i / (float)fade; v = v * k + raw[n + i] * gain * (1f - k); }
-                d[i] = v;
+                float v = raw[i] - dc;
+                if (i < fade)
+                {
+                    float k = i / (float)fade;
+                    v = v * Mathf.Sin(k * Mathf.PI * 0.5f) + (raw[n + i] - dc) * Mathf.Cos(k * Mathf.PI * 0.5f);
+                }
+                d[i] = v * gain;
             }
-            return Clip("loop", rate, d);
+            return Clip("loop", rate, d, false);
         }
 
-        /// <summary>One-pole low-pass applied twice (12 dB/oct) to a clip's samples.</summary>
-        static float[] LowPass(float[] d, float hz, int rate = Rate)
+        /// <summary>RBJ biquad filter, run sample by sample (<see cref="Run"/>) or over a buffer in place (<see cref="Apply"/>).</summary>
+        sealed class Bq
         {
-            float a = 1f - Mathf.Exp(-2f * Mathf.PI * hz / rate);
-            float y1 = 0f, y2 = 0f;
-            var o = new float[d.Length];
-            for (int i = 0; i < d.Length; i++) { y1 += (d[i] - y1) * a; y2 += (y1 - y2) * a; o[i] = y2; }
-            return o;
+            float b0, b1, b2, a1, a2, z1, z2;
+
+            static Bq Make(float b0, float b1, float b2, float a0, float a1, float a2)
+            {
+                return new Bq { b0 = b0 / a0, b1 = b1 / a0, b2 = b2 / a0, a1 = a1 / a0, a2 = a2 / a0 };
+            }
+
+            static void W(float hz, float q, out float cs, out float al)
+            {
+                float w = 2f * Mathf.PI * Mathf.Min(hz, Rate * 0.47f) / Rate;
+                cs = Mathf.Cos(w);
+                al = Mathf.Sin(w) / (2f * q);
+            }
+
+            public static Bq Lp(float hz, float q = 0.707f) { float c, a; W(hz, q, out c, out a); return Make((1f - c) / 2f, 1f - c, (1f - c) / 2f, 1f + a, -2f * c, 1f - a); }
+            public static Bq Hp(float hz, float q = 0.707f) { float c, a; W(hz, q, out c, out a); return Make((1f + c) / 2f, -(1f + c), (1f + c) / 2f, 1f + a, -2f * c, 1f - a); }
+            /// <summary>Band-pass with 0 dB at the centre.</summary>
+            public static Bq Bp(float hz, float q) { float c, a; W(hz, q, out c, out a); return Make(a, 0f, -a, 1f + a, -2f * c, 1f - a); }
+            public static Bq Peak(float hz, float q, float db)
+            {
+                float c, a, A = Mathf.Pow(10f, db / 40f);
+                W(hz, q, out c, out a);
+                return Make(1f + a * A, -2f * c, 1f - a * A, 1f + a / A, -2f * c, 1f - a / A);
+            }
+            public static Bq HiShelf(float hz, float db)
+            {
+                float c, a, A = Mathf.Pow(10f, db / 40f);
+                W(hz, 0.707f, out c, out a);
+                float s = 2f * Mathf.Sqrt(A) * a;
+                return Make(A * ((A + 1f) + (A - 1f) * c + s), -2f * A * ((A - 1f) + (A + 1f) * c), A * ((A + 1f) + (A - 1f) * c - s),
+                            (A + 1f) - (A - 1f) * c + s, 2f * ((A - 1f) - (A + 1f) * c), (A + 1f) - (A - 1f) * c - s);
+            }
+
+            public float Run(float x)
+            {
+                float y = b0 * x + z1;
+                z1 = b1 * x - a1 * y + z2;
+                z2 = b2 * x - a2 * y;
+                return y;
+            }
+
+            public float[] Apply(float[] d) { for (int i = 0; i < d.Length; i++) d[i] = Run(d[i]); return d; }
+            public float[] Apply(float[] d, int from, int to) { for (int i = from; i < to && i < d.Length; i++) d[i] = Run(d[i]); return d; }
         }
 
-        static float[] HighPass(float[] d, float hz, int rate = Rate)
+        /// <summary>A slow random wobble around 0 (about -1..1): a new random target every 1/<paramref name="hz"/> s, glided to.</summary>
+        sealed class Drift
         {
-            var lp = LowPass(d, hz, rate);
-            var o = new float[d.Length];
-            for (int i = 0; i < d.Length; i++) o[i] = d[i] - lp[i];
-            return o;
+            readonly System.Random r;
+            readonly int every;
+            readonly float glide;
+            float v, target;
+            int left;
+
+            public Drift(System.Random r, float hz, int rate = Rate)
+            {
+                this.r = r;
+                every = Mathf.Max(1, (int)(rate / hz));
+                glide = 1f - Mathf.Exp(-2f * Mathf.PI * hz * 1.2f / rate);
+                v = target = N(r);
+            }
+
+            public float Next()
+            {
+                if (--left <= 0) { left = every; target = N(r); }
+                v += (target - v) * glide;
+                return v;
+            }
         }
 
         /// <summary>
-        /// Outdoor reverb: a few discrete slapback echoes off the houses (early reflections), then a diffuse
-        /// Schroeder tail (four combs and two all-passes). <paramref name="wet"/> is the reverb level.
+        /// One vibrating mode, added to <paramref name="d"/> from sample <paramref name="s0"/>: a sine starting at zero
+        /// (the impulse response of a resonator) decaying at <paramref name="decay"/> per second, with a soft onset of
+        /// <paramref name="attack"/> seconds (0: struck hard). Uses a rotating phasor, not a sine per sample.
         /// </summary>
-        static AudioClip Reverb(float[] dry, float wet, float tail, System.Random r)
+        static void Mode(float[] d, int s0, float hz, float decay, float amp, float attack = 0f, int rate = Rate)
         {
-            int extra = (int)(tail * Rate);
-            var o = new float[dry.Length + extra];
-            for (int i = 0; i < dry.Length; i++) o[i] = dry[i];
-            // Early reflections.
-            float[] delays = { 0.043f, 0.071f, 0.112f, 0.168f };
-            float[] gains = { 0.32f, 0.24f, 0.18f, 0.12f };
-            var dark = LowPass(dry, 3500f);
-            for (int k = 0; k < delays.Length; k++)
+            if (hz >= rate * 0.48f || amp == 0f || s0 < 0 || s0 >= d.Length) return;
+            float w = 2f * Mathf.PI * hz / rate, c = Mathf.Cos(w), s = Mathf.Sin(w), g = Mathf.Exp(-decay / rate);
+            float ga = attack > 0f ? Mathf.Exp(-1f / (attack * rate)) : 0f, ea = 1f;
+            float x = amp, y = 0f;
+            int len = Mathf.Min(d.Length - s0, (int)(Mathf.Log(Mathf.Abs(amp) * 20000f + 1f) / decay * rate) + 1);
+            for (int i = 0; i < len; i++)
             {
-                int off = (int)(delays[k] * Rate);
-                for (int i = 0; i < dark.Length && i + off < o.Length; i++) o[i + off] += dark[i] * gains[k] * wet * 2f;
+                d[s0 + i] += y * (1f - ea);
+                ea *= ga;
+                float nx = (c * x - s * y) * g;
+                y = (s * x + c * y) * g;
+                x = nx;
             }
-            // Diffuse tail.
-            var input = new float[o.Length];
-            for (int i = 0; i < dark.Length; i++) input[i] = dark[i];
-            var sum = new float[o.Length];
-            int[] combs = { 1557, 1617, 1491, 1422 };
-            float fb = Mathf.Clamp(0.7f + tail * 0.08f, 0.7f, 0.88f);
-            foreach (var len in combs)
+        }
+
+        /// <summary>A burst of noise from <paramref name="s0"/>: <paramref name="attack"/> s rise, exponential decay, through <paramref name="f"/> (if any).</summary>
+        static void Burst(float[] d, int s0, float seconds, float amp, float attack, float decay, Bq f, System.Random r)
+        {
+            int n = Mathf.Min((int)(seconds * Rate), d.Length - s0);
+            if (s0 < 0) return;
+            for (int i = 0; i < n; i++)
             {
+                float t = i / (float)Rate;
+                float env = (attack > 0f ? Mathf.Min(1f, t / attack) : 1f) * Mathf.Exp(-t * decay);
+                float v = N(r) * env * amp;
+                d[s0 + i] += f != null ? f.Run(v) : v;
+            }
+        }
+
+        static float SoftClip(float x) { return (float)System.Math.Tanh(x); }
+
+        /// <summary>
+        /// Outdoor acoustics for a dry recording: the ground and a few house fronts give discrete slapback echoes
+        /// (each further one later, quieter and duller), then a diffuse tail builds up softly and dies away.
+        /// <paramref name="wet"/> is the level of the reflections, <paramref name="tail"/> the extra length (s) and
+        /// <paramref name="space"/> how far away the buildings are (1: a street; 2-3: echoes rolling round a block).
+        /// </summary>
+        static AudioClip Reverb(float[] dry, float wet, float tail, System.Random r, float space)
+        {
+            return Clip("reverb", Rate, Outdoor(dry, wet, tail, r, space));
+        }
+
+        static float[] Outdoor(float[] dry, float wet, float tail, System.Random r, float space)
+        {
+            int extra = (int)(tail * Rate), n = dry.Length + extra;
+            var o = new float[n];
+            System.Array.Copy(dry, o, dry.Length);
+            var dark = Bq.Lp(4200f, 0.6f).Apply((float[])dry.Clone());
+            var darker = Bq.Lp(1600f, 0.6f).Apply((float[])dark.Clone());
+            // Early reflections: house fronts 8..45 m away (times space).
+            int taps = 6;
+            var input = new float[n];
+            for (int k = 0; k < taps; k++)
+            {
+                float delay = (0.022f + 0.14f * (k + U(r)) / taps) * space;
+                float gain = wet * 0.9f / (1f + delay * 9f) * U(r, 0.6f, 1.1f);
+                var src = k < 2 ? dark : darker;
+                int off = (int)(delay * Rate);
+                for (int i = 0; i < src.Length && i + off < n; i++) { o[i + off] += src[i] * gain; input[i + off] += src[i] * gain * 0.6f; }
+            }
+            int pre = (int)(0.012f * space * Rate);
+            for (int i = 0; i + pre < n && i < darker.Length; i++) input[i + pre] += darker[i] * 0.5f;
+            // Diffusion: three all-passes, then four damped combs whose feedback gives a decay of about `tail`.
+            var sum = new float[n];
+            int[] aps = { 347, 113, 37 };
+            foreach (int len0 in aps)
+            {
+                int len = len0 + r.Next(9);
+                var buf = new float[len];
+                int idx = 0;
+                for (int i = 0; i < n; i++)
+                {
+                    float b = buf[idx], x = input[i];
+                    float y = -0.7f * x + b;
+                    buf[idx] = x + 0.7f * y;
+                    if (++idx >= len) idx = 0;
+                    input[i] = y;
+                }
+            }
+            int[] combs = { 1557, 1617, 1491, 1422, 1277, 1356 };
+            float rt = Mathf.Max(0.3f, tail * 0.7f) * Mathf.Sqrt(space);
+            foreach (int len0 in combs)
+            {
+                int len = (int)(len0 * (0.9f + 0.25f * space)) + r.Next(23);
+                float fb = Mathf.Pow(10f, -3f * len / (rt * Rate));
                 var buf = new float[len];
                 int idx = 0;
                 float lp = 0f;
-                for (int i = 0; i < o.Length; i++)
+                for (int i = 0; i < n; i++)
                 {
                     float y = buf[idx];
-                    lp += (y - lp) * 0.35f;
+                    lp += (y - lp) * 0.4f;
                     buf[idx] = input[i] + lp * fb;
-                    idx = (idx + 1) % len;
-                    sum[i] += y * 0.25f;
+                    if (++idx >= len) idx = 0;
+                    sum[i] += y;
                 }
             }
-            foreach (var len in new[] { 225, 556 })
-            {
-                var buf = new float[len];
-                int idx = 0;
-                for (int i = 0; i < sum.Length; i++)
-                {
-                    float b = buf[idx];
-                    float y = -sum[i] + b;
-                    buf[idx] = sum[i] + b * 0.5f;
-                    idx = (idx + 1) % len;
-                    sum[i] = y;
-                }
-            }
-            for (int i = 0; i < o.Length; i++)
-            {
-                float fade = i > o.Length - Rate / 5 ? (o.Length - i) / (Rate / 5f) : 1f;
-                o[i] = (o[i] + sum[i] * wet) * fade;
-            }
-            return Clip("reverb", Rate, o);
-        }
-
-        /// <summary>Firecracker: a very short, bright crack (pressure spike + high noise), little body.</summary>
-        static float[] Pop(System.Random r, float bright)
-        {
-            var d = Samples(Rate, 0.35f, (t, i) =>
-            {
-                float spike = t < 0.0015f ? 1f - t / 0.0015f : 0f;
-                float noise = N(r) * Mathf.Exp(-t * 55f);
-                float body = Mathf.Sin(2f * Mathf.PI * 180f * t) * Mathf.Exp(-t * 40f) * 0.4f;
-                return spike * 1.2f + noise * 0.9f * bright + body;
-            });
-            return HighPass(d, 120f);
+            float tailGain = wet * 0.22f;
+            for (int i = 0; i < n; i++) o[i] += sum[i] * tailGain;
+            Fade(o, 0f, Mathf.Min(0.25f, tail * 0.5f));
+            return o;
         }
 
         /// <summary>
-        /// Explosion: a sharp transient, a noisy pressure body falling from bright to dark, a sub thump sweeping
-        /// down from <paramref name="sub"/> Hz, and a crackling tail of debris and burning fuel.
+        /// Firecracker. Near: an N-shaped shock wave (sharp positive edge, linear fall, sharp return), the bang's
+        /// burst of hot gas and torn paper (broadband noise with the tube's mid resonance), a short chesty thump
+        /// and specks of paper ticking down; slightly overdriven like a mic that close. Far (<paramref name="far"/> 1):
+        /// the same, but air and the ground take the highs and round off the shock.
         /// </summary>
-        static float[] Boom(System.Random r, float seconds, float sub, float bright)
+        static float[] Pop(System.Random r, float far)
         {
-            float lp1 = 0f, lp2 = 0f;
-            return Samples(Rate, seconds, (t, i) =>
+            int n = (int)(0.32f * Rate);
+            var d = new float[n];
+            int half = (int)((0.00035f + 0.00025f * far) * Rate);
+            d[0] = 0.4f;
+            for (int k = 1; k <= 2 * half; k++) d[k] += 1f - k / (float)half;
+            // Hot gas and paper.
+            var body = Bq.Peak(U(r, 1100f, 1600f), 1.2f, 7f);
+            var hp = Bq.Hp(180f);
+            for (int i = 0; i < n; i++)
             {
-                float n = N(r);
-                float cutoff = Mathf.Lerp(0.5f, 0.02f, Mathf.Clamp01(t * 3f));   // filter closes as the blast rolls off
-                lp1 += (n - lp1) * cutoff;
-                lp2 += (lp1 - lp2) * cutoff;
-                float transient = (t < 0.004f ? 1f : 0f) * (1f - t / 0.004f) + n * Mathf.Exp(-t * 60f) * 0.8f * bright;
-                float body = lp2 * 3.2f * Mathf.Exp(-t * 2.4f / (seconds * 0.6f));
-                float thump = Mathf.Sin(2f * Mathf.PI * sub * t * (1f - 0.35f * Mathf.Clamp01(t / seconds))) * Mathf.Exp(-t * 3.5f) * 0.9f;
-                float crack = (r.NextDouble() < 0.0025 * Mathf.Exp(-t * 1.2f) ? N(r) * 0.6f : 0f);
-                return transient + body + thump + crack;
-            });
+                float t = i / (float)Rate;
+                float v = N(r) * (Mathf.Exp(-t * 260f) * 0.75f + Mathf.Exp(-t * 55f) * 0.08f);
+                d[i] += hp.Run(body.Run(v));
+            }
+            // Chest thump: a Friedlander blast wave, ~3 ms positive phase.
+            float T = U(r, 0.0025f, 0.0035f);
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)Rate;
+                if (t > 0.04f) break;
+                d[i] += 0.45f * (1f - t / T) * Mathf.Exp(-1.6f * t / T) * Mathf.Min(1f, t * 4000f);
+            }
+            // Bits of paper and card landing nearby.
+            int bits = 6 + r.Next(8);
+            for (int k = 0; k < bits; k++)
+            {
+                int at = (int)(U(r, 0.02f, 0.25f) * Rate);
+                Burst(d, at, 0.003f, U(r, 0.01f, 0.05f), 0f, 1500f, Bq.Bp(U(r, 2500f, 6000f), 1.5f), r);
+            }
+            if (far > 0f)
+            {
+                Bq.Lp(2600f, 0.6f).Apply(d);
+                Bq.Lp(3800f, 0.7f).Apply(d);
+                Bq.Hp(140f).Apply(d);
+            }
+            else
+            {
+                for (int i = 0; i < n; i++) d[i] = SoftClip(d[i] * 1.6f) / 1.3f;
+            }
+            return d;
         }
 
-        /// <summary>Glass: many small high resonant shards falling over a second, on a noisy break.</summary>
+        /// <summary>
+        /// Explosion. A shock front (N-wave, clips a near mic), the blast wave's chest punch (Friedlander curve with
+        /// <paramref name="sub"/> setting its length), a deep rolling rumble of low noise that breathes as the
+        /// fireball churns, a broadband roar whose highs close down within a fraction of a second, a second gout
+        /// of fire for the big ones, and debris crackling in the tail. Far (<paramref name="far"/> 1): highs lost to
+        /// distance, the shock rounded, the low end and rumble carry on.
+        /// </summary>
+        static float[] Blast(System.Random r, float seconds, float sub, float bright, float far)
+        {
+            int n = (int)(seconds * Rate);
+            var d = new float[n];
+            float size = seconds / 1.6f;
+            // Shock front.
+            int half = (int)((0.0006f + 0.0004f * size) * Rate);
+            for (int k = 0; k <= 2 * half; k++) d[k] += 1.2f * (1f - k / (float)half);
+            // Blast wave.
+            float T = 0.35f / sub;
+            var lpPunch = Bq.Lp(500f, 0.6f);
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)Rate;
+                if (t > 12f * T) break;
+                d[i] += lpPunch.Run(1.1f * (1f - t / T) * Mathf.Exp(-1.3f * t / T));
+            }
+            // Rumble: low noise, rolling; and the roar, closing from bright to dark.
+            var rum1 = new Svf().Set(sub * 1.6f, 0.8f, Rate);
+            var rum2 = new Svf().Set(sub * 2.4f, 0.6f, Rate);
+            var roar = new Svf();
+            var roll = new Drift(r, 7f);
+            var roll2 = new Drift(r, 2.5f);
+            float rumTau = 0.32f * seconds, roarTau = 0.18f * size, closeTau = 0.14f * size;
+            float second = size > 1.5f ? U(r, 0.14f, 0.3f) : -1f, secAmp = 0.55f;
+            float hpS = 0f, hpA = 1f - Mathf.Exp(-2f * Mathf.PI * 22f / Rate);
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)Rate;
+                if ((i & 15) == 0)
+                {
+                    float cut = 380f + 9000f * bright * Mathf.Exp(-t / closeTau);
+                    if (second > 0f && t > second) cut += 2500f * bright * Mathf.Exp(-(t - second) / closeTau);
+                    roar.Set(cut, 0.6f, Rate);
+                }
+                float x = N(r);
+                rum1.Run(x);
+                rum2.Run(rum1.Lp);
+                roar.Run(x);
+                float rollV = 1f + 0.45f * roll.Next() + 0.25f * roll2.Next();
+                float att = Mathf.Min(1f, t / 0.006f);
+                float rumble = rum2.Lp * 3.6f * att * Mathf.Exp(-t / rumTau) * rollV;
+                float roarEnv = att * Mathf.Exp(-t / roarTau) + 0.3f * Mathf.Exp(-t / (rumTau * 0.8f)) * rollV;
+                if (second > 0f && t > second)
+                {
+                    float u = t - second;
+                    roarEnv += secAmp * Mathf.Min(1f, u / 0.02f) * Mathf.Exp(-u / (roarTau * 1.6f));
+                    rumble += rum2.Lp * 3f * secAmp * Mathf.Min(1f, u / 0.03f) * Mathf.Exp(-u / rumTau);
+                }
+                float v = rumble + roar.Lp * 0.9f * roarEnv;
+                hpS += (v - hpS) * hpA;
+                d[i] += v - hpS;
+            }
+            // Debris and burning bits crackling in the tail.
+            int bits = (int)(40 * size);
+            for (int k = 0; k < bits; k++)
+            {
+                float at = 0.08f + (seconds - 0.25f) * Mathf.Pow(U(r), 1.8f);
+                float a = 0.12f * Mathf.Exp(-at * 1.4f) * U(r, 0.2f, 1f);
+                if (r.NextDouble() < 0.7) Burst(d, (int)(at * Rate), 0.004f, a, 0f, 1200f, Bq.Bp(U(r, 1200f, 5000f), 1.2f), r);
+                else Burst(d, (int)(at * Rate), 0.06f, a * 1.5f, 0.002f, 70f, Bq.Lp(U(r, 250f, 600f), 1f), r);
+            }
+            if (far > 0f)
+            {
+                float cut = 1200f + 800f * bright;
+                Bq.Lp(cut, 0.6f).Apply(d);
+                Bq.Lp(cut * 1.6f, 0.7f).Apply(d);
+                // Air absorbs the highs over distance, but the reflections of the ground give a fuller low end.
+                Bq.Peak(70f, 0.8f, 3f).Apply(d);
+            }
+            else
+            {
+                Bq.Peak(4000f, 0.7f, 2f).Apply(d);
+                for (int i = 0; i < n; i++) d[i] = SoftClip(d[i] * 1.3f) * 0.42f;   // the mic overloads a little
+            }
+            if (far > 0f) for (int i = 0; i < n; i++) d[i] = SoftClip(d[i] * 2.6f) * 0.52f;   // a far recording, levelled
+            return Bq.Hp(35f).Apply(d);
+        }
+
+        /// <summary>
+        /// A window breaking: the hit (a click and the pane's low thunk), a crunchy burst as it cracks, then dozens of
+        /// shards - each a few inharmonic plate modes, higher the smaller it is - flying and landing over most of a
+        /// second, some bouncing once.
+        /// </summary>
         static float[] Glass(System.Random r)
         {
             int n = (int)(1.1f * Rate);
             var d = new float[n];
-            for (int i = 0; i < n; i++) { float t = i / (float)Rate; d[i] = N(r) * Mathf.Exp(-t * 30f) * 0.6f; }
-            for (int k = 0; k < 40; k++)
+            Burst(d, 0, 0.004f, 0.35f, 0f, 900f, Bq.Hp(1500f), r);
+            Mode(d, 0, U(r, 160f, 240f), 40f, 0.2f, 0.001f);
+            Mode(d, 0, U(r, 380f, 520f), 55f, 0.12f, 0.001f);
+            // The crack running across the pane: dense grains of bright noise.
+            for (int k = 0; k < 60; k++)
             {
-                float start = (float)(r.NextDouble() * r.NextDouble()) * 0.9f;
-                float f = 2500f + (float)r.NextDouble() * 5500f, decay = 30f + (float)r.NextDouble() * 60f, amp = 0.15f + (float)r.NextDouble() * 0.2f;
-                int s0 = (int)(start * Rate);
-                for (int i = s0; i < n; i++)
+                float at = 0.13f * Mathf.Pow(U(r), 1.5f);
+                Burst(d, (int)(at * Rate), 0.004f, U(r, 0.08f, 0.35f) * (1f - at * 5f), 0.0003f, 900f, Bq.Bp(U(r, 2500f, 9000f), 1.4f), r);
+            }
+            // Shards.
+            for (int k = 0; k < 95; k++)
+            {
+                float s = Mathf.Pow(U(r), 1.6f);   // size: mostly small
+                float at = k < 30 ? U(r, 0.002f, 0.08f) : 0.12f + 0.75f * Mathf.Pow(U(r), 0.8f);
+                float f = 2200f + 9500f * Mathf.Pow(1f - s, 1.4f);
+                float amp = (0.05f + 0.16f * s) * U(r, 0.4f, 1f) * (1f - at * 0.6f);
+                float[] ratio = { 1f, U(r, 1.45f, 1.9f), U(r, 2.3f, 3.1f) };
+                int bounces = r.NextDouble() < 0.35 ? 2 : 1;
+                for (int b = 0; b < bounces; b++)
                 {
-                    float t = (i - s0) / (float)Rate;
-                    if (t > 0.15f) break;
-                    d[i] += Mathf.Sin(2f * Mathf.PI * f * t) * Mathf.Exp(-t * decay) * amp;
+                    int s0 = (int)(at * Rate);
+                    Burst(d, s0, 0.0008f, amp * 0.8f, 0f, 4000f, null, r);
+                    for (int m = 0; m < 3; m++) Mode(d, s0, f * ratio[m], U(r, 25f, 90f) * (1f + m * 0.6f), amp / (1f + m * 0.8f) * U(r, 0.5f, 1f));
+                    at += U(r, 0.04f, 0.12f);
+                    amp *= 0.4f;
                 }
             }
-            return HighPass(d, 800f);
+            Bq.Hp(450f).Apply(d);
+            for (int i = 0; i < n; i++) d[i] *= 2.6f;
+            return d;
         }
 
-        /// <summary>Metal hit: inharmonic partials ringing down (car panels, bins, cylinders).</summary>
+        /// <summary>
+        /// A metal hit (a car panel, a bin, a cylinder): ten shell modes, each a slightly detuned pair so they beat,
+        /// higher ones dying faster, struck with a short click and a dull thunk, and the panel slapping back once.
+        /// </summary>
         static float[] Clang(System.Random r)
         {
-            float[] ratios = { 1f, 2.76f, 5.4f, 8.93f };
-            float f0 = 220f + (float)r.NextDouble() * 120f;
-            return Samples(Rate, 1f, (t, i) =>
+            int n = Rate;
+            var d = new float[n];
+            float f0 = U(r, 190f, 320f);
+            float[] ratios = { 1f, 1.47f, 2.09f, 2.56f, 2.94f, 3.6f, 4.23f, 5.1f, 6.3f, 7.45f };
+            float[] hits = { 0f, U(r, 0.025f, 0.05f) }, amps = { 1f, 0.28f };
+            for (int h = 0; h < 2; h++)
             {
-                float v = N(r) * Mathf.Exp(-t * 80f) * 0.4f;
-                for (int k = 0; k < ratios.Length; k++) v += Mathf.Sin(2f * Mathf.PI * f0 * ratios[k] * t) * Mathf.Exp(-t * (4f + k * 3f)) * (0.35f / (k + 1));
-                return v;
-            });
+                int s0 = (int)(hits[h] * Rate);
+                Burst(d, s0, 0.003f, 0.25f * amps[h], 0f, 1500f, Bq.Hp(2000f), r);
+                Mode(d, s0, U(r, 90f, 130f), 30f, 0.2f * amps[h], 0.0015f);
+                for (int k = 0; k < ratios.Length; k++)
+                {
+                    float f = f0 * ratios[k] * (1f + 0.02f * N(r)), dec = 2.8f + 2.2f * Mathf.Pow(k, 1.15f) * U(r, 0.7f, 1.3f);
+                    float a = 0.16f / (1f + 0.3f * k) * U(r, 0.4f, 1f) * amps[h];
+                    Mode(d, s0, f, dec, a, 0.0002f);
+                    Mode(d, s0, f * (1f + U(r, 0.002f, 0.006f)), dec * 1.1f, a * 0.6f, 0.0002f);
+                }
+            }
+            Bq.Hp(70f).Apply(d);
+            for (int i = 0; i < n; i++) d[i] *= 2.2f;
+            return d;
         }
 
-        /// <summary>Debris raining down: a scatter of thuds and clinks over a second and a half.</summary>
-        static AudioClip Debris(System.Random r)
+        /// <summary>
+        /// Debris coming down: clods and splinters thudding, bits of brick clacking, scraps of metal clinking (some
+        /// bouncing), with gravel patter, most of it early and thinning out.
+        /// </summary>
+        static float[] Debris(System.Random r)
         {
             int n = (int)(1.8f * Rate);
             var d = new float[n];
-            for (int k = 0; k < 30; k++)
+            for (int k = 0; k < 42; k++)
             {
-                float start = 0.15f + (float)r.NextDouble() * 1.5f;
-                bool metal = r.NextDouble() < 0.4;
-                float f = metal ? 1200f + (float)r.NextDouble() * 2500f : 90f + (float)r.NextDouble() * 120f;
-                float amp = (0.08f + (float)r.NextDouble() * 0.15f) * (1f - start / 2f);
-                int s0 = (int)(start * Rate);
-                for (int i = s0; i < n; i++)
+                float at = 0.04f + 1.55f * Mathf.Pow(U(r), 1.6f);
+                float amp = U(r, 0.08f, 0.25f) * (1f - at / 2.2f);
+                double kind = r.NextDouble();
+                int bounces = 1 + (r.NextDouble() < 0.4 ? 1 + r.Next(2) : 0);
+                float fm = U(r, 1300f, 4500f), fb = U(r, 70f, 180f), fs = U(r, 600f, 1800f);
+                for (int b = 0; b < bounces && at < 1.75f; b++)
                 {
-                    float t = (i - s0) / (float)Rate;
-                    if (t > 0.2f) break;
-                    d[i] += (Mathf.Sin(2f * Mathf.PI * f * t) * 0.7f + N(r) * 0.3f) * Mathf.Exp(-t * (metal ? 35f : 45f)) * amp;
+                    int s0 = (int)(at * Rate);
+                    if (kind < 0.45)
+                    {   // earth, wood
+                        Burst(d, s0, 0.04f, amp * 1.2f, 0.001f, 90f, Bq.Lp(U(r, 300f, 900f), 0.9f), r);
+                        Mode(d, s0, fb, 40f, amp * 0.7f, 0.002f);
+                    }
+                    else if (kind < 0.75)
+                    {   // brick, stone
+                        Burst(d, s0, 0.006f, amp, 0f, 700f, Bq.Bp(U(r, 1500f, 4000f), 0.9f), r);
+                        Mode(d, s0, fs, 90f, amp * 0.5f);
+                        Mode(d, s0, fs * 2.3f, 140f, amp * 0.25f);
+                    }
+                    else
+                    {   // metal
+                        Burst(d, s0, 0.002f, amp * 0.6f, 0f, 2000f, Bq.Hp(2500f), r);
+                        Mode(d, s0, fm, U(r, 12f, 25f), amp * 0.35f);
+                        Mode(d, s0, fm * 1.58f, U(r, 20f, 40f), amp * 0.22f);
+                        Mode(d, s0, fm * 2.71f, U(r, 30f, 60f), amp * 0.12f);
+                    }
+                    at += U(r, 0.06f, 0.16f) / (b + 1);
+                    amp *= 0.35f;
                 }
+                // gravel patter around the bigger pieces
+                int grit = r.Next(6);
+                for (int g = 0; g < grit; g++)
+                    Burst(d, (int)((at + U(r, -0.05f, 0.15f)) * Rate), 0.002f, amp * U(r, 0.1f, 0.5f), 0f, 2500f, Bq.Bp(U(r, 2500f, 7000f), 1.5f), r);
             }
-            return Clip("debris", Rate, d);
+            return Bq.Hp(45f).Apply(d);
         }
 
-        /// <summary>Lighter: the flint wheel's rasp, a spark, then the gas catching with a soft whoomp.</summary>
+        /// <summary>
+        /// A lighter: the wheel's rasp over the flint (teeth catching, metal ringing), sparks, the gas catching with
+        /// a soft whoomp, then the flame settling to a quiet hiss.
+        /// </summary>
         static AudioClip Lighter(System.Random r)
         {
-            var d = Samples(Rate, 0.45f, (t, i) =>
+            int n = (int)(0.45f * Rate);
+            var d = new float[n];
+            // Thumb on the wheel, then the teeth over the flint, slowing as the wheel stops.
+            Burst(d, 0, 0.006f, 0.15f, 0.001f, 600f, Bq.Lp(1500f), r);
+            float t = 0.004f, gap = 0.0011f;
+            var wheel = new[] { U(r, 3000f, 3600f), U(r, 4700f, 5400f), U(r, 6800f, 7600f) };
+            while (t < 0.065f)
             {
-                float rasp = t < 0.07f ? N(r) * (0.5f + 0.5f * Mathf.Sin(t * 2f * Mathf.PI * 180f)) * 0.7f : 0f;
-                float spark = t > 0.06f && t < 0.075f ? N(r) * 0.9f : 0f;
-                float gas = t > 0.07f ? N(r) * Mathf.Exp(-(t - 0.07f) * 9f) * Mathf.Clamp01((t - 0.07f) * 40f) * 0.5f : 0f;
-                return rasp + spark + gas;
-            });
-            var hp = HighPass(d, 900f);
-            return Clip("lighter", Rate, hp);
+                int s0 = (int)(t * Rate);
+                float a = U(r, 0.08f, 0.3f) * Mathf.Min(1f, t * 60f);
+                Burst(d, s0, 0.0006f, a, 0f, 6000f, null, r);
+                for (int m = 0; m < 3; m++) Mode(d, s0, wheel[m] * (1f + 0.01f * N(r)), 500f + 300f * m, a * 0.25f / (m + 1));
+                t += gap * U(r, 0.6f, 1.4f);
+                gap *= 1.04f;
+            }
+            // Sparks.
+            for (int k = 0; k < 9; k++)
+                Burst(d, (int)(U(r, 0.03f, 0.085f) * Rate), 0.002f, U(r, 0.2f, 0.5f), 0f, 2500f, Bq.Hp(5000f), r);
+            // The gas catching: a soft whoomp, then the steady flame.
+            var whoomp = new Svf();
+            int g0 = (int)(0.07f * Rate);
+            for (int i = g0; i < n; i++)
+            {
+                float u = (i - g0) / (float)Rate;
+                if (((i - g0) & 15) == 0) whoomp.Set(300f + 900f * Mathf.Exp(-u * 18f) + 300f * Mathf.Min(1f, u * 40f), 0.9f, Rate);
+                whoomp.Run(N(r));
+                float env = Mathf.Min(1f, u / 0.012f) * (Mathf.Exp(-u * 14f) + 0.12f);
+                d[i] += whoomp.Bp * env * 0.7f + whoomp.Lp * Mathf.Exp(-u * 30f) * Mathf.Min(1f, u / 0.008f) * 0.3f;
+            }
+            Bq.Hp(120f).Apply(d);
+            for (int i = 0; i < n; i++) d[i] *= 2.1f;
+            return Clip("lighter", Rate, d);
         }
 
+        /// <summary>A lighter's flame: a soft breathy roar that flutters and flares in the air, with a faint hiss.</summary>
         static Wave FlameWave(System.Random r)
         {
-            float lp = 0f;
-            return (t, i) => { lp += (N(r) - lp) * 0.06f; return lp * 2.2f * (0.8f + 0.2f * Mathf.Sin(t * 37f)); };
+            var body = new Svf();
+            var air = Bq.Bp(3200f, 0.8f);
+            var hp = Bq.Hp(90f);
+            var flick = new Drift(r, 9f);
+            var gust = new Drift(r, 1.3f);
+            float m = 0.6f;
+            return (t, i) =>
+            {
+                if ((i & 31) == 0)
+                {
+                    m = Mathf.Clamp01(0.6f + 0.25f * gust.Next() + 0.15f * flick.Next());
+                    body.Set(380f + 650f * m, 0.8f, Rate);
+                }
+                float n = N(r);
+                body.Run(n);
+                return hp.Run(body.Lp * (0.5f + 0.9f * m) * 1.6f + air.Run(n) * 0.05f);
+            };
         }
 
+        /// <summary>
+        /// A burning fuse: a dense spitting of tiny sparks (bursts of bright noise, each a fraction of a millisecond)
+        /// whose rate and strength sputter, over a hiss, with now and then a fatter pop.
+        /// </summary>
         static Wave HissWave(System.Random r)
         {
-            float lp = 0f;
+            var hissF = Bq.Bp(5200f, 0.7f);
+            var sparkF = Bq.Hp(1800f);
+            var popF = Bq.Bp(1100f, 1.5f);
+            var sputter = new Drift(r, 14f);
+            var slow = new Drift(r, 3f);
+            float spark = 0f, pop = 0f, rate = 0.01f, sdec = 0f;
             return (t, i) =>
             {
+                if ((i & 15) == 0)
+                {
+                    float s = Mathf.Clamp01(0.55f + 0.3f * sputter.Next() + 0.2f * slow.Next());
+                    rate = 0.004f + 0.02f * s * s;
+                    sdec = Mathf.Exp(-1f / (U(r, 0.0002f, 0.0008f) * Rate));
+                }
+                if (r.NextDouble() < rate) spark += U(r) * U(r) * 1.6f;
+                if (r.NextDouble() < 0.00012) pop += U(r, 0.6f, 1.4f);
+                spark *= sdec;
+                pop *= 0.996f;
                 float n = N(r);
-                lp += (n - lp) * 0.5f;
-                float hiss = (n - lp) * 0.8f;   // high band
-                float pop = r.NextDouble() < 0.004 ? N(r) * 1.4f : 0f;
-                return hiss + pop;
+                return hissF.Run(n) * 0.45f * (0.6f + 0.4f * rate * 40f) + sparkF.Run(n * spark) + popF.Run(n * pop) * 0.8f;
             };
         }
 
+        /// <summary>
+        /// A fire burning: a low rolling roar that breathes, a hiss of steam and sap, swarms of small crackles that
+        /// come and go, and every so often a sharp snap of splitting wood.
+        /// </summary>
         static Wave CrackleWave(System.Random r)
         {
-            float lp = 0f;
+            var roar = new Svf();
+            var sizzle = Bq.Bp(6500f, 0.9f);
+            var crk = new Svf();
+            var snapRes = new Svf();
+            var breathe = new Drift(r, 0.8f);
+            var swarm = new Drift(r, 1.7f);
+            var hp = Bq.Hp(40f);
+            float c = 0f, cdec = 0.9f, snap = 0f, b = 0f, density = 0f;
             return (t, i) =>
             {
-                lp += (N(r) - lp) * 0.02f;
-                float roar = lp * 3f;
-                float pop = r.NextDouble() < 0.0015 ? N(r) * 1.2f : 0f;
-                float snap = r.NextDouble() < 0.0004 ? 1f : 0f;
-                return roar * 0.6f + pop + snap * 0.8f;
+                if ((i & 31) == 0)
+                {
+                    b = Mathf.Clamp01(0.55f + 0.4f * breathe.Next());
+                    roar.Set(160f + 260f * b, 0.7f, Rate);
+                    float s = Mathf.Clamp01(0.4f + 0.7f * swarm.Next());
+                    density = 0.0003f + 0.0035f * s * s;
+                }
+                if (r.NextDouble() < density)
+                {
+                    c += U(r) * U(r) * 2.2f;
+                    cdec = Mathf.Exp(-1f / (U(r, 0.0002f, 0.0012f) * Rate));
+                    crk.Set(U(r, 1500f, 6000f), 1.2f, Rate);
+                }
+                if (r.NextDouble() < 0.000025)
+                {
+                    snap += U(r, 1.5f, 3f);
+                    snapRes.Set(U(r, 350f, 900f), 6f, Rate);
+                }
+                c *= cdec;
+                snap *= 0.985f;
+                float n = N(r);
+                roar.Run(n);
+                crk.Run(n * c);
+                snapRes.Run(n * snap);
+                float v = roar.Lp * (0.6f + 0.8f * b) * 2.2f + sizzle.Run(n) * 0.05f * b + crk.Bp * 1.4f + n * snap * 0.4f + snapRes.Bp * 1.2f;
+                return hp.Run(v) * 0.75f;
             };
         }
 
-        static float[] Chord(float[] notes, float seconds, float arp)
+        /// <summary>Ears ringing after a close blast: two close high tones beating, a narrow band of noise round them, drifting, fading.</summary>
+        static AudioClip Tinnitus(System.Random r)
         {
-            return Samples(Rate, seconds, (t, i) =>
+            int n = (int)(3.2f * Rate);
+            var d = new float[n];
+            var band = new Svf().Set(3700f, 30f, Rate);
+            var wob = new Drift(r, 0.7f);
+            float p1 = 0f, p2 = 0f;
+            for (int i = 0; i < n; i++)
             {
-                float v = 0f;
-                for (int k = 0; k < notes.Length; k++)
+                float t = i / (float)Rate;
+                float w = wob.Next(), f = 3650f * (1f + 0.004f * w);
+                p1 += f / Rate; if (p1 >= 1f) p1 -= 1f;
+                p2 += f * 1.0123f / Rate; if (p2 >= 1f) p2 -= 1f;
+                band.Run(N(r));
+                float env = Mathf.Clamp01(t * 5f) * Mathf.Clamp01((3.2f - t) / 2f);
+                env *= env * (3f - 2f * env);
+                d[i] = (Mathf.Sin(2f * Mathf.PI * p1) * 0.19f + Mathf.Sin(2f * Mathf.PI * p2) * 0.075f + band.Bp * 0.6f) * env * (1f + 0.1f * w);
+            }
+            return Clip("ring", Rate, d);
+        }
+
+        /// <summary>Something heavy hitting the ground: a soft click, a low body thump whose pitch drops as the ground gives, and a puff of dirt.</summary>
+        static AudioClip Thud(System.Random r)
+        {
+            int n = (int)(0.5f * Rate);
+            var d = new float[n];
+            float ph = 0f;
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)Rate;
+                ph += (55f + 28f * Mathf.Exp(-t * 25f)) / Rate;
+                d[i] = Mathf.Sin(2f * Mathf.PI * ph) * Mathf.Exp(-t * 11f) * Mathf.Min(1f, t / 0.002f) * 0.6f;
+            }
+            Mode(d, 0, U(r, 110f, 140f), 30f, 0.45f, 0.001f);
+            Mode(d, 0, U(r, 260f, 340f), 60f, 0.22f, 0.0008f);
+            Burst(d, 0, 0.003f, 0.3f, 0f, 1200f, Bq.Lp(3000f), r);
+            Burst(d, 0, 0.25f, 0.9f, 0.002f, 30f, Bq.Lp(700f, 0.8f), r);
+            for (int k = 0; k < 6; k++)
+                Burst(d, (int)(U(r, 0.02f, 0.25f) * Rate), 0.003f, U(r, 0.02f, 0.06f), 0f, 1500f, Bq.Bp(U(r, 1500f, 4000f), 1.2f), r);
+            Bq.Hp(30f).Apply(d);
+            return Clip("thud", Rate, Outdoor(d, 0.12f, 0.15f, r, 0.5f));
+        }
+
+        /// <summary>A wooden mallet note (marimba bar: partials 1 : 3.9 : 9.2), soft-felt onset.</summary>
+        static void Mallet(float[] d, float start, float hz, float amp, float decay, System.Random r)
+        {
+            int s0 = (int)(start * Rate);
+            Mode(d, s0, hz, decay, amp, 0.0025f);
+            Mode(d, s0, hz * 1.003f, decay * 1.2f, amp * 0.3f, 0.0025f);
+            Mode(d, s0, hz * 3.93f, decay * 2.6f, amp * 0.16f, 0.0015f);
+            Mode(d, s0, hz * 9.2f, decay * 5f, amp * 0.04f, 0.001f);
+            Burst(d, s0, 0.006f, amp * 0.1f, 0.001f, 500f, Bq.Lp(1800f), r);
+        }
+
+        /// <summary>A small bell or celesta note (metal bar: partials 1 : 2.76 : 5.40), its shimmer from a detuned twin.</summary>
+        static void Bell(float[] d, float start, float hz, float amp, float decay, float bright)
+        {
+            int s0 = (int)(start * Rate);
+            Mode(d, s0, hz, decay, amp, 0.0012f);
+            Mode(d, s0, hz * 1.0021f, decay, amp * 0.5f, 0.0012f);
+            Mode(d, s0, hz * 2.756f, decay * 2f, amp * 0.25f * bright, 0.0008f);
+            Mode(d, s0, hz * 5.404f, decay * 3.5f, amp * 0.08f * bright, 0.0006f);
+        }
+
+        /// <summary>UI tap: a soft, short wooden "tock".</summary>
+        static AudioClip UiTap(System.Random r)
+        {
+            var d = new float[(int)(0.06f * Rate)];
+            Mode(d, 0, 1180f, 95f, 0.45f, 0.0007f);
+            Mode(d, 0, 2650f, 170f, 0.14f, 0.0005f);
+            Mode(d, 0, 430f, 110f, 0.2f, 0.001f);
+            Burst(d, 0, 0.002f, 0.06f, 0.0003f, 2000f, Bq.Lp(5000f), r);
+            for (int i = 0; i < d.Length; i++) d[i] *= 1.4f;
+            return Clip("tap", Rate, Bq.Lp(7000f).Apply(d));
+        }
+
+        /// <summary>UI confirm: two soft marimba notes a fifth apart.</summary>
+        static AudioClip UiConfirm(System.Random r)
+        {
+            var d = new float[(int)(0.25f * Rate)];
+            Mallet(d, 0f, 659.3f, 0.32f, 13f, r);
+            Mallet(d, 0.075f, 987.8f, 0.36f, 12f, r);
+            return Clip("confirm", Rate, d);
+        }
+
+        /// <summary>UI coin: a bright little two-note "cling" on a struck metal bar.</summary>
+        static AudioClip UiCoin(System.Random r)
+        {
+            var d = new float[(int)(0.4f * Rate)];
+            Bell(d, 0f, 1975.5f, 0.2f, 12f, 0.8f);
+            Bell(d, 0.065f, 2637f, 0.26f, 9f, 0.7f);
+            Burst(d, 0, 0.0015f, 0.05f, 0f, 3000f, Bq.Hp(4000f), r);
+            Burst(d, (int)(0.065f * Rate), 0.0015f, 0.05f, 0f, 3000f, Bq.Hp(4000f), r);
+            return Clip("coin", Rate, Bq.Lp(9000f).Apply(d));
+        }
+
+        /// <summary>UI star: a quick rising celesta arpeggio with a sparkle on top.</summary>
+        static float[] UiStar(System.Random r)
+        {
+            var d = new float[(int)(0.7f * Rate)];
+            float[] notes = { 1046.5f, 1318.5f, 1568f, 2093f };
+            for (int k = 0; k < notes.Length; k++) Bell(d, k * 0.045f + 0.003f * N(r), notes[k], 0.16f * U(r, 0.85f, 1f), 5.5f, 0.45f);
+            for (int k = 0; k < 6; k++) Mode(d, (int)(U(r, 0.12f, 0.4f) * Rate), U(r, 4200f, 6500f), 30f, U(r, 0.01f, 0.025f), 0.002f);
+            return Bq.Lp(10000f).Apply(d);
+        }
+
+        /// <summary>
+        /// Win and fail stings on an electric piano (FM tine: a sine phase-modulated by itself, the modulation dying
+        /// fast so the attack is bell-like and the sustain round), slightly chorused, timing and velocity humanised.
+        /// Win: a rising major arpeggio into a held chord. Fail: a falling line, darker, its last note sagging.
+        /// </summary>
+        static float[] Sting(System.Random r, bool win)
+        {
+            int n = (int)(1.6f * Rate);
+            var d = new float[n];
+            float[] notes = win ? new[] { 523.3f, 659.3f, 784f, 1046.5f } : new[] { 392f, 370f, 349.2f, 311.1f };
+            float arp = win ? 0.065f : 0.17f, bright = win ? 1f : 0.55f;
+            for (int k = 0; k < notes.Length; k++)
+            {
+                float start = k * arp + 0.004f * N(r), vel = U(r, 0.8f, 1f) * (win && k == notes.Length - 1 ? 1.15f : 1f);
+                bool last = k == notes.Length - 1;
+                EPiano(d, start, notes[k], 0.16f * vel, bright, !win && last, r);
+                if (win && last) { EPiano(d, start + 0.01f, 659.3f, 0.07f, 0.8f, false, r); EPiano(d, start + 0.015f, 392f, 0.07f, 0.8f, false, r); }
+            }
+            if (!win) EPiano(d, 3 * arp + 0.02f, 155.6f, 0.1f, 0.4f, true, r);
+            return d;
+        }
+
+        static void EPiano(float[] d, float start, float hz, float amp, float bright, bool sag, System.Random r)
+        {
+            int s0 = (int)(start * Rate);
+            if (s0 < 0) s0 = 0;
+            float p1 = 0f, p2 = 0f, pt = 0f, detune = 1f + 0.0025f * U(r, 0.6f, 1f);
+            for (int i = s0; i < d.Length; i++)
+            {
+                float t = (i - s0) / (float)Rate;
+                float f = hz * (sag ? 1f - 0.03f * Mathf.Clamp01((t - 0.15f) / 0.9f) : 1f);
+                p1 += f / Rate; if (p1 >= 1f) p1 -= 1f;
+                p2 += f * detune / Rate; if (p2 >= 1f) p2 -= 1f;
+                pt += f * 7.1f / Rate; if (pt >= 1f) pt -= 1f;
+                float idx = bright * (1.6f * Mathf.Exp(-t * 9f) + 0.35f);
+                float m1 = Mathf.Sin(2f * Mathf.PI * p1), m2 = Mathf.Sin(2f * Mathf.PI * p2);
+                float v = Mathf.Sin(2f * Mathf.PI * p1 + idx * m1) + 0.6f * Mathf.Sin(2f * Mathf.PI * p2 + idx * m2);
+                v += 0.25f * bright * Mathf.Sin(2f * Mathf.PI * pt) * Mathf.Exp(-t * 35f);   // the tine's ping
+                float env = Mathf.Min(1f, t / 0.003f) * (0.7f * Mathf.Exp(-t * 2.4f) + 0.3f * Mathf.Exp(-t * 0.9f));
+                d[i] += v * env * amp;
+            }
+        }
+
+        /// <summary>The spray can: a pressurised hiss, bright and slightly rough, with the nozzle spitting now and then.</summary>
+        internal static AudioClip SprayClip()
+        {
+            var r = new System.Random(23);
+            var hp = Bq.Hp(1800f);
+            var p1 = Bq.Peak(5600f, 1.1f, 6f);
+            var p2 = Bq.Peak(9800f, 2f, 5f);
+            var gas = Bq.Bp(1400f, 0.9f);
+            var lp = Bq.Lp(13000f);
+            var turb = new Drift(r, 25f);
+            var slow = new Drift(r, 2f);
+            float spit = 0f;
+            return Loop(Rate, 1.2f, (t, i) =>
+            {
+                float n = N(r);
+                if (r.NextDouble() < 0.00008) spit = U(r, 0.3f, 0.7f);
+                spit *= 0.9993f;
+                float a = (1f + 0.12f * turb.Next() + 0.06f * slow.Next()) * (1f - 0.5f * spit);
+                return lp.Run(p2.Run(p1.Run(hp.Run(n)))) * a * 0.7f + gas.Run(n) * 0.12f * a + n * spit * 0.15f;
+            }, 0.27f);
+        }
+
+        /// <summary>
+        /// The mixing ball knocking about in a shaken aerosol can: each knock rings the thin can's wall modes, with a
+        /// little rattle of bounces after it, over the swish of the paint.
+        /// </summary>
+        internal static AudioClip RattleClip()
+        {
+            var r = new System.Random(29);
+            int n = (int)(0.7f * Rate);
+            var d = new float[n];
+            float[] can = { U(r, 1750f, 1950f), U(r, 2600f, 2850f), U(r, 3400f, 3650f), U(r, 4800f, 5100f), U(r, 6200f, 6700f) };
+            float t = 0.015f;
+            int k = 0;
+            while (t < 0.62f)
+            {
+                float a = U(r, 0.6f, 1f) * (1f - t / 1.1f);
+                int bounces = 1 + r.Next(3);
+                float bt = t, ba = a;
+                for (int b = 0; b <= bounces; b++)
                 {
-                    float s = t - k * arp;
-                    if (s < 0f) continue;
-                    v += (Mathf.Sin(2f * Mathf.PI * notes[k] * s) + 0.3f * Mathf.Sin(4f * Mathf.PI * notes[k] * s)) * Mathf.Exp(-s * 2.2f) * 0.18f;
+                    int s0 = (int)(bt * Rate);
+                    Burst(d, s0, 0.0006f, ba * 0.35f, 0f, 8000f, Bq.Hp(5000f), r);
+                    for (int m = 0; m < can.Length; m++) Mode(d, s0, can[m] * (1f + 0.004f * N(r)), U(r, 45f, 90f) * (1f + 0.3f * m), ba * 0.13f / (1f + 0.4f * m) * U(r, 0.5f, 1f));
+                    bt += U(r, 0.008f, 0.022f);
+                    ba *= U(r, 0.2f, 0.4f);
                 }
-                return v;
-            });
+                t += (k & 1) == 0 ? U(r, 0.1f, 0.125f) : U(r, 0.105f, 0.13f);
+                k++;
+            }
+            // The paint sloshing with each stroke.
+            var slosh = Bq.Bp(650f, 0.8f);
+            for (int i = 0; i < n; i++)
+            {
+                float u = i / (float)Rate;
+                d[i] += slosh.Run(N(r)) * 0.05f * Mathf.Abs(Mathf.Sin(Mathf.PI * u / 0.115f)) * (1f - u / 0.8f);
+            }
+            Bq.Hp(300f).Apply(d);
+            return Clip("rattle", Rate, d);
         }
 
         // ----- shared helpers for the stereo loops (ambience, music) -----
