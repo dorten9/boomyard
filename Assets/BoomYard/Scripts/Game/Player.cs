@@ -17,10 +17,11 @@ namespace BoomYard.Game
         public int Select = -1;
         public bool Pause;
         public bool Detonate;         // the remote's BOOM button
+        public bool SprayToggle;      // the can in or out of the hand
 
         public void ClearEdges()
         {
-            LighterDown = LighterUp = ThrowUp = Place = Pause = Detonate = false;
+            LighterDown = LighterUp = ThrowUp = Place = Pause = Detonate = SprayToggle = false;
             Select = -1;
             Look = Vector2.zero;
         }
@@ -128,6 +129,8 @@ namespace BoomYard.Game
             HeldLit = false;
             Hands.SetItem(null);
             Hands.SetLit(false);
+            Hands.SetCan(null);
+            Hands.Spraying = false;
         }
 
         void Update()
@@ -144,23 +147,45 @@ namespace BoomYard.Game
 
             if (Controllable && game != null && game.Round.State != RoundState.Results)
             {
+                var spray = Spray.I;
+                if (act && In.SprayToggle && !HeldLit) SetCan(spray != null && !spray.Active);
                 if (act && In.Select >= 0 && !HeldLit)
                 {
                     int sel = Mathf.Clamp(In.Select, 0, game.Pocket.Slots.Count - 1);
                     // Tapping the timer charge again sets its delay: 5, 10 or 15 seconds.
-                    if (sel == game.Pocket.Selected && HeldDef != null && HeldDef.Timer) game.CycleTimer();
+                    if (sel == game.Pocket.Selected && HeldDef != null && HeldDef.Timer && !Spraying) game.CycleTimer();
                     game.Pocket.Selected = sel;
+                    SetCan(false);   // picking an explosive puts the can away
                 }
                 if (act && In.Detonate) { if (game.Level.Show) game.LaunchShow(); else game.DetonateRemotes(); }
-                Hold(game);
-                if (act) Lighter(game, dt);
-                else Ignition.Release();
+                if (Spraying)
+                {
+                    // The can: hold SPRAY to paint at the crosshair, tap a wall to stamp the stencil.
+                    Ignition.Release();
+                    LightTarget = null;
+                    if (act && In.LighterHeld) spray.Paint(Cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f)));
+                    else if (spray.Painting) spray.Release();
+                    if (act && In.Place && !spray.Stamp(Cam.ScreenPointToRay(In.PlaceScreen)))
+                        game.Toast(spray.Stencil == null ? "toast.nostencil" : "toast.nowall");
+                    Hands.Spraying = spray.Painting;
+                }
+                else
+                {
+                    Hold(game);
+                    if (act) Lighter(game, dt);
+                    else Ignition.Release();
+                }
                 Fuse(game, dt);
                 // When the clock runs out with a lit item in the hand, it can still be thrown.
                 bool late = game.Round.State == RoundState.Settling && HeldLit && !Knocked && !game.Paused;
-                if (act || late) ThrowAndPlace(game);
+                if ((act || late) && !Spraying) ThrowAndPlace(game);
             }
-            else Ignition.Release();
+            else
+            {
+                Ignition.Release();
+                if (Spraying && Spray.I.Painting) Spray.I.Release();
+                Hands.Spraying = false;
+            }
 
             Hands.FlameOn = Ignition != null && Ignition.Flame == FlameState.Lit;
             Hands.Lighting = Hands.FlameOn && (LightTarget != null || HeldDef != null && !HeldLit);
@@ -169,6 +194,33 @@ namespace BoomYard.Game
             Predict(HeldLit);
             In.ClearEdges();
         }
+
+        /// <summary>The spray can is in the hand instead of an explosive.</summary>
+        public bool Spraying { get { return Spray.I != null && Spray.I.Active; } }
+
+        /// <summary>Takes the spray can out (the explosive goes back in the pocket) or puts it away.</summary>
+        public void SetCan(bool on)
+        {
+            var spray = Spray.I;
+            if (spray == null || spray.Active == on) return;
+            spray.SetActive(on);
+            Hands.Spraying = false;
+            if (on) { HeldDef = null; Hands.SetCan(spray.Color); }
+            else Hands.SetCan(null);   // Hold() puts the selected explosive back in the hand
+        }
+
+        /// <summary>Puts the player somewhere, looking a given way (screenshot runs).</summary>
+        public void Teleport(Vector3 feet, float toYaw, float toPitch)
+        {
+            cc.enabled = false;
+            transform.position = feet;
+            cc.enabled = true;
+            yaw = toYaw;
+            pitch = toPitch;
+        }
+
+        /// <summary>A new colour on the can (from the colour strip or the shop).</summary>
+        public void RefreshCan() { if (Spraying) Hands.SetCan(Spray.I.Color); }
 
         void Look(Vector2 delta)
         {

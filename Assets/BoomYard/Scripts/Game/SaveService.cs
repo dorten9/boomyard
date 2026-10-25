@@ -53,7 +53,9 @@ namespace BoomYard.Game
         public int challengeDate;                         // the daily challenge: day played (Daily.Seed), best and whether cleared
         public long challengeBest;
         public bool challengeCleared;
-        public List<string> styles = new List<string>();  // style items bought (shop ids)
+        public List<string> styles = new List<string>();  // style and graffiti items bought (shop ids)
+        public string sprayColor = "red", sprayCap = "standard", stencil = "";   // the can as last set; stencil "" = freehand
+        public List<string> customStencils = new List<string>();                // the stencil maker's grids (Graffiti.Valid)
         public int gems;                  // retired: gems became coins (100 each) on load
         public string lighter = "basic";
         public List<string> lighters = new List<string> { "basic" };
@@ -74,6 +76,16 @@ namespace BoomYard.Game
 
         // Lifetime stats (shown in the profile, used by achievements later).
         public int totalDestroyed, totalBlasts, bestChain;
+
+        /// <summary>Owns a style or graffiti item (the free ones count as owned).</summary>
+        public bool Owns(ShopItem item) { return item != null && (item.Coins == 0 || styles.Contains(item.Id)); }
+
+        /// <summary>A custom stencil grid by slot (blank if never drawn).</summary>
+        public string Custom(int slot)
+        {
+            while (customStencils.Count < Graffiti.CustomSlots) customStencils.Add(Graffiti.Blank);
+            return Graffiti.Valid(customStencils[slot]) ? customStencils[slot] : Graffiti.Blank;
+        }
 
         public ArenaRecord Arena(int number)
         {

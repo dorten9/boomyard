@@ -44,7 +44,7 @@ namespace BoomYard.Core
         public int Spare = -1;   // index into Props of the object to keep (LevelRule.Spare)
         public bool Boss;        // the street's last level: one big target and everything round it
         public bool Daily;       // today's challenge: a copy of a level with a twist, the same for everyone
-        public bool Show;        // the fireworks show: no targets, no clock
+        public bool Show;        // the big city: no targets, no clock (and placed rockets go up as a show)
 
         public StreetDef Street { get { return Streets.ForLevel(Number); } }
 
@@ -209,9 +209,14 @@ namespace BoomYard.Core
         public const int DailyReward = 600;
 
         /// <summary>The fireworks show: an empty yard on Holly Lane and forty rockets to set out and launch.</summary>
-        public static LevelDef FireworksShow()
+        /// <summary>
+        /// The big city: a whole downtown to wreck and paint, no targets and no clock. Rockets, M-80s and the
+        /// Black Cat come free; everything unlocked in the shop is there too, all unlimited. Pays for the wreckage
+        /// when the player cashes in.
+        /// </summary>
+        public static LevelDef City()
         {
-            return new LevelDef { Number = 43, Name = "Fireworks Show", Time = 3600f, Reward = 0, Props = new PropSpot[0], Kit = Kit("rocket", 40), Show = true };
+            return new LevelDef { Number = 0, Name = "Big City", Time = 3600f, Reward = 0, Props = new PropSpot[0], Kit = Kit("rocket", 1, "m80", 1, "blackcat", 1), Show = true };
         }
 
         /// <summary>

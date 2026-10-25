@@ -24,7 +24,7 @@ namespace BoomYard.UI
         public static readonly Color Scrim = new Color(0.04f, 0.035f, 0.04f, 0.86f);
 
         static Font text, display;
-        static Sprite rounded, circle, ring, glow, vignette, star, arrow, diamond, flame, play, coin, gear, back, gift, lockIcon, drop, check, pill;
+        static Sprite canIcon, bagIcon, rounded, circle, ring, glow, vignette, star, arrow, diamond, flame, play, coin, gear, back, gift, lockIcon, drop, check, pill;
 
         public static Font Text
         {
@@ -321,6 +321,43 @@ namespace BoomYard.UI
                         return (box || lid || bowL || bowR) && !ribbon ? 1f : 0f;
                     }, Vector4.zero);
                 return gift;
+            }
+        }
+
+        /// <summary>A spray can: the can, its shoulder and the nozzle, and a puff of paint.</summary>
+        public static Sprite Can
+        {
+            get
+            {
+                if (canIcon == null)
+                    canIcon = Shape(64, (x, y, n) =>
+                    {
+                        float u = (x + 0.5f) / n, v = (y + 0.5f) / n;
+                        bool body = u > 0.3f && u < 0.62f && v > 0.08f && v < 0.62f;
+                        bool shoulder = Vector2.Distance(new Vector2(u, v), new Vector2(0.46f, 0.62f)) < 0.16f && v >= 0.62f;
+                        bool nozzle = u > 0.41f && u < 0.51f && v > 0.74f && v < 0.84f;
+                        bool puff = Vector2.Distance(new Vector2(u, v), new Vector2(0.72f, 0.86f)) < 0.05f || Vector2.Distance(new Vector2(u, v), new Vector2(0.84f, 0.8f)) < 0.04f || Vector2.Distance(new Vector2(u, v), new Vector2(0.8f, 0.93f)) < 0.035f;
+                        return body || shoulder || nozzle || puff ? 1f : 0f;
+                    }, Vector4.zero);
+                return canIcon;
+            }
+        }
+
+        /// <summary>A shopping bag (the shop, from inside a level).</summary>
+        public static Sprite Bag
+        {
+            get
+            {
+                if (bagIcon == null)
+                    bagIcon = Shape(64, (x, y, n) =>
+                    {
+                        float u = (x + 0.5f) / n, v = (y + 0.5f) / n;
+                        bool bag = u > 0.18f && u < 0.82f && v > 0.1f && v < 0.64f;
+                        float r = Vector2.Distance(new Vector2(u, v), new Vector2(0.5f, 0.64f));
+                        bool handle = v > 0.64f && r < 0.2f && r > 0.12f;
+                        return bag || handle ? 1f : 0f;
+                    }, Vector4.zero);
+                return bagIcon;
             }
         }
 

@@ -30,7 +30,7 @@ namespace BoomYard.Game
                 case "barrel": d = Barrel(t, variant); break;
                 case "fence": d = Fence(t); break;
                 case "crate": d = Crate(t); break;
-                default: d = Street(id, t, variant) ?? Crate(t); break;
+                default: d = Street(id, t, variant) ?? City(id, t, variant) ?? Crate(t); break;
             }
             return d;
         }

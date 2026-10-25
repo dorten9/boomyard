@@ -77,6 +77,7 @@ namespace BoomYard.Game
             sfx.MusicVolume = save.settings.musicVolume;
             Mark("sound ready");
             gameObject.AddComponent<FireGrid>();
+            Spray.Create(gameObject);
             Rendering.Create(Quality.Tier);
             Mark("rendering ready");
 
@@ -114,6 +115,7 @@ namespace BoomYard.Game
             spareBroken = false;
             foreach (var live in LiveExplosive.Active.ToArray()) if (live != null) Destroy(live.gameObject);
             FireGrid.I.Clear();
+            Spray.I.Clear();
             var fx = GameObject.Find("Fx");
             if (fx != null) Destroy(fx);
             Arena = ArenaBuilder.Build(Level, Quality.Tier);
@@ -126,7 +128,7 @@ namespace BoomYard.Game
             var save = SaveService.Data;
             Pocket.Slots.Clear();
             Pocket.Selected = 0;
-            int slots = Core.Pocket.BaseSlots + (save.Has("vest") ? 2 : 0);
+            int slots = Level.Show ? Core.Pocket.MaxSlots : Core.Pocket.BaseSlots + (save.Has("vest") ? 2 : 0);
             var counts = new Dictionary<string, int>();
             var order = new List<string>();
             // The level's kit first, then every kind the player has unlocked in the shop, and the Black Cat always.
@@ -179,15 +181,23 @@ namespace BoomYard.Game
 
         public void StartLevel(int number) { StartLevel(Levels.Get(number)); }
 
-        /// <summary>The fireworks show: Holly Lane, no targets, no clock, a pocket full of rockets.</summary>
-        public void StartShow()
+        /// <summary>The big city: a downtown to wreck and paint, no targets, no clock, everything unlimited.</summary>
+        public void StartCity()
         {
-            StartLevel(Levels.FireworksShow());
-            Sfx.I.Music(true);
-            UI.Toast(Loc.T("show.intro"), 5f);
+            StartLevel(Levels.City());
+            UI.Toast(Loc.T("city.intro"), 6f);
         }
 
-        /// <summary>Every rocket standing in the yard goes up, one after another, in the order they were set down.</summary>
+        /// <summary>Leaves the city and banks a share of the wreckage as coins (the results screen).</summary>
+        public void CashIn()
+        {
+            if (Current != Mode.Level || !Level.Show) return;
+            if (Paused) TogglePause();
+            Round.Finish();
+            Round.Tick(0f, false);
+        }
+
+        /// <summary>Every rocket standing in the street goes up, one after another, in the order they were set down.</summary>
         public void LaunchShow()
         {
             var list = new List<LiveExplosive>();
@@ -279,7 +289,7 @@ namespace BoomYard.Game
             return new LighterDef { Id = l.Id, NameEn = l.NameEn, NameHe = l.NameHe, CatchTime = l.CatchTime * 1.6f + 0.25f, WindBlowout = l.WindBlowout, Flames = l.Flames, BreakChance = l.BreakChance };
         }
 
-        public void Restart() { if (Level.Daily) StartDaily(); else StartLevel(Level.Number); }
+        public void Restart() { if (Level.Show) StartCity(); else if (Level.Daily) StartDaily(); else StartLevel(Level.Number); }
 
         public void NextLevel() { StartLevel(Mathf.Min(Level.Number + 1, Levels.All.Length)); }
 
@@ -475,6 +485,7 @@ namespace BoomYard.Game
                 total++;
                 if (d.Destroyed) destroyed++;
             }
+            if (Level.Show) return SummarizeCity(destroyed, total);
             int targetsLeft = Arena.TargetsLeft;
             bool cleared = targetsLeft == 0 && !spareBroken;
             Score.CleanSweep = total > 0 && destroyed == total;
@@ -532,6 +543,25 @@ namespace BoomYard.Game
             return sum;
         }
 
+        /// <summary>The city pays a share of its wreckage (there is so much of it); no records, no stars.</summary>
+        RoundSummary SummarizeCity(int destroyed, int total)
+        {
+            var save = SaveService.Data;
+            var sum = new RoundSummary
+            {
+                Level = Level, Arena = ArenaDef, Cleared = true, FailReason = "", Total = Score.Total, Base = Score.Base,
+                ChainExtra = Score.ChainExtra, Bonuses = Score.Bonuses, LongestChain = Chain.LongestChain, Destroyed = destroyed, Objects = total,
+                BonusLog = new List<BonusKind>(Score.BonusLog), TipKey = "tip.city",
+            };
+            sum.Coins = Progress.CityCoins(Score.Total);
+            save.shekels += sum.Coins;
+            save.roundsPlayed++;
+            save.totalDestroyed += destroyed;
+            save.bestChain = Mathf.Max(save.bestChain, Chain.LongestChain);
+            SaveService.Save();
+            return sum;
+        }
+
         public void TogglePause()
         {
             if (Current != Mode.Level || Round.State == RoundState.Results || Round.State == RoundState.Loadout) return;
@@ -549,6 +579,24 @@ namespace BoomYard.Game
             if (item.Kind == "lighter" && save.lighters.Contains(item.Grants)) { save.lighter = item.Grants; SaveService.Save(); return true; }
             if (item.Kind == "upgrade" && save.Has(item.Grants)) return false;
             if (item.Kind == "explosive" && save.Count(item.Grants) > 0) return false;   // unlocked already
+            if (item.Kind == "spray" || item.Kind == "cap" || item.Kind == "stencil" || item.Kind == "maker")
+            {
+                // Graffiti gear: bought once, then a tap puts it on the can.
+                if (!save.Owns(item))
+                {
+                    if (save.shekels < item.Coins) return false;
+                    save.shekels -= item.Coins;
+                    save.styles.Add(item.Id);
+                    Sfx.I.Coin();
+                }
+                else Sfx.I.Confirm();
+                if (item.Kind == "spray") save.sprayColor = item.Grants;
+                else if (item.Kind == "cap") save.sprayCap = item.Grants;
+                else if (item.Kind == "stencil") save.stencil = item.Grants;
+                SaveService.Save();
+                Player.RefreshCan();
+                return true;
+            }
             if (item.Kind == "glove" || item.Kind == "lighterskin")
             {
                 bool own = item.Coins == 0 || save.styles.Contains(item.Id);
@@ -575,7 +623,47 @@ namespace BoomYard.Game
             }
             SaveService.Save();
             Sfx.I.Coin();
+            // Bought from inside a level: an explosive goes straight into the pocket.
+            if (Current == Mode.Level && item.Kind == "explosive") RefreshPocket();
             return true;
+        }
+
+        /// <summary>Refills the pocket with what is now unlocked, keeping the selected kind in the hand.</summary>
+        public void RefreshPocket()
+        {
+            var keep = Pocket.Current != null ? Pocket.Current.id : null;
+            FillPocket();
+            for (int i = 0; i < Pocket.Slots.Count; i++) if (Pocket.Slots[i].id == keep) Pocket.Selected = i;
+        }
+
+        /// <summary>The shop from inside a level: the game pauses under it, and BACK returns to the pause menu.</summary>
+        public void OpenShopInLevel()
+        {
+            if (Current != Mode.Level || Round.State == RoundState.Results) return;
+            if (!Paused) TogglePause();
+            if (Paused) UI.ShowShop(true);
+        }
+
+        /// <summary>The next stencil owned (custom ones that have a drawing in them too), then none.</summary>
+        public void CycleStencil()
+        {
+            var save = SaveService.Data;
+            var ids = new List<string> { "" };
+            foreach (var st in Graffiti.Stencils) if (save.Owns(Shop.Get("stencil_" + st.Id))) ids.Add(st.Id);
+            if (save.Owns(Shop.Get("maker")))
+                for (int i = 0; i < Graffiti.CustomSlots; i++) if (!Graffiti.Empty(save.Custom(i))) ids.Add(Graffiti.CustomId(i));
+            if (ids.Count == 1) { UI.Toast(Loc.T("toast.buystencil")); return; }
+            int at = ids.IndexOf(save.stencil);
+            save.stencil = ids[(at + 1) % ids.Count];
+        }
+
+        public void CycleCap()
+        {
+            var save = SaveService.Data;
+            var ids = new List<string>();
+            foreach (var c in Graffiti.Caps) if (save.Owns(Shop.Get("cap_" + c.Id))) ids.Add(c.Id);
+            if (ids.Count <= 1) { UI.Toast(Loc.T("toast.buycap")); return; }
+            save.sprayCap = ids[(ids.IndexOf(save.sprayCap) + 1) % ids.Count];
         }
 
         public void Claim(Mission m)
@@ -664,14 +752,81 @@ namespace BoomYard.Game
             if (mode == "shop") { GoHome(); UI.ShowShop(); yield break; }
             if (mode == "mapall") { SaveService.Data.unlocked = Levels.All.Length; GoMap(); yield break; }
             if (mode == "daily") { StartDaily(); yield break; }
+            if (mode == "city") { StartCity(); yield break; }
+            if (mode == "citytower" || mode == "citypark" || mode == "citysite")
+            {
+                StartCity();
+                yield return new WaitForSeconds(1f);
+                if (mode == "citytower") Player.Teleport(new Vector3(-20f, 0.16f, 6f), 262f, -12f);
+                else if (mode == "citypark") Player.Teleport(new Vector3(-6f, 0.16f, 26f), 20f, 8f);
+                else Player.Teleport(new Vector3(-21f, 0.16f, -29f), 222f, 6f);
+                yield break;
+            }
+            if (mode == "spray")
+            {
+                // Paint on the back wall of the flats on the corner block: a few strokes, then two stencils.
+                var save = SaveService.Data;
+                foreach (var id in new[] { "stencil_boom", "stencil_heart", "spray_yellow", "spray_neonpink", "cap_fat" }) if (!save.styles.Contains(id)) save.styles.Add(id);
+                save.sprayColor = "red";
+                save.sprayCap = "fat";
+                save.stencil = "boom";
+                StartCity();
+                yield return new WaitForSeconds(1f);
+                Player.Teleport(new Vector3(51f, 0.16f, -44.2f), 180f, 8f);
+                yield return null;
+                Player.SetCan(true);
+                yield return new WaitForSeconds(0.5f);
+                var eye = Player.Cam.transform.position;
+                for (int stroke = 0; stroke < 3; stroke++)
+                {
+                    save.sprayColor = stroke == 0 ? "red" : stroke == 1 ? "yellow" : "neonpink";
+                    Player.RefreshCan();
+                    for (int f = 0; f < 50; f++)
+                    {
+                        float t = f / 49f;
+                        var target = new Vector3(47f + t * 8f, 1.2f + stroke * 0.7f + Mathf.Sin(t * 9f) * 0.3f, -48f);
+                        Player.Hands.Spraying = true;
+                        Spray.I.Paint(new Ray(eye, target - eye));
+                        yield return null;
+                    }
+                    Spray.I.Release();
+                }
+                Player.Hands.Spraying = false;
+                save.sprayColor = "yellow";
+                Spray.I.Stamp(new Ray(eye, new Vector3(50.5f, 3.6f, -48f) - eye));
+                yield return new WaitForSeconds(1f);
+                save.stencil = "heart";
+                save.sprayColor = "neonpink";
+                Spray.I.Stamp(new Ray(eye, new Vector3(54.5f, 1.4f, -48f) - eye));
+                yield break;
+            }
+            if (mode == "shopgraffiti") { GoHome(); UI.ShopTab = "graffiti"; UI.ShowShop(); yield break; }
+            if (mode == "maker")
+            {
+                var save = SaveService.Data;
+                if (!save.styles.Contains("maker")) save.styles.Add("maker");
+                string smile = "....................########......############...####kk##kk####..####kk##kk####.####################################w######w#######kw######wk#######kkwwwwkk####.#####kkkk#####..##############...############......########....................................";
+                save.Custom(0);
+                save.customStencils[0] = smile;
+                GoHome();
+                UI.ShowMaker(0);
+                yield break;
+            }
+            if (mode == "inshop")
+            {
+                StartCity();
+                yield return new WaitForSeconds(1f);
+                OpenShopInLevel();
+                yield break;
+            }
             if (mode == "show")
             {
                 // Six rockets in an arc in front of the player, then the show.
-                StartShow();
+                StartCity();
                 yield return new WaitForSeconds(1.5f);
                 var rocket = Catalog.Explosive("rocket");
                 for (int i = 0; i < 6; i++)
-                    LiveExplosive.SpawnUnlit(rocket, new Vector3(-5f + i * 2f, 0.05f, 4f + Mathf.Abs(i - 2.5f)), Quaternion.identity, Placement.Placed);
+                    LiveExplosive.SpawnUnlit(rocket, new Vector3(-5f + i * 2f, 0.05f, -21f + Mathf.Abs(i - 2.5f)), Quaternion.identity, Placement.Placed);
                 yield return new WaitForSeconds(1f);
                 LaunchShow();
                 yield break;

@@ -7,11 +7,15 @@ namespace BoomYard.UI
     /// <summary>
     /// Controls (spec §05): left thumb moves (floating joystick, double tap to run), right side drags to look,
     /// 🔥 held = lighter, ↑ = throw (tap = short, drag up = power), a tap on the ground = place, the pocket bar
-    /// selects. Mouse and keyboard do the same in the editor and browser: WASD, Shift, F, Space, E, 1–4, Esc.
+    /// selects, the can button takes out the spray can. Mouse and keyboard do the same in the editor and browser: WASD,
+    /// Shift, F, Space, E, 1–8, R (detonate), G (spray can), B (shop), Esc.
     /// </summary>
     public sealed class TouchControls : MonoBehaviour
     {
-        public RectTransform LighterButton, ThrowButton, PlaceButton, PauseButton, DetonateButton;
+        public RectTransform LighterButton, ThrowButton, PlaceButton, PauseButton, DetonateButton, SprayButton, ShopButton;
+        /// <summary>Other HUD buttons that act on a tap (the spray colour strip, the stencil and cap chips).</summary>
+        public readonly List<KeyValuePair<RectTransform, System.Action>> Taps = new List<KeyValuePair<RectTransform, System.Action>>();
+        public System.Action OpenShop;
         public readonly List<RectTransform> PocketSlots = new List<RectTransform>();
 
         public bool JoystickActive { get; private set; }
@@ -121,6 +125,9 @@ namespace BoomYard.UI
         Role RoleAt(Vector2 pos, InputFrame input)
         {
             if (Hit(PauseButton, pos)) { input.Pause = true; return Role.Ui; }
+            if (Hit(ShopButton, pos)) { if (OpenShop != null) OpenShop(); return Role.Ui; }
+            if (Hit(SprayButton, pos)) { input.SprayToggle = true; return Role.Ui; }
+            foreach (var t in Taps) if (Hit(t.Key, pos)) { t.Value(); return Role.Ui; }
             for (int i = 0; i < PocketSlots.Count; i++)
                 if (Hit(PocketSlots[i], pos)) { input.Select = i; return Role.Ui; }
             if (Hit(LighterButton, pos)) return Role.Lighter;
@@ -191,6 +198,8 @@ namespace BoomYard.UI
             for (int i = 0; i < 8; i++) if (Input.GetKeyDown(KeyCode.Alpha1 + i)) input.Select = i;
             if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.P)) input.Pause = true;
             if (Input.GetKeyDown(KeyCode.R)) input.Detonate = true;
+            if (Input.GetKeyDown(KeyCode.G)) input.SprayToggle = true;
+            if (Input.GetKeyDown(KeyCode.B) && OpenShop != null) OpenShop();
         }
     }
 }

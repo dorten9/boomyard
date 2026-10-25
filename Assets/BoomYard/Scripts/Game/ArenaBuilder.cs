@@ -32,6 +32,7 @@ namespace BoomYard.Game
     {
         public static Arena Build(LevelDef level, QualityTier tier)
         {
+            if (level.Show) return BuildCity(level, tier);
             var a = new Arena { Level = level, Def = Catalog.Arena(1) };
             StreetLife.DarkRooms.Clear();
             a.Root = new GameObject("Level " + level.Number);

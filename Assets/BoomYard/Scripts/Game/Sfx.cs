@@ -107,6 +107,38 @@ namespace BoomYard.Game
         }
         AudioSource handHiss;
 
+        /// <summary>The spray can's hiss while the nozzle is pressed (made the first time it is used).</summary>
+        public void Spray(bool on)
+        {
+            if (sprayLoop == null)
+            {
+                if (!on) return;
+                var r = new System.Random(23);
+                float lp = 0f;
+                var d = Samples(Rate, 1.4f, (t, i) => { float n = N(r); lp += (n - lp) * 0.35f; return (n - lp) * (0.8f + 0.2f * Mathf.Sin(t * 37f)); });
+                sprayLoop = Source(Loop(Rate, 1.2f, (t, i) => d[i % d.Length], 0.5f), 0.35f, true);
+            }
+            Toggle(sprayLoop, on);
+            sprayLoop.volume = 0.35f * Volume;
+        }
+        AudioSource sprayLoop;
+
+        /// <summary>The ball rattling in the can as it is shaken.</summary>
+        public void Rattle()
+        {
+            if (rattle == null)
+            {
+                var r = new System.Random(29);
+                rattle = Make(Rate, 0.7f, (t, i) =>
+                {
+                    float k = (t * 9f) % 1f;   // nine knocks
+                    return (Mathf.Sin(2f * Mathf.PI * 2600f * t) * 0.5f + N(r) * 0.5f) * Mathf.Exp(-k * 40f) * 0.5f * (1f - t / 0.7f);
+                });
+            }
+            ui.PlayOneShot(rattle, 0.6f * Volume);
+        }
+        AudioClip rattle;
+
         public void Music(bool on)
         {
             if (on && music == null) music = MakeMusic();
