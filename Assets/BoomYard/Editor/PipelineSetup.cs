@@ -50,9 +50,7 @@ namespace BoomYard.EditorTools
             asset.supportsHDR = true;
             asset.msaaSampleCount = 1;            // SMAA on the camera instead: cheaper on phones
             asset.renderScale = 1f;
-            // URP's post pass needs every upscaler shader, and the build strips the FSR one unless the asset selects it.
-            // The game switches to plain bilinear at runtime (Rendering.ApplyTier).
-            asset.upscalingFilter = UpscalingFilterSelection.FSR;
+            asset.upscalingFilter = UpscalingFilterSelection.Linear;
             asset.shadowDistance = 70f;
             asset.shadowCascadeCount = 2;
             asset.supportsCameraDepthTexture = true;

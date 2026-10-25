@@ -31,6 +31,28 @@
     <div id="loader"><div class="logo">BOOMYARD</div><div class="tag">Light it. Count. Run.</div><div class="bar"><div class="fill" id="fill"></div></div></div>
   </div>
   <script>
+    // Crash report on screen (phones have no console): the last log lines, shown with the error. Tap to close.
+    var logLines = [];
+    ["log", "warn", "error"].forEach(function (kind) {
+      var original = console[kind];
+      console[kind] = function () {
+        try { logLines.push(Array.prototype.join.call(arguments, " ").trim().slice(0, 200)); if (logLines.length > 40) logLines.shift(); } catch (e) {}
+        return original.apply(console, arguments);
+      };
+    });
+    function showCrash(message) {
+      if (document.getElementById("crash")) return;
+      var box = document.createElement("pre");
+      box.id = "crash";
+      box.style.cssText = "position:fixed;inset:0;margin:0;padding:12px;overflow:auto;z-index:99;background:rgba(0,0,0,.92);" +
+        "color:#ffb36b;font:11px/1.35 monospace;white-space:pre-wrap;-webkit-user-select:text;user-select:text";
+      box.textContent = String(message) + "\n\n" + navigator.userAgent + "\n\n" + logLines.filter(function (l) { return l.indexOf("GL Driver") < 0; }).join("\n");
+      box.onclick = function () { box.remove(); };
+      document.body.appendChild(box);
+    }
+    window.addEventListener("error", function (e) { showCrash(e.message || e); });
+    window.addEventListener("unhandledrejection", function (e) { showCrash(e.reason || e); });
+    window.alert = function (m) { showCrash(m); };
     var canvas = document.querySelector("#unity-canvas");
     var config = {
       dataUrl: "Build/{{{ DATA_FILENAME }}}",
@@ -58,7 +80,7 @@
     script.onload = function () {
       createUnityInstance(canvas, config, function (p) { document.getElementById("fill").style.width = (100 * p) + "%"; })
         .then(function (instance) { window.unityInstance = instance; document.getElementById("loader").remove(); })
-        .catch(function (message) { window.unityError = String(message); alert(message); });
+        .catch(function (message) { window.unityError = String(message); showCrash(message); });
     };
     document.body.appendChild(script);
   </script>
