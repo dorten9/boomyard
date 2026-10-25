@@ -406,15 +406,22 @@ namespace BoomYard.UI
                 var name = UIKit.Label(card.transform, "Name", pack.Name, 20, UIKit.Muted, TextAnchor.MiddleCenter, true);
                 UIKit.Place(name.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -178f), new Vector2(cw, 28f));
                 bool can = Purchases.Available;
-                var buy = UIKit.Button(card.transform, "Buy", web ? "IN THE APP" : Purchases.PriceOf(pack), can ? UIKit.Ember : new Color(0.2f, 0.19f, 0.2f), can ? Dark : UIKit.Muted, () =>
+                // On the web the packs show their prices like in the app, marked APP ONLY (as in Overlane).
+                bool lit = can || web;
+                var buy = UIKit.Button(card.transform, "Buy", can || web ? Purchases.PriceOf(pack) : "...", lit ? UIKit.Ember : new Color(0.2f, 0.19f, 0.2f), lit ? Dark : UIKit.Muted, () =>
                 {
                     if (!Purchases.Available) { Sfx.I.Fail(); Toast(web ? "Coins are bought in the BoomYard app" : "The store is not available right now"); return; }
                     Sfx.I.Tap();
                     Purchases.Buy(pack, (ok, message) => { if (ok) ShowShop(); else if (message != null) Toast(message); });
                 }, 28);
-                UIKit.Place((RectTransform)buy.transform, new Vector2(0.5f, 0f), new Vector2(0f, 20f), new Vector2(cw - 60f, 68f));
+                UIKit.Place((RectTransform)buy.transform, new Vector2(0.5f, 0f), new Vector2(0f, web ? 40f : 20f), new Vector2(cw - 60f, 68f));
+                if (web)
+                {
+                    var only = UIKit.Label(card.transform, "AppOnly", "APP ONLY", 18, UIKit.Muted, TextAnchor.MiddleCenter, true);
+                    UIKit.Place(only.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 10f), new Vector2(cw, 26f));
+                }
             }
-            var note = UIKit.Label(content, "Note", web ? "Coin packs are sold in the iPhone and Android apps. In the browser you can see them, but not buy them."
+            var note = UIKit.Label(content, "Note", web ? "Coin packs are sold in the iPhone and Android apps, through the App Store and Google Play. The web version shows them for a preview."
                 : Purchases.Status == Purchases.State.Connecting ? "Connecting to the store..." : "Payments go through " + (Application.platform == RuntimePlatform.IPhonePlayer ? "the App Store" : "Google Play") + ". Coins arrive as soon as the store confirms.", 20, UIKit.Muted, TextAnchor.UpperLeft);
             UIKit.Place(note.rectTransform, new Vector2(0f, 1f), new Vector2(0f, -ch - 26f), new Vector2(1500f, 30f));
             content.sizeDelta = new Vector2(0f, ch + 70f);
