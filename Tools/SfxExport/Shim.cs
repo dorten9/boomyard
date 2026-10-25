@@ -3,10 +3,11 @@ namespace UnityEngine
 {
     public sealed class AudioClip
     {
-        public string name; public int frequency; public float[] data;
-        public float length { get { return data.Length / (float)frequency; } }
+        public string name; public int frequency, channels; public float[] data;
+        public float length { get { return data.Length / channels / (float)frequency; } }
+        /// <summary>Like Unity: <paramref name="samples"/> is frames per channel; data is interleaved.</summary>
         public static AudioClip Create(string name, int samples, int channels, int frequency, bool stream)
-        { return new AudioClip { name = name, frequency = frequency, data = new float[samples] }; }
+        { return new AudioClip { name = name, frequency = frequency, channels = channels, data = new float[samples * channels] }; }
         public bool SetData(float[] d, int offset) { System.Array.Copy(d, 0, data, offset, d.Length); return true; }
     }
 
