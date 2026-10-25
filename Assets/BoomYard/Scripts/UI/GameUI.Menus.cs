@@ -217,7 +217,7 @@ namespace BoomYard.UI
                 if (l.Boss)
                 {
                     var boss = UIKit.Label(content, "Boss", "BOSS", 20, UIKit.Danger, TextAnchor.MiddleCenter, true);
-                    UIKit.Place(boss.rectTransform, new Vector2(0f, 0.5f), new Vector2(x, y + 122f), new Vector2(120f, 26f));
+                    UIKit.Place(boss.rectTransform, new Vector2(0f, 0.5f), new Vector2(x, y - 126f), new Vector2(120f, 26f));
                     boss.rectTransform.pivot = new Vector2(0.5f, 0.5f);
                 }
                 if (locked)

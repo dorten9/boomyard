@@ -659,7 +659,7 @@ namespace BoomYard.Game
             return amp >= 0 ? v.Substring(0, amp) : v;
         }
 
-        /// <summary>?shot=title|map|mapall|shop|play|boom|level&lt;n&gt; on the web page URL.</summary>
+        /// <summary>?shot=title|map|mapall|shop|play|boom|daily|show|gadgets|level&lt;n&gt; on the web page URL.</summary>
         System.Collections.IEnumerator RunShot(string mode)
         {
             SaveService.Data.disclaimerSeen = true;
@@ -668,6 +668,32 @@ namespace BoomYard.Game
             if (mode == "map") { GoMap(); yield break; }
             if (mode == "shop") { GoHome(); UI.ShowShop(); yield break; }
             if (mode == "mapall") { SaveService.Data.unlocked = Levels.All.Length; GoMap(); yield break; }
+            if (mode == "daily") { StartDaily(); yield break; }
+            if (mode == "show")
+            {
+                // Six rockets in an arc in front of the player, then the show.
+                StartShow();
+                yield return new WaitForSeconds(1.5f);
+                var rocket = Catalog.Explosive("rocket");
+                for (int i = 0; i < 6; i++)
+                    LiveExplosive.SpawnUnlit(rocket, new Vector3(-5f + i * 2f, 0.05f, 4f + Mathf.Abs(i - 2.5f)), Quaternion.identity, Placement.Placed);
+                yield return new WaitForSeconds(1f);
+                LaunchShow();
+                yield break;
+            }
+            if (mode == "gadgets")
+            {
+                // A timer charge and two remote charges round the van; the remotes go when the timer does.
+                StartLevel(4);
+                yield return new WaitForSeconds(1.5f);
+                var timer = LiveExplosive.Spawn(Catalog.Explosive("timer"), new Vector3(3.5f, 0.05f, 3f), Quaternion.identity, 4f, Placement.Placed);
+                var remote = Catalog.Explosive("remote");
+                LiveExplosive.SpawnUnlit(remote, new Vector3(-4f, 0.05f, 8f), Quaternion.identity, Placement.Placed);
+                LiveExplosive.SpawnUnlit(remote, new Vector3(-3.4f, 0.05f, 8.2f), Quaternion.identity, Placement.Placed);
+                yield return new WaitForSeconds(4.5f);
+                DetonateRemotes();
+                yield break;
+            }
             int n;
             if (mode.StartsWith("level") && int.TryParse(mode.Substring(5), out n)) { StartLevel(Mathf.Clamp(n, 1, Levels.All.Length)); yield break; }
             StartLevel(mode == "boom" ? 9 : 4);

@@ -314,16 +314,24 @@ namespace BoomYard.Game
             var wire = Mats.Lit(new Color(0.05f, 0.06f, 0.05f), 0f, 0.3f);
             var mats = new UnityEngine.Material[Bulbs.Length];
             for (int i = 0; i < Bulbs.Length; i++) mats[i] = Mats.Emissive(Bulbs[i] * 0.3f, Bulbs[i]);
-            var bulb = MeshKit.RoundedBox(new Vector3(0.07f, 0.1f, 0.07f), 0.034f, 2);
-            float y = 3.25f, z = 13.25f;
-            Box(root, "Wire", new Vector3(0f, y + 0.06f, z), new Vector3(17f, 0.01f, 0.01f), wire, false);
-            for (int i = 0; i < 56; i++)
+            var bulb = MeshKit.RoundedBox(new Vector3(0.13f, 0.18f, 0.13f), 0.06f, 2);
+            float y = 3.2f, z = 13.12f;
+            // Along the eaves, sagging a little between hooks, and on the porch roof.
+            for (int i = 0; i < 44; i++)
             {
-                float x = -8.4f + i * 0.305f;
-                Props.Part(root, bulb, new Vector3(x, y - 0.02f * Mathf.Sin(i * 1.3f), z), mats[i % mats.Length], false);
+                float x = -8.4f + i * 0.39f;
+                float sag = 0.09f * Mathf.Abs(Mathf.Sin((x + 8.4f) / 1.56f * Mathf.PI));
+                Props.Part(root, bulb, new Vector3(x, y - sag, z), mats[i % mats.Length], false);
             }
-            for (int i = 0; i < 14; i++)
-                Props.Part(root, bulb, new Vector3(-5.5f + i * 0.31f, 3.38f, 11.85f), mats[(i + 1) % mats.Length], false);
+            Box(root, "Wire", new Vector3(0f, y + 0.02f, z), new Vector3(17f, 0.012f, 0.012f), wire, false);
+            for (int i = 0; i < 12; i++)
+                Props.Part(root, bulb, new Vector3(-5.6f + i * 0.38f, 3.36f, 11.7f), mats[(i + 1) % mats.Length], false);
+            // Round the trunk and up into the crown of the tree by the fence.
+            for (int i = 0; i < 18; i++)
+            {
+                float a = i * 0.9f;
+                Props.Part(root, bulb, new Vector3(-11f + Mathf.Cos(a) * 0.32f, 0.6f + i * 0.17f, 9f + Mathf.Sin(a) * 0.32f), mats[(i + 2) % mats.Length], false);
+            }
         }
 
         static readonly string[] KerbIds = { "sedan", "van", "pickup", "sedan" };
