@@ -17,6 +17,9 @@ namespace BoomYard.Game
         ParticleSystem sparks;
         float throwT = 1f, lightT, downT, sway;
         static readonly Vector3 LeftRest = new Vector3(-0.21f, -0.27f, 0.42f), RightRest = new Vector3(0.2f, -0.25f, 0.42f);
+        // Where each fist closes: round the lighter in the left hand, round the item in the right (tilted with it).
+        static readonly Vector3 LeftGrip = new Vector3(0.012f, 0.04f, 0.02f), RightGrip = new Vector3(0f, 0.033f, 0.035f);
+        static readonly Quaternion ItemTilt = Quaternion.Euler(-10f, 0f, 28f);
         static readonly Vector3 LeftLight = new Vector3(-0.05f, -0.2f, 0.36f), RightLight = new Vector3(0.035f, -0.16f, 0.38f);
 
         /// <summary>World position of the held item (where a thrown item leaves from).</summary>
@@ -63,16 +66,43 @@ namespace BoomYard.Game
             float side = isLeft ? -1f : 1f;
             var skin = Mats.Lit(Mats.Skin, 0f, 0.35f);
             var sleeve = Mats.Lit(new Color(0.12f, 0.13f, 0.15f), 0f, 0.2f);
-            // Forearm reaching in from the bottom corner, a sleeve, a palm and a thumb.
+            // Forearm reaching in from the bottom corner and a sleeve.
             var fore = Part(arm, PrimitiveType.Capsule, new Vector3(side * 0.05f, -0.1f, -0.12f), new Vector3(0.06f, 0.14f, 0.06f), skin);
             fore.transform.localRotation = Quaternion.Euler(62f, side * -14f, 0f);
             var sl = Part(arm, PrimitiveType.Capsule, new Vector3(side * 0.09f, -0.16f, -0.24f), new Vector3(0.085f, 0.12f, 0.085f), sleeve);
             sl.transform.localRotation = Quaternion.Euler(62f, side * -14f, 0f);
-            Part(arm, PrimitiveType.Sphere, new Vector3(0f, 0f, 0f), new Vector3(0.075f, 0.05f, 0.085f), skin);
-            var thumb = Part(arm, PrimitiveType.Capsule, new Vector3(-side * 0.03f, 0.018f, 0.02f), new Vector3(0.022f, 0.03f, 0.022f), skin);
-            thumb.transform.localRotation = Quaternion.Euler(0f, 0f, side * 50f);
+
+            // A fist closed around what the hand holds (Core/HandRig), its axis along the held object.
+            var grip = new GameObject("Grip").transform;
+            grip.SetParent(arm, false);
+            grip.localPosition = isLeft ? LeftGrip : RightGrip;
+            grip.localRotation = isLeft ? Quaternion.identity : ItemTilt;
+            foreach (var p in HandRig.Fist(side))
+            {
+                if (p.Kind == HandPartKind.Bone) Bone(grip, V(p.A), V(p.B), p.Diameter, skin);
+                else
+                {
+                    var blob = Part(grip, PrimitiveType.Sphere, V(p.A), V(p.Size), skin);
+                    blob.transform.localRotation = Quaternion.Euler(0f, p.Yaw, 0f);
+                }
+            }
+            // Wrist: from under the back of the hand to the top of the forearm.
+            var wrist = arm.InverseTransformPoint(grip.TransformPoint(V(HandRig.WristTop(side))));
+            var elbowSide = fore.transform.localPosition + fore.transform.localRotation * Vector3.up * 0.11f;
+            Bone(arm, wrist, elbowSide, 0.046f, skin);
             arm.localPosition = isLeft ? LeftRest : RightRest;
             return arm;
+        }
+
+        static Vector3 V(Vec3 v) { return new Vector3(v.X, v.Y, v.Z); }
+
+        /// <summary>A capsule from a to b (both ends rounded), for finger bones and the wrist.</summary>
+        static GameObject Bone(Transform parent, Vector3 a, Vector3 b, float d, UnityEngine.Material mat)
+        {
+            var dir = b - a;
+            var go = Part(parent, PrimitiveType.Capsule, (a + b) * 0.5f, new Vector3(d, (dir.magnitude + d) * 0.5f, d), mat);
+            go.transform.localRotation = Quaternion.FromToRotation(Vector3.up, dir);
+            return go;
         }
 
         static GameObject Part(Transform parent, PrimitiveType type, Vector3 pos, Vector3 scale, UnityEngine.Material mat)
@@ -100,7 +130,7 @@ namespace BoomYard.Game
             foreach (var r in go.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             go.transform.SetParent(right, false);
             go.transform.localPosition = new Vector3(0.0f, 0.045f, 0.035f);
-            go.transform.localRotation = Quaternion.Euler(-10f, 0f, 28f);
+            go.transform.localRotation = ItemTilt;
             float big = def.Id == "keg" ? 0.35f : 1f;   // the keg is carried small in the placeholder rig
             go.transform.localScale = Vector3.one * big;
             item = go.transform;
