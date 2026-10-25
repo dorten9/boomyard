@@ -99,23 +99,23 @@ namespace BoomYard.UI
 
             var save = SaveService.Data;
             int next = Mathf.Min(save.unlocked, Levels.All.Length);
-            var play = Btn(s, "PLAY", true, () => game.GoMap(), new Vector2(0f, 0.5f), new Vector2(260f, -30f), new Vector2(380f, 110f), 52);
+            var play = Btn(s, "PLAY", true, () => game.GoMap(), new Vector2(0f, 0.5f), new Vector2(260f, 30f), new Vector2(380f, 110f), 52);
             var sub = UIKit.Label(play.transform, "Sub", "LEVEL " + next + " · " + Levels.Get(next).Name.ToUpperInvariant(), 20, Dark, TextAnchor.LowerCenter);
             UIKit.Place(sub.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 8f), new Vector2(380f, 28f));
             sub.rectTransform.pivot = new Vector2(0.5f, 0f);
             ((RectTransform)play.transform.Find("Label")).offsetMin = new Vector2(0f, 18f);
 
-            Btn(s, "SHOP", false, () => ShowShop(), new Vector2(0f, 0.5f), new Vector2(170f, -165f), new Vector2(200f, 86f), 30);
+            Btn(s, "SHOP", false, () => ShowShop(), new Vector2(0f, 0.5f), new Vector2(170f, -92f), new Vector2(200f, 80f), 30);
             // Today's challenge: one level with a twist, the same for everyone.
             var today = Levels.DailyChallenge(Daily.Seed(System.DateTime.Now));
             bool doneToday = save.challengeDate == Daily.Seed(System.DateTime.Now) && save.challengeCleared;
-            var daily = Btn(s, "DAILY CHALLENGE", false, () => game.StartDaily(), new Vector2(0f, 0.5f), new Vector2(275f, -275f), new Vector2(410f, 96f), 28);
+            var daily = Btn(s, "DAILY CHALLENGE", false, () => game.StartDaily(), new Vector2(0f, 0.5f), new Vector2(275f, -196f), new Vector2(410f, 92f), 28);
             var dsub = UIKit.Label(daily.transform, "Sub", today.Name.ToUpperInvariant() + (today.Rule != LevelRule.None ? " · " + (today.Rule == LevelRule.Spare ? "KEEP ONE" : RuleName(today.Rule)) : "") + (doneToday ? " · CLEARED" : " · +" + Levels.DailyReward), 18, doneToday ? UIKit.Ok : UIKit.Flame, TextAnchor.LowerCenter);
             UIKit.Place(dsub.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 8f), new Vector2(400f, 26f));
             dsub.rectTransform.pivot = new Vector2(0.5f, 0f);
             ((RectTransform)daily.transform.Find("Label")).offsetMin = new Vector2(0f, 18f);
-            Btn(s, "FIREWORKS SHOW", false, () => game.StartShow(), new Vector2(0f, 0.5f), new Vector2(275f, -385f), new Vector2(410f, 80f), 26);
-            var missions = Btn(s, "MISSIONS", false, () => ShowMissions(), new Vector2(0f, 0.5f), new Vector2(380f, -165f), new Vector2(200f, 86f), 28);
+            Btn(s, "FIREWORKS SHOW", false, () => game.StartShow(), new Vector2(0f, 0.5f), new Vector2(275f, -294f), new Vector2(410f, 72f), 26);
+            var missions = Btn(s, "MISSIONS", false, () => ShowMissions(), new Vector2(0f, 0.5f), new Vector2(380f, -92f), new Vector2(200f, 80f), 28);
             int ready = 0;
             foreach (var m in save.TodaysMissions()) if (m.Done && !m.claimed) ready++;
             if (ready > 0 || game.DailyAvailable() >= 0) Badge(missions.transform, ready > 0 ? ready.ToString() : "!");

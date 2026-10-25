@@ -441,7 +441,7 @@ namespace BoomYard.UI
             // The coin sits just left of the number, however wide it is.
             hudCoin.rectTransform.anchoredPosition = new Vector2(-40f - damage.preferredWidth - 30f, -26f);
             float tl = g.Round.TimeLeft;
-            timer.text = g.Level.Show ? "" : Loc.Time(tl);
+            timer.text = g.Level.Show ? "NO CLOCK" : Loc.Time(tl);
             bool urgent = tl <= 10f && !g.Round.Frozen;
             timer.color = urgent ? Color.Lerp(UIKit.Danger, UIKit.Fg, Mathf.PingPong(Time.unscaledTime * 2f, 1f)) : UIKit.Fg;
             targetPulse = Mathf.MoveTowards(targetPulse, 0f, dt * 2f);

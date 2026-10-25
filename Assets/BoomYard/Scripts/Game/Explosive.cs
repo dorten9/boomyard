@@ -414,7 +414,7 @@ namespace BoomYard.Game
 
     /// <summary>
     /// A rocket under power. Thrown lit, it is a missile: it flies along the aim and bursts on impact. Lit standing
-    /// on the ground, it is a firework: it climbs for 1.4 s, then bursts into coloured stars high over the street.
+    /// on the ground, it is a firework: it climbs for about a second, then bursts into coloured stars over the street.
     /// </summary>
     public sealed class RocketMotor : MonoBehaviour
     {
@@ -465,11 +465,11 @@ namespace BoomYard.Game
                 return;
             }
 #if UNITY_6000_0_OR_NEWER
-            rb.linearVelocity = dir * Mathf.Lerp(8f, 26f, Mathf.Clamp01(age * 2f));
+            rb.linearVelocity = dir * Mathf.Lerp(8f, 20f, Mathf.Clamp01(age * 2f));
 #else
-            rb.velocity = dir * Mathf.Lerp(8f, 26f, Mathf.Clamp01(age * 2f));
+            rb.velocity = dir * Mathf.Lerp(8f, 20f, Mathf.Clamp01(age * 2f));
 #endif
-            if (age < 1.4f) return;
+            if (age < 1.05f) return;   // about 15 m up: high over the house, still in view from the yard
             var c = Stars[Random.Range(0, Stars.Length)];
             Fx.Shell(transform.position, c, Random.value < 0.4f ? Stars[Random.Range(0, Stars.Length)] : c);
             Sfx.I.Boom(transform.position, 0.6f);
