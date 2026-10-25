@@ -20,6 +20,8 @@ namespace BoomYard.Game
         public bool Active { get; private set; }
         public bool Painting { get; private set; }
         public const float Reach = 5f, StencilCell = 0.1f;
+        /// <summary>SPRAY held by a screenshot run.</summary>
+        public bool HeldForShot;
 
         readonly Dictionary<int, PaintLayer> layers = new Dictionary<int, PaintLayer>();
         Transform root;

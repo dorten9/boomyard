@@ -289,7 +289,7 @@ namespace BoomYard.UI
             lightIcon = lightBtn.Find("Icon").GetComponent<Image>();
             placeCaption = placeBtn.Find("Caption").GetComponent<Text>();
             strip = UIKit.Rect(hud, "SprayStrip");
-            UIKit.Place(strip, new Vector2(0f, 0f), new Vector2(30f, 140f), new Vector2(1000f, 64f));
+            UIKit.Place(strip, new Vector2(0f, 0f), new Vector2(30f, 262f), new Vector2(1000f, 64f));   // clear of the joystick
             powerBar = UIKit.Rect(throwBtn, "Power");
             UIKit.Place(powerBar, new Vector2(0.5f, 1f), new Vector2(0f, 36f), new Vector2(14f, 150f));
             powerBar.pivot = new Vector2(0.5f, 0f);

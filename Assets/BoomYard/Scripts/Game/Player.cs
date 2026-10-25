@@ -163,7 +163,7 @@ namespace BoomYard.Game
                     // The can: hold SPRAY to paint at the crosshair, tap a wall to stamp the stencil.
                     Ignition.Release();
                     LightTarget = null;
-                    if (act && In.LighterHeld) spray.Paint(Cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f)));
+                    if (act && (In.LighterHeld || spray.HeldForShot)) spray.Paint(Cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f)));
                     else if (spray.Painting) spray.Release();
                     if (act && In.Place && !spray.Stamp(Cam.ScreenPointToRay(In.PlaceScreen)))
                         game.Toast(spray.Stencil == null ? "toast.nostencil" : "toast.nowall");

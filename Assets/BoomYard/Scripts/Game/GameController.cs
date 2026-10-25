@@ -777,27 +777,24 @@ namespace BoomYard.Game
                 Player.SetCan(true);
                 yield return new WaitForSeconds(0.5f);
                 var eye = Player.Cam.transform.position;
-                for (int stroke = 0; stroke < 3; stroke++)
-                {
-                    save.sprayColor = stroke == 0 ? "red" : stroke == 1 ? "yellow" : "neonpink";
-                    Player.RefreshCan();
-                    for (int f = 0; f < 50; f++)
-                    {
-                        float t = f / 49f;
-                        var target = new Vector3(47f + t * 8f, 1.2f + stroke * 0.7f + Mathf.Sin(t * 9f) * 0.3f, -48f);
-                        Player.Hands.Spraying = true;
-                        Spray.I.Paint(new Ray(eye, target - eye));
-                        yield return null;
-                    }
-                    Spray.I.Release();
-                }
-                Player.Hands.Spraying = false;
                 save.sprayColor = "yellow";
                 Spray.I.Stamp(new Ray(eye, new Vector3(50.5f, 3.6f, -48f) - eye));
                 yield return new WaitForSeconds(1f);
                 save.stencil = "heart";
                 save.sprayColor = "neonpink";
-                Spray.I.Stamp(new Ray(eye, new Vector3(54.5f, 1.4f, -48f) - eye));
+                Spray.I.Stamp(new Ray(eye, new Vector3(54.5f, 1.6f, -48f) - eye));
+                yield return new WaitForSeconds(1f);
+                // Freehand strokes, as if SPRAY were held (the player releases the can when it is not).
+                save.sprayColor = "red";
+                Player.RefreshCan();
+                Spray.I.HeldForShot = true;
+                for (int f = 0; f < 40; f++)
+                {
+                    float t = f / 39f;
+                    Player.Teleport(Player.transform.position, 140f + t * 50f, 12f + Mathf.Sin(t * 7f) * 6f);
+                    yield return null;
+                }
+                Spray.I.HeldForShot = false;
                 yield break;
             }
             if (mode == "shopgraffiti") { GoHome(); UI.ShopTab = "graffiti"; UI.ShowShop(); yield break; }

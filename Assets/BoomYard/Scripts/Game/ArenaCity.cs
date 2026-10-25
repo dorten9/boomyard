@@ -140,6 +140,8 @@ namespace BoomYard.Game
                             if (rng.NextDouble() < 0.35) continue;
                             float along = Roads[seg] + 13f + (float)rng.NextDouble() * 22f;
                             float across = Roads[r] + side * 3.6f;
+                            // Leave the kerb in front of the start clear, so the plaza is in view.
+                            if (axis == 0 && r == 1 && side < 0 && Mathf.Abs(along) < 7f) continue;
                             string id = KerbFleet[(n + rng.Next(3)) % KerbFleet.Length];
                             // Parked with the traffic: facing along the road, on the right-hand side.
                             var pos = axis == 0 ? new Vector3(along, 0f, across) : new Vector3(across, 0f, along);

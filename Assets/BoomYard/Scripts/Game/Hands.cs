@@ -163,7 +163,7 @@ namespace BoomYard.Game
             var go = new GameObject("SprayCan");
             go.transform.SetParent(right, false);
             go.transform.localPosition = new Vector3(0f, -0.04f, 0.035f);
-            go.transform.localRotation = ItemTilt;
+            go.transform.localRotation = Quaternion.Euler(12f, 0f, 8f);   // upright, the nozzle facing ahead
             var paint = Mats.Lit(new Color(c.R, c.G, c.B), c.Id == "chrome" || c.Id == "gold" ? 0.9f : 0.3f, 0.7f);
             var steel = Mats.Lit(Mats.Steel, 0.9f, 0.6f);
             Can(go.transform, MeshKit.Lathe("spraycan", new[] { new Vector2(0.024f, 0f), new Vector2(0.026f, 0.006f), new Vector2(0.026f, 0.15f), new Vector2(0.02f, 0.165f), new Vector2(0.008f, 0.172f), new Vector2(0f, 0.172f) }, 18, true, true), Vector3.zero, paint);
@@ -223,7 +223,7 @@ namespace BoomYard.Game
             float swing = Mathf.Sin(throwT * Mathf.PI);
             rp += new Vector3(-0.05f, 0.15f, 0.2f) * swing;
             // The can held up and out towards the wall, the nozzle pointing ahead.
-            rp += new Vector3(-0.06f, 0.08f, 0.06f) * sprayT;
+            rp += new Vector3(-0.05f, 0.06f, 0.08f) * sprayT;
 
             // Hands shake after a close blast and drop out of view on the ground.
             var tremble = new Vector3(Mathf.PerlinNoise(sway * 14f, 0f) - 0.5f, Mathf.PerlinNoise(0f, sway * 14f) - 0.5f, 0f) * 0.02f * downT;
@@ -233,7 +233,7 @@ namespace BoomYard.Game
             left.localPosition = lp + tremble + drop + breathe;
             right.localPosition = rp - tremble + drop + breathe;
             left.localRotation = Quaternion.Euler(-10f * l, 10f * l, -12f * l);
-            right.localRotation = Quaternion.Euler(-25f * swing - 8f * l - 50f * sprayT, -12f * l, 20f * l - 20f * sprayT);
+            right.localRotation = Quaternion.Euler(-25f * swing - 8f * l - 8f * sprayT, -12f * l, 20f * l - 24f * sprayT);
 
             flame.gameObject.SetActive(FlameOn);
             if (FlameOn)
