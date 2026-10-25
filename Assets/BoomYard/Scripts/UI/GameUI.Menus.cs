@@ -156,6 +156,8 @@ namespace BoomYard.UI
             var s = NewScreen("Map");
             TopBar(s, "LEVELS", () => game.GoHome());
             var save = SaveService.Data;
+            var gnomes = UIKit.Label(s, "Gnomes", "GOLDEN GNOMES  " + save.goldGnomes.Count + " / " + (Levels.All.Length - 1), 24, new Color(1f, 0.78f, 0.3f), TextAnchor.MiddleCenter, true);
+            UIKit.Place(gnomes.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -56f), new Vector2(600f, 34f));
             ScrollRect sr;
             var content = UIKit.Scroll(s, "Path", false, out sr);
             var view = (RectTransform)sr.transform;
@@ -250,6 +252,7 @@ namespace BoomYard.UI
             string rule = l.Rule == LevelRule.None ? "" : l.Rule == LevelRule.Spare ? "   ·   KEEP THE " + Catalog.Object(l.Props[l.Spare].Id).NameEn.ToUpperInvariant() : "   ·   " + RuleName(l.Rule);
             Text(p, "Destroy all " + targets + " targets in " + Loc.Time(l.Time) + rule, 32, UIKit.Flame, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -226f), new Vector2(940f, 44f));
             Text(p, "TARGETS:  " + Summary(list.ToArray()), 24, UIKit.Fg, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -290f), new Vector2(900f, 70f));
+            if (l.Number >= 2) Text(p, SaveService.Data.goldGnomes.Contains(l.Number) ? "GOLDEN GNOME FOUND" : "A GOLDEN GNOME IS HIDDEN HERE", 22, new Color(1f, 0.78f, 0.3f), TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -420f), new Vector2(900f, 30f), true);
             Text(p, "YOU GET:  " + KitSummary(l.Kit) + Owned(), 24, UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -368f), new Vector2(900f, 70f));
             Btn(p, "PLAY", true, () => game.StartLevel(number), new Vector2(0.5f, 0f), new Vector2(110f, 80f), new Vector2(320f, 96f), 44);
             Btn(p, "CLOSE", false, CloseModal, new Vector2(0.5f, 0f), new Vector2(-200f, 80f), new Vector2(220f, 86f), 28);

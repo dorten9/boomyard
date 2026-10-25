@@ -354,6 +354,17 @@ namespace BoomYard.Game
             UI.Bonus(kind);
         }
 
+        public void FoundGoldGnome(int level)
+        {
+            var save = SaveService.Data;
+            if (save.goldGnomes.Contains(level)) return;
+            save.goldGnomes.Add(level);
+            save.shekels += GoldGnome.Coins;
+            SaveService.Save();
+            Sfx.I.Star();
+            UI.Toast(Loc.F("goldgnome", GoldGnome.Coins, save.goldGnomes.Count, Levels.All.Length - 1), 3f);
+        }
+
         /// <summary>A launched object landed (StreetLife.Flight): long flights pay, gnomes get their distance called out.</summary>
         public void OnFlight(Destructible d, float seconds, float metres)
         {

@@ -59,6 +59,7 @@ namespace BoomYard
             { "bonus.Domino", "Domino! Five in a row +120 coins" },
             { "bonus.HoleInOne", "Hole in one! +80 coins" },
             { "flight", "The {0} flew {1} m!" },
+            { "goldgnome", "Golden gnome! +{0} coins  ({1} of {2} found)" },
             { "tip.chain", "Tip: hit things that explode by themselves. Every chain link adds ×0.5" },
             { "tip.again", "Tip: place charges under cars for ×1.8 containment" },
             { "tip.time", "Tip: light several charges before you run, and let the blasts chain" },

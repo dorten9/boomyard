@@ -45,8 +45,9 @@ namespace BoomYard.Game
     {
         public const int CurrentSchema = 2;
         public int schema = CurrentSchema;
-        public long shekels;              // coins (dollars; the field keeps its name so saves still load)
+        public long shekels;              // coins (the field keeps its old name so saves still load)
         public float bestGnome;           // longest gnome flight, metres
+        public List<int> goldGnomes = new List<int>();   // levels whose golden gnome was found
         public int gems;                  // retired: gems became coins (100 each) on load
         public string lighter = "basic";
         public List<string> lighters = new List<string> { "basic" };
