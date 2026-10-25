@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace BoomYard.Core
 {
     /// <summary>
-    /// Damage in shekels (spec §07): Σ(Value × MaterialMult × PlacementMult × ChainMult) + Bonuses.
+    /// Damage in dollars (spec §07): Σ(Value × MaterialMult × PlacementMult × ChainMult) + Bonuses.
     /// Pure C#, no Unity, so Tools/SimTest can check it.
     /// </summary>
     public static class ScoreCalculator
@@ -41,7 +41,7 @@ namespace BoomYard.Core
             }
         }
 
-        /// <summary>Shekels for destroying <paramref name="fraction"/> (0..1) of an object worth <paramref name="value"/>.</summary>
+        /// <summary>Dollars for destroying <paramref name="fraction"/> (0..1) of an object worth <paramref name="value"/>.</summary>
         public static long Damage(int value, float fraction, Material material, Placement placement, float chainMult)
         {
             if (fraction <= 0f) return 0;
@@ -85,7 +85,7 @@ namespace BoomYard.Core
             }
         }
 
-        /// <summary>Credits damage to an object and returns the shekels it added.</summary>
+        /// <summary>Credits damage to an object and returns the dollars it added.</summary>
         public long AddDamage(int value, float fraction, Material material, Placement placement, float chainMult)
         {
             long plain = ScoreCalculator.Damage(value, fraction, material, Placement.Thrown, 1f);

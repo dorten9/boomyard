@@ -18,7 +18,7 @@ namespace BoomYard.Game
     }
 
     /// <summary>
-    /// An object that breaks and costs money (spec §06, §09): HP, value in shekels, material and a reaction it has
+    /// An object that breaks and costs money (spec §06, §09): HP, value in dollars, material and a reaction it has
     /// on the yard when destroyed. Partial damage pays its share of the value; the reaction is what chains.
     /// </summary>
     public sealed class Destructible : MonoBehaviour

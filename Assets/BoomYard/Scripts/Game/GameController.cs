@@ -267,7 +267,7 @@ namespace BoomYard.Game
 
         // ---------- scoring ----------
 
-        /// <summary>Damage to an object turned into shekels (called by Destructible).</summary>
+        /// <summary>Damage to an object turned into dollars (called by Destructible).</summary>
         public void Credit(Destructible d, float fraction, Hit hit, bool destroyed)
         {
             if (Current != Mode.Level) return;

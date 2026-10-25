@@ -33,7 +33,7 @@ namespace BoomYard.Core
         public int Units = 1;       // sub-charges (string of 50, cake of 36, cluster of 8)
         public float UnitInterval;  // seconds between sub-charges
         public float Radius;        // metres
-        public int Price;           // shekels per unit in the shop (0 = free each round)
+        public int Price;           // dollars per unit in the shop (0 = free each round)
         public int FreePerRound;
         public int UnlockArena;     // 1-based; 0 = from the start
         public int UnlockStars;     // stars needed in UnlockArena (0 = just reach it)
@@ -51,7 +51,7 @@ namespace BoomYard.Core
     {
         public string Id, NameHe, NameEn;
         public float Hp;
-        public int Value;           // shekels at full destruction; partial damage pays a share
+        public int Value;           // dollars at full destruction; partial damage pays a share
         public Material Material;
         public Reaction Reaction;
         public float BlastRadius;   // for Explode
@@ -77,7 +77,7 @@ namespace BoomYard.Core
     {
         public int Number;
         public string Id, NameHe, NameEn, TeachesHe, TeachesEn;
-        public long ThreeStars;     // shekels for ★★★
+        public long ThreeStars;     // dollars for ★★★
         public int UnlockStars;     // total stars needed to open
         public float EchoMult = 1f; // enclosed spaces strengthen the blast wave
         public bool Outdoors = true;

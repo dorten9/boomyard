@@ -45,7 +45,7 @@ namespace BoomYard.Game
     {
         public const int CurrentSchema = 2;
         public int schema = CurrentSchema;
-        public long shekels;              // coins
+        public long shekels;              // coins (dollars; the field keeps its name so saves still load)
         public int gems;
         public string lighter = "basic";
         public List<string> lighters = new List<string> { "basic" };

@@ -145,7 +145,7 @@ namespace BoomYard.Core
             return (long)Math.Round(basePrice * Math.Pow(1.2, ownedOfKind));
         }
 
-        /// <summary>Shop pack price: 5 units for the price of ~4.4 (the M-80 pack is ₪7,900 for 5 × ₪1,800).</summary>
+        /// <summary>Shop pack price: 5 units for the price of ~4.4 (the M-80 pack is $7,900 for 5 × $1,800).</summary>
         public static long PackPrice(int unitPrice, int units) { return units >= 5 ? (long)Math.Round(unitPrice * units * 0.8778 / 100.0) * 100 : unitPrice * units; }
     }
 }
