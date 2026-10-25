@@ -62,7 +62,7 @@ namespace BoomYard.Game
             }
             foreach (var d in a.Root.GetComponentsInChildren<Destructible>()) a.Objects.Add(d);
             StreetLife.Create(root, new Vector3(-21f, 0f, 6f));   // the dog is next door, behind the fence
-            if (level.Number >= 2 && !SaveService.Data.goldGnomes.Contains(level.Number)) GoldGnome.Hide(root, level);
+            if (level.Number >= 2 && !level.Daily && !SaveService.Data.goldGnomes.Contains(level.Number)) GoldGnome.Hide(root, level);
             return a;
         }
 

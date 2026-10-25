@@ -270,5 +270,13 @@ static class MetaTests
         int prev = 0;
         foreach (var st in Streets.All) { check(st.FirstLevel == prev + 1, st.Name + " follows on"); prev = st.LastLevel; }
         check(prev == Levels.All.Length, "streets cover every level");
+
+        var dc1 = Levels.DailyChallenge(20261025);
+        var dc2 = Levels.DailyChallenge(20261025);
+        check(dc1.Number == dc2.Number && dc1.Rule == dc2.Rule && dc1.Daily, "the daily challenge is the same all day");
+        check(dc1.Number >= 2 && dc1.Time < Levels.Get(dc1.Number).Time, "the daily challenge is a real level with less time");
+        int differ = 0;
+        for (int d = 1; d <= 20; d++) if (Levels.DailyChallenge(20261100 + d).Number != dc1.Number) differ++;
+        check(differ >= 15, "the daily challenge changes from day to day");
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace BoomYard.Core
@@ -42,6 +43,7 @@ namespace BoomYard.Core
         public LevelRule Rule;
         public int Spare = -1;   // index into Props of the object to keep (LevelRule.Spare)
         public bool Boss;        // the street's last level: one big target and everything round it
+        public bool Daily;       // today's challenge: a copy of a level with a twist, the same for everyone
 
         public StreetDef Street { get { return Streets.ForLevel(Number); } }
 
@@ -202,6 +204,25 @@ namespace BoomYard.Core
             L(50, "Corner Gas", 150f, 8000, Kit("remote", 4, "timer", 2, "dynamite", 2, "keg", 1, "blackcat", 6),
                 P("fuelpump", -3f, 6f), P("fuelpump", 1f, 6f), P("fueltruck", 6.5f, 2f, 180f), P("barrel", -6f, 8f), P("barrel", -5.4f, 8.4f, 0f, 1), P("gascyl", 3f, 9f), P("gascyl", 3.5f, 9.3f), P("newsbox", -8f, 10.5f)).AsBoss(),
         };
+
+        public const int DailyReward = 600;
+
+        /// <summary>
+        /// Today's challenge (the same for everyone on a date): one of the levels from 2 on, 15% less time, and a
+        /// twist if it has none of its own. Pays <see cref="DailyReward"/> coins the first time it is cleared today.
+        /// </summary>
+        public static LevelDef DailyChallenge(int daySeed)
+        {
+            var r = new System.Random(daySeed * 7919 + 13);
+            var b = All[1 + r.Next(All.Length - 1)];
+            var rules = new[] { LevelRule.Rain, LevelRule.Windy, LevelRule.Matches, LevelRule.None };
+            var rule = b.Rule != LevelRule.None ? b.Rule : rules[r.Next(rules.Length)];
+            return new LevelDef
+            {
+                Number = b.Number, Name = b.Name, Time = (float)Math.Round(b.Time * 0.85f), Props = b.Props, Kit = b.Kit,
+                Reward = DailyReward, Rule = rule, Spare = b.Spare, Boss = b.Boss, Daily = true,
+            };
+        }
 
         public static LevelDef Get(int number)
         {

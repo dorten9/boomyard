@@ -173,10 +173,15 @@ namespace BoomYard.Game
             Sfx.I.Music(true);
         }
 
-        public void StartLevel(int number)
+        public void StartLevel(int number) { StartLevel(Levels.Get(number)); }
+
+        /// <summary>Today's challenge.</summary>
+        public void StartDaily() { StartLevel(Levels.DailyChallenge(Daily.Seed(System.DateTime.Now))); }
+
+        public void StartLevel(LevelDef level)
         {
             var save = SaveService.Data;
-            Level = Levels.Get(number);
+            Level = level;
             Current = Mode.Level;
             Paused = false;
             Time.timeScale = 1f;
@@ -244,7 +249,7 @@ namespace BoomYard.Game
             return new LighterDef { Id = l.Id, NameEn = l.NameEn, NameHe = l.NameHe, CatchTime = l.CatchTime * 1.6f + 0.25f, WindBlowout = l.WindBlowout, Flames = l.Flames, BreakChance = l.BreakChance };
         }
 
-        public void Restart() { StartLevel(Level.Number); }
+        public void Restart() { if (Level.Daily) StartDaily(); else StartLevel(Level.Number); }
 
         public void NextLevel() { StartLevel(Mathf.Min(Level.Number + 1, Levels.All.Length)); }
 
@@ -442,7 +447,10 @@ namespace BoomYard.Game
             int targetsLeft = Arena.TargetsLeft;
             bool cleared = targetsLeft == 0 && !spareBroken;
             Score.CleanSweep = total > 0 && destroyed == total;
-            var rec = save.Level(Level.Number);
+            int today = Daily.Seed(System.DateTime.Now);
+            if (Level.Daily && save.challengeDate != today) { save.challengeDate = today; save.challengeBest = 0; save.challengeCleared = false; }
+            // The daily challenge keeps its own record; it never touches the level it copies.
+            var rec = Level.Daily ? new LevelRecord { number = Level.Number, stars = save.challengeCleared ? 1 : 0, bestDamage = save.challengeBest } : save.Level(Level.Number);
             var sum = new RoundSummary
             {
                 Level = Level,
@@ -469,7 +477,7 @@ namespace BoomYard.Game
             sum.Stars = Level.Stars(cleared, Round.TimeLeft);
             sum.Record = cleared && sum.Total > rec.bestDamage;
             sum.FirstClear = cleared && rec.stars == 0;
-            int newStars = Mathf.Max(0, sum.Stars - rec.stars);
+            int newStars = Level.Daily ? 0 : Mathf.Max(0, sum.Stars - rec.stars);
             sum.Coins = Progress.LevelCoins(Level, cleared, sum.FirstClear, newStars, sum.Total);
             sum.TipKey = cleared ? (Chain.LongestChain < 2 ? "tip.chain" : "tip.again") : sum.FailReason == "spare" ? "tip.spare" : (sum.FailReason == "empty" ? "tip.empty" : "tip.time");
 
@@ -478,7 +486,8 @@ namespace BoomYard.Game
                 if (sum.Record) rec.bestDamage = sum.Total;
                 rec.stars = Mathf.Max(rec.stars, sum.Stars);
                 rec.bestTimeLeft = Mathf.Max(rec.bestTimeLeft, Round.TimeLeft);
-                if (Level.Number >= save.unlocked && Level.Number < Levels.All.Length) { save.unlocked = Level.Number + 1; sum.Unlocked = true; }
+                if (!Level.Daily && Level.Number >= save.unlocked && Level.Number < Levels.All.Length) { save.unlocked = Level.Number + 1; sum.Unlocked = true; }
+                if (Level.Daily) { save.challengeCleared = true; save.challengeBest = rec.bestDamage; }
                 var missions = save.TodaysMissions();
                 Missions.Count(missions, "clear", null, 1);
                 if (newStars > 0) Missions.Count(missions, "stars", null, newStars);

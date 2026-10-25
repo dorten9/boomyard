@@ -106,6 +106,14 @@ namespace BoomYard.UI
             ((RectTransform)play.transform.Find("Label")).offsetMin = new Vector2(0f, 18f);
 
             Btn(s, "SHOP", false, () => ShowShop(), new Vector2(0f, 0.5f), new Vector2(170f, -165f), new Vector2(200f, 86f), 30);
+            // Today's challenge: one level with a twist, the same for everyone.
+            var today = Levels.DailyChallenge(Daily.Seed(System.DateTime.Now));
+            bool doneToday = save.challengeDate == Daily.Seed(System.DateTime.Now) && save.challengeCleared;
+            var daily = Btn(s, "DAILY CHALLENGE", false, () => game.StartDaily(), new Vector2(0f, 0.5f), new Vector2(275f, -275f), new Vector2(410f, 96f), 28);
+            var dsub = UIKit.Label(daily.transform, "Sub", today.Name.ToUpperInvariant() + (today.Rule != LevelRule.None ? " · " + (today.Rule == LevelRule.Spare ? "KEEP ONE" : RuleName(today.Rule)) : "") + (doneToday ? " · CLEARED" : " · +" + Levels.DailyReward), 18, doneToday ? UIKit.Ok : UIKit.Flame, TextAnchor.LowerCenter);
+            UIKit.Place(dsub.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 8f), new Vector2(400f, 26f));
+            dsub.rectTransform.pivot = new Vector2(0.5f, 0f);
+            ((RectTransform)daily.transform.Find("Label")).offsetMin = new Vector2(0f, 18f);
             var missions = Btn(s, "MISSIONS", false, () => ShowMissions(), new Vector2(0f, 0.5f), new Vector2(380f, -165f), new Vector2(200f, 86f), 28);
             int ready = 0;
             foreach (var m in save.TodaysMissions()) if (m.Done && !m.claimed) ready++;
@@ -624,7 +632,7 @@ namespace BoomYard.UI
             var save = SaveService.Data;
             if (r.Cleared)
             {
-                Text(s, "LEVEL " + r.Level.Number + " · " + r.Level.Name.ToUpperInvariant(), 26, UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -60f), new Vector2(1200f, 36f), true);
+                Text(s, (r.Level.Daily ? "DAILY CHALLENGE" : "LEVEL " + r.Level.Number) + " · " + r.Level.Name.ToUpperInvariant(), 26, UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -60f), new Vector2(1200f, 36f), true);
                 Text(s, "CLEARED!", 110, UIKit.Fg, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -140f), new Vector2(1200f, 120f), true);
                 StartCoroutine(StarsIn(s, r.Stars));
                 Stat(s, 0, "TIME LEFT", Loc.Time(r.TimeLeft));
@@ -633,7 +641,7 @@ namespace BoomYard.UI
                 Stat(s, 3, "COINS EARNED", "+" + Loc.Coins(r.Coins));
                 if (r.Record && r.PreviousBest > 0) Text(s, "NEW WRECKAGE RECORD", 26, UIKit.Ember, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, -150f), new Vector2(800f, 34f), true);
                 Text(s, Loc.T(r.TipKey), 22, UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), new Vector2(0f, 190f), new Vector2(1300f, 34f));
-                bool last = r.Level.Number >= Levels.All.Length;
+                bool last = r.Level.Daily || r.Level.Number >= Levels.All.Length;
                 Btn(s, last ? "MAP" : "NEXT LEVEL", true, () => { if (last) game.GoMap(); else game.NextLevel(); }, new Vector2(0.5f, 0f), new Vector2(0f, 100f), new Vector2(380f, 100f), 42);
                 Btn(s, "RETRY", false, () => game.Restart(), new Vector2(0.5f, 0f), new Vector2(-330f, 100f), new Vector2(220f, 86f), 30);
                 Btn(s, "MAP", false, () => game.GoMap(), new Vector2(0.5f, 0f), new Vector2(330f, 100f), new Vector2(220f, 86f), 30);
