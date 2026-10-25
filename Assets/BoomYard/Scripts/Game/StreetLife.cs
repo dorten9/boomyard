@@ -295,6 +295,8 @@ namespace BoomYard.Game
             var d = new float[n];
             for (int i = 0; i < n; i++) d[i] = f1[i] + 0.6f * f2[i] + 0.25f * f3[i];
             Normalize(d, 0.8f);
+            int tail = Rate / 60;
+            for (int i = 0; i < tail; i++) d[n - 1 - i] *= i / (float)tail;   // no click at the end
             return d;
         }
 

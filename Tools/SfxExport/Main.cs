@@ -8,7 +8,12 @@ namespace BoomYard.Game
         {
             var gen = new SfxGen();
             gen.Build();
-            foreach (var kv in gen.All())
+            var all = gen.All();
+            all["carAlarm"] = StreetSounds.CarAlarm;
+            all["whistle"] = StreetSounds.Whistle;
+            all["rain"] = StreetSounds.Rain;
+            for (int i = 0; i < StreetSounds.Bark.Length; i++) all["bark" + i] = StreetSounds.Bark[i];
+            foreach (var kv in all)
             {
                 var path = Path.Combine(args[0], kv.Key + ".wav");
                 Write(path, kv.Value.data, kv.Value.frequency, kv.Value.channels);

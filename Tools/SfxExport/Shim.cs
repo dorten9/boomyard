@@ -16,6 +16,7 @@ namespace UnityEngine
         public const float PI = 3.14159274f;
         public static float Sin(float f) { return (float)System.Math.Sin(f); }
         public static float Exp(float f) { return (float)System.Math.Exp(f); }
+        public static float Cos(float f) { return (float)System.Math.Cos(f); }
         public static float Abs(float f) { return System.Math.Abs(f); }
         public static float Max(float a, float b) { return a > b ? a : b; }
         public static float Min(float a, float b) { return a < b ? a : b; }
