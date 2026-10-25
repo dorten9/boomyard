@@ -121,13 +121,22 @@ namespace BoomYard.Game
 
         Light glow;
         GameObject marker;
+        ParticleSystem sparks;
         bool done;
+        float wetCheck;
 
         /// <summary>An unlit item lying in the world, waiting for the lighter.</summary>
         public static LiveExplosive SpawnUnlit(ExplosiveDef def, Vector3 pos, Quaternion rot, Placement placement)
         {
             var live = Spawn(def, pos, rot, BoomYard.Core.Fuse.TotalBurn(def) > 0f ? BoomYard.Core.Fuse.TotalBurn(def) : 8f, placement, false);
-            // A soft ring on the ground so placed charges are easy to find again.
+            live.AddMarker();
+            return live;
+        }
+
+        /// <summary>A soft ring on the ground so placed charges are easy to find again.</summary>
+        void AddMarker()
+        {
+            var live = this;
             live.marker = new GameObject("Marker");
             live.marker.transform.SetParent(live.transform, false);
             var lr = live.marker.AddComponent<LineRenderer>();
@@ -143,7 +152,6 @@ namespace BoomYard.Game
                 lr.SetPosition(i, new Vector3(Mathf.Cos(a) * 0.14f, 0.005f, Mathf.Sin(a) * 0.14f));
             }
             lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            return live;
         }
 
         public static LiveExplosive Spawn(ExplosiveDef def, Vector3 pos, Quaternion rot, float remaining, Placement placement, bool lit = true)
@@ -187,7 +195,7 @@ namespace BoomYard.Game
             var tip = transform.Find("FuseTip");
             if (tip != null && Def.Fuse > 0f)
             {
-                Fx.FuseSparks(tip);
+                sparks = Fx.FuseSparks(tip);
                 glow = tip.gameObject.AddComponent<Light>();
                 glow.type = LightType.Point;
                 glow.color = new Color(1f, 0.7f, 0.35f);
@@ -221,7 +229,32 @@ namespace BoomYard.Game
         {
             if (done || !Lit) return;
             Remaining -= Time.deltaTime;
-            if (Remaining <= 0f) Detonate();
+            if (Remaining <= 0f) { Detonate(); return; }
+            // In the rain a fuse lying in the open can fizzle out (about one in six over a 3 s fuse).
+            var gc = GameController.I;
+            if (gc != null && gc.Raining && Def.Fuse > 0f && Remaining > 0.6f)
+            {
+                wetCheck += Time.deltaTime;
+                if (wetCheck >= 0.5f) { wetCheck = 0f; if (Random.value < 0.03f) Fizzle(); }
+            }
+        }
+
+        /// <summary>The fuse goes out: it lies there unlit again, with the time it had left.</summary>
+        void Fizzle()
+        {
+            Lit = false;
+            if (sparks != null) Destroy(sparks.gameObject);
+            if (glow != null) Destroy(glow);
+            var tip = transform.Find("FuseTip");
+            if (tip != null)
+            {
+                var f = tip.GetComponent<Flicker>();
+                if (f != null) Destroy(f);
+                var a = tip.GetComponent<AudioSource>();
+                if (a != null) Destroy(a);
+            }
+            AddMarker();
+            GameController.I.Toast("toast.fizzle");
         }
 
         void OnCollisionEnter(Collision c)

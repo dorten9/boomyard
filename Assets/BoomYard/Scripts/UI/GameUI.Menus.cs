@@ -161,17 +161,30 @@ namespace BoomYard.UI
             var view = (RectTransform)sr.transform;
             view.anchorMin = new Vector2(0f, 0f); view.anchorMax = new Vector2(1f, 1f);
             view.offsetMin = new Vector2(0f, 40f); view.offsetMax = new Vector2(0f, -120f);
-            const float step = 230f;
-            content.sizeDelta = new Vector2(Levels.All.Length * step + 240f, 0f);
+            const float step = 230f, gap = 200f;
+            // Each street starts with a gap and its name over the path.
+            System.Func<int, float> X = i => 160f + i * step + (Streets.ForLevel(i + 1).FirstLevel > 1 ? gap * IndexOf(Streets.ForLevel(i + 1)) : 0f);
+            content.sizeDelta = new Vector2(X(Levels.All.Length - 1) + 400f, 0f);
 
             for (int i = 0; i < Levels.All.Length; i++)
             {
                 var l = Levels.All[i];
-                float x = 160f + i * step, y = Mathf.Sin(i * 1.1f) * 120f;
+                float x = X(i), y = Mathf.Sin(i * 1.1f) * 120f;
+                var street = l.Street;
+                if (l.Number == street.FirstLevel)
+                {
+                    bool open = l.Number <= save.unlocked;
+                    var title = UIKit.Label(content, "Street", street.Name.ToUpperInvariant(), 34, open ? UIKit.Flame : UIKit.Muted, TextAnchor.MiddleLeft, true);
+                    UIKit.Place(title.rectTransform, new Vector2(0f, 0.5f), new Vector2(x - 70f, 250f), new Vector2(700f, 44f));
+                    title.rectTransform.pivot = new Vector2(0f, 0.5f);
+                    var blurb = UIKit.Label(content, "Blurb", street.Blurb, 20, UIKit.Muted, TextAnchor.MiddleLeft);
+                    UIKit.Place(blurb.rectTransform, new Vector2(0f, 0.5f), new Vector2(x - 70f, 215f), new Vector2(700f, 28f));
+                    blurb.rectTransform.pivot = new Vector2(0f, 0.5f);
+                }
                 if (i > 0)
                 {
                     // Dotted path to the previous node.
-                    float px = 160f + (i - 1) * step, py = Mathf.Sin((i - 1) * 1.1f) * 120f;
+                    float px = X(i - 1), py = Mathf.Sin((i - 1) * 1.1f) * 120f;
                     for (int d = 1; d < 6; d++)
                     {
                         float k = d / 6f;
@@ -184,11 +197,18 @@ namespace BoomYard.UI
                 bool current = l.Number == save.unlocked;
                 var rec = save.Level(l.Number);
                 var node = UIKit.Image(content, "Level" + l.Number, locked ? new Color(0.14f, 0.13f, 0.15f, 0.95f) : current ? UIKit.Ember : new Color(0.2f, 0.18f, 0.19f, 0.98f), UIKit.Circle);
-                UIKit.Place(node.rectTransform, new Vector2(0f, 0.5f), new Vector2(x, y), new Vector2(current ? 140f : 120f, current ? 140f : 120f));
+                float nodeSize = (current ? 140f : 120f) + (l.Boss ? 24f : 0f);
+                UIKit.Place(node.rectTransform, new Vector2(0f, 0.5f), new Vector2(x, y), new Vector2(nodeSize, nodeSize));
                 node.rectTransform.pivot = new Vector2(0.5f, 0.5f);
                 node.raycastTarget = true;
-                var ring = UIKit.Image(node.transform, "Ring", locked ? UIKit.Line : UIKit.Flame, UIKit.Ring);
+                var ring = UIKit.Image(node.transform, "Ring", l.Boss ? UIKit.Danger : locked ? UIKit.Line : UIKit.Flame, UIKit.Ring);
                 UIKit.Stretch(ring.rectTransform);
+                if (l.Boss)
+                {
+                    var boss = UIKit.Label(content, "Boss", "BOSS", 20, UIKit.Danger, TextAnchor.MiddleCenter, true);
+                    UIKit.Place(boss.rectTransform, new Vector2(0f, 0.5f), new Vector2(x, y + 122f), new Vector2(120f, 26f));
+                    boss.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+                }
                 if (locked)
                 {
                     var lk = UIKit.Image(node.transform, "Lock", UIKit.Muted, UIKit.Lock);
@@ -212,7 +232,7 @@ namespace BoomYard.UI
                 }
             }
             // Scroll so the current level is in view.
-            float target = 160f + (save.unlocked - 1) * step;
+            float target = X(Mathf.Clamp(save.unlocked - 1, 0, Levels.All.Length - 1));
             sr.horizontalNormalizedPosition = Mathf.Clamp01((target - 600f) / Mathf.Max(1f, content.sizeDelta.x - 1600f));
         }
 
@@ -221,15 +241,32 @@ namespace BoomYard.UI
             var l = Levels.Get(number);
             var rec = SaveService.Data.Level(number);
             var p = Modal("LevelInfo", new Vector2(980f, 600f));
-            Text(p, "LEVEL " + l.Number, 26, UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -46f), new Vector2(900f, 34f), true);
+            Text(p, "LEVEL " + l.Number + "  ·  " + l.Street.Name.ToUpperInvariant() + (l.Boss ? "  ·  BOSS" : ""), 26, l.Boss ? UIKit.Danger : UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -46f), new Vector2(900f, 34f), true);
             Text(p, l.Name.ToUpperInvariant(), 58, UIKit.Fg, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -100f), new Vector2(900f, 70f), true);
             Stars(p, rec.stars, new Vector2(0.5f, 1f), new Vector2(0f, -164f), 44f, 52f);
-            Text(p, "Destroy all " + l.Props.Length + " targets in " + Loc.Time(l.Time), 32, UIKit.Flame, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -226f), new Vector2(900f, 44f));
-            Text(p, "TARGETS:  " + Summary(l.Props), 24, UIKit.Fg, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -290f), new Vector2(900f, 70f));
+            int targets = 0;
+            var list = new List<PropSpot>();
+            for (int i = 0; i < l.Props.Length; i++) if (l.IsTarget(i)) { targets++; list.Add(l.Props[i]); }
+            string rule = l.Rule == LevelRule.None ? "" : l.Rule == LevelRule.Spare ? "   ·   KEEP THE " + Catalog.Object(l.Props[l.Spare].Id).NameEn.ToUpperInvariant() : "   ·   " + RuleName(l.Rule);
+            Text(p, "Destroy all " + targets + " targets in " + Loc.Time(l.Time) + rule, 32, UIKit.Flame, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -226f), new Vector2(940f, 44f));
+            Text(p, "TARGETS:  " + Summary(list.ToArray()), 24, UIKit.Fg, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -290f), new Vector2(900f, 70f));
             Text(p, "YOU GET:  " + KitSummary(l.Kit) + Owned(), 24, UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -368f), new Vector2(900f, 70f));
             Btn(p, "PLAY", true, () => game.StartLevel(number), new Vector2(0.5f, 0f), new Vector2(110f, 80f), new Vector2(320f, 96f), 44);
             Btn(p, "CLOSE", false, CloseModal, new Vector2(0.5f, 0f), new Vector2(-200f, 80f), new Vector2(220f, 86f), 28);
         }
+
+        static string RuleName(LevelRule r)
+        {
+            switch (r)
+            {
+                case LevelRule.Rain: return "RAIN";
+                case LevelRule.Windy: return "STRONG WIND";
+                case LevelRule.Matches: return "MATCHES ONLY";
+                default: return "";
+            }
+        }
+
+        static int IndexOf(StreetDef s) { return System.Array.IndexOf(Streets.All, s); }
 
         static string Summary(PropSpot[] props)
         {
@@ -589,8 +626,8 @@ namespace BoomYard.UI
             else
             {
                 Text(s, "LEVEL " + r.Level.Number + " · " + r.Level.Name.ToUpperInvariant(), 26, UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -60f), new Vector2(1200f, 36f), true);
-                Text(s, r.FailReason == "time" ? "TIME'S UP" : "OUT OF EXPLOSIVES", 100, UIKit.Danger, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -150f), new Vector2(1400f, 120f), true);
-                Text(s, r.TargetsLeft + " of " + r.Targets + " targets still standing", 36, UIKit.Fg, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, 70f), new Vector2(1200f, 50f));
+                Text(s, r.FailReason == "spare" ? Loc.T("fail.spare") : r.FailReason == "time" ? "TIME'S UP" : "OUT OF EXPLOSIVES", 100, UIKit.Danger, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -150f), new Vector2(1400f, 120f), true);
+                Text(s, r.FailReason == "spare" ? "The " + (game.Arena.Spare != null ? game.Arena.Spare.Name.ToLowerInvariant() : "one you had to keep") + " had to survive" : r.TargetsLeft + " of " + r.Targets + " targets still standing", 36, UIKit.Fg, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, 70f), new Vector2(1200f, 50f));
                 Text(s, "You keep the wreckage:  +" + Loc.Coins(r.Coins) + " coins", 28, UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(1200f, 40f));
                 Text(s, Loc.T(r.TipKey), 24, UIKit.Flame, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, -60f), new Vector2(1300f, 40f));
                 Btn(s, "TRY AGAIN", true, () => game.Restart(), new Vector2(0.5f, 0f), new Vector2(0f, 110f), new Vector2(380f, 100f), 42);

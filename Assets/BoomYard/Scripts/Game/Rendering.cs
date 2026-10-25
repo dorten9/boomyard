@@ -124,7 +124,7 @@ namespace BoomYard.Game
         /// Golden hour: low warm sun with soft shadows, a procedural sky to match, ambient light and a reflection
         /// probe taken from that sky, and a light warm haze.
         /// </summary>
-        public static Light Sunset(Transform root, Vector3 probeCentre)
+        public static Light Sunset(Transform root, Vector3 probeCentre, float yawOffset = 0f)
         {
             var sun = new GameObject("Sun").AddComponent<Light>();
             sun.transform.SetParent(root, false);
@@ -135,7 +135,7 @@ namespace BoomYard.Game
             sun.shadowStrength = 0.92f;
             sun.shadowBias = 0.04f;
             sun.shadowNormalBias = 0.3f;
-            sun.transform.rotation = Quaternion.Euler(13f, -58f, 0f);
+            sun.transform.rotation = Quaternion.Euler(13f, -58f + yawOffset, 0f);
             RenderSettings.sun = sun;
 
             // A soft blue fill from the other side, like the open sky opposite the sun.

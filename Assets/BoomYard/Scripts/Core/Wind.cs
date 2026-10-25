@@ -15,7 +15,10 @@ namespace BoomYard.Core
         float nextChange;
 
         public float Direction { get; private set; }
-        public float Speed { get; private set; }
+        public float Speed { get { return speed * SpeedScale; } }
+        /// <summary>Windy levels blow harder (LevelRule.Windy).</summary>
+        public float SpeedScale = 1f;
+        float speed;
 
         public WindModel(int seed)
         {
@@ -35,7 +38,7 @@ namespace BoomYard.Core
         void Roll()
         {
             Direction = (float)(rng.NextDouble() * 360.0);
-            Speed = MinSpeed + (float)rng.NextDouble() * (MaxSpeed - MinSpeed);
+            speed = MinSpeed + (float)rng.NextDouble() * (MaxSpeed - MinSpeed);
         }
 
         /// <summary>

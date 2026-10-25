@@ -366,6 +366,37 @@ namespace BoomYard.Game
             return ps;
         }
 
+        /// <summary>Rain around the camera (LevelRule.Rain): falling streaks in a box that moves with the player.</summary>
+        public static GameObject Rain(Transform cam)
+        {
+            var go = new GameObject("Rain");
+            go.transform.SetParent(cam, false);
+            go.transform.localPosition = new Vector3(0f, 6f, 4f);
+            go.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            var ps = go.AddComponent<ParticleSystem>();
+            var main = ps.main;
+            main.loop = true;
+            main.startLifetime = 1.1f;
+            main.startSpeed = new ParticleSystem.MinMaxCurve(9f, 12f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.012f, 0.02f);
+            main.startColor = new Color(0.75f, 0.78f, 0.82f, 0.35f);
+            main.maxParticles = 2500;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            var em = ps.emission;
+            em.rateOverTime = Quality.Tier == QualityTier.Low ? 900f : 1800f;
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(22f, 22f, 0.1f);
+            var r = go.GetComponent<ParticleSystemRenderer>();
+            r.sharedMaterial = Mats.ParticleAlpha;
+            r.renderMode = ParticleSystemRenderMode.Stretch;
+            r.velocityScale = 0.035f;
+            r.lengthScale = 2f;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            ps.Play();
+            return go;
+        }
+
         /// <summary>Dark chunks flying off a destroyed object.</summary>
         public static void Debris(Vector3 pos, Vector3 from, int count, Color color, float size)
         {

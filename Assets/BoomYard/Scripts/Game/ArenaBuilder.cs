@@ -14,6 +14,8 @@ namespace BoomYard.Game
         public float SpawnYaw;
         public readonly List<Destructible> Targets = new List<Destructible>();
         public readonly List<Destructible> Objects = new List<Destructible>();
+        /// <summary>The object that must survive (LevelRule.Spare), or null.</summary>
+        public Destructible Spare;
 
         public int TargetsLeft
         {
@@ -22,10 +24,11 @@ namespace BoomYard.Game
     }
 
     /// <summary>
-    /// Builds a level: the suburban street at golden hour (house, driveway, lawn, street, neighbours, trees) and
-    /// the level's props on it. All geometry and surfaces are generated (MeshKit, TextureLib).
+    /// Builds a level: its street at golden hour (houses, yard, road, neighbours, trees, dressing; see
+    /// ArenaStreets.cs for each street's houses) and the level's props on it. All geometry and surfaces are
+    /// generated (MeshKit, TextureLib).
     /// </summary>
-    public static class ArenaBuilder
+    public static partial class ArenaBuilder
     {
         public static Arena Build(LevelDef level, QualityTier tier)
         {
@@ -35,22 +38,26 @@ namespace BoomYard.Game
             a.Spawn = new Vector3(0f, 0f, -8f);
             a.SpawnYaw = 6f;
 
-            Rendering.Sunset(root, new Vector3(0f, 3f, 2f));
-            Ground(root);
-            House(root, new Vector3(0f, 0f, 14f), 0f, new Color(0.93f, 0.88f, 0.8f), true);
-            House(root, new Vector3(-27f, 0f, 16f), 0f, new Color(0.78f, 0.82f, 0.86f), false);
-            House(root, new Vector3(26f, 0f, 15f), 0f, new Color(0.9f, 0.8f, 0.68f), false);
-            House(root, new Vector3(-14f, 0f, -36f), 180f, new Color(0.85f, 0.86f, 0.8f), false);
-            House(root, new Vector3(14f, 0f, -37f), 180f, new Color(0.92f, 0.84f, 0.78f), false);
-            Fences(root);
-            Trees(root, tier);
+            var street = level.Street;
+            Rendering.Sunset(root, new Vector3(0f, 3f, 2f), street.SunYaw);
+            Ground(root, street);
+            Houses(root, street);
+            Fences(root, street);
+            Trees(root, tier, street.Trees);
             Lamps(root);
+            if (street.HolidayLights) HolidayLights(root);
+            if (street.KerbCars) KerbCars(root, level.Number);
+            bool forecourt = false;
+            foreach (var spot in level.Props) if (spot.Id == "fuelpump") forecourt = true;
+            if (forecourt) Canopy(root);
 
-            foreach (var spot in level.Props)
+            for (int i = 0; i < level.Props.Length; i++)
             {
+                var spot = level.Props[i];
                 var pos = new Vector3(spot.X, spot.Id == "acunit" ? 1.25f : 0f, spot.Z);
                 var d = Props.Spawn(spot.Id, root, pos, spot.Yaw, spot.Variant);
-                a.Targets.Add(d);
+                if (level.IsTarget(i)) a.Targets.Add(d);
+                else a.Spare = d;
             }
             foreach (var d in a.Root.GetComponentsInChildren<Destructible>()) a.Objects.Add(d);
             return a;
@@ -58,9 +65,11 @@ namespace BoomYard.Game
 
         // ---------- ground ----------
 
-        static void Ground(Transform root)
+        static void Ground(Transform root, StreetDef street)
         {
-            var grass = Mats.Surface("grass", Color.white, 0f, 1f);
+            var grass = street.PavedYard ? Mats.Surface("asphalt", new Color(0.92f, 0.92f, 0.9f), 0f, 1f)
+                : street.Gravel ? Mats.Surface("asphalt", new Color(1.25f, 1.12f, 0.95f), 0f, 0.5f, 1.4f)
+                : Mats.Surface("grass", Color.white, 0f, 1f);
             var asphalt = Mats.Surface("asphalt", Color.white, 0f, 1f);
             var concrete = Mats.Surface("concrete", new Color(0.95f, 0.93f, 0.9f), 0f, 1f);
             var kerb = Mats.Surface("concrete", new Color(0.82f, 0.81f, 0.78f), 0f, 0.8f, 0.6f);
@@ -69,8 +78,12 @@ namespace BoomYard.Game
             var slab = Slab(root, "Ground", new Vector3(0f, -0.5f, 0f), new Vector3(220f, 1f, 220f), grass);
             slab.GetComponent<MeshRenderer>().sharedMaterial = grass;
             Flat(root, "Street", new Vector3(0f, 0.01f, -16f), new Vector2(220f, 9f), asphalt);
-            Flat(root, "Driveway", new Vector3(6.5f, 0.015f, -1f), new Vector2(5.5f, 21f), concrete);
-            Flat(root, "Walk", new Vector3(-3.5f, 0.015f, 1.5f), new Vector2(1.4f, 21f), concrete);
+            if (street.PavedYard) ParkingLines(root);
+            else
+            {
+                Flat(root, "Driveway", new Vector3(6.5f, 0.015f, -1f), new Vector2(5.5f, 21f), concrete);
+                Flat(root, "Walk", new Vector3(-3.5f, 0.015f, 1.5f), new Vector2(1.4f, 21f), concrete);
+            }
             Flat(root, "Sidewalk", new Vector3(0f, 0.02f, -10.4f), new Vector2(220f, 2.2f), concrete);
             Flat(root, "SidewalkFar", new Vector3(0f, 0.02f, -21.6f), new Vector2(220f, 2.2f), concrete);
             Box(root, "Kerb", new Vector3(0f, 0.07f, -11.55f), new Vector3(220f, 0.16f, 0.22f), kerb, true);
@@ -83,7 +96,7 @@ namespace BoomYard.Game
         // ---------- the houses ----------
 
         /// <summary>Two-storey house: stucco, brick plinth, gable roof, framed windows, door with porch light, garage.</summary>
-        static void House(Transform parent, Vector3 pos, float yaw, Color plaster, bool main)
+        static void House(Transform parent, Vector3 pos, float yaw, Color plaster, bool main, StreetDef street)
         {
             var h = new GameObject(main ? "House" : "Neighbour").transform;
             h.SetParent(parent, false);
@@ -92,8 +105,8 @@ namespace BoomYard.Game
             const float w = 15f, depth = 9f, wall = 6.1f;
             var walls = Mats.Surface("plaster", plaster, 0f, 1f);
             var brick = Mats.Surface("brick", Color.white, 0f, 1f);
-            var trim = Mats.Surface("paint", new Color(0.95f, 0.94f, 0.9f), 0f, 0.6f);
-            var roof = Mats.Surface("roof", new Color(0.75f, 0.62f, 0.55f), 0f, 1f);
+            var trim = Mats.Surface("paint", Rgb(street.Trim), 0f, 0.6f);
+            var roof = Mats.Surface("roof", Rgb(street.Roof), 0f, 1f);
 
             // Walls (front face at local z = 0, building extends back).
             Box(h, "Walls", new Vector3(0f, wall * 0.5f, depth * 0.5f), new Vector3(w, wall, depth), walls, true);
@@ -127,7 +140,7 @@ namespace BoomYard.Game
             foreach (var x in upper) Window(h, new Vector3(x, 4.5f, 0f), new Vector2(1.1f, 1.25f), (lit++ % 3) == 0, trim);
         }
 
-        static void Window(Transform h, Vector3 p, Vector2 size, bool lit, UnityEngine.Material trim)
+        static void Window(Transform h, Vector3 p, Vector2 size, bool lit, UnityEngine.Material trim, string id = "window")
         {
             var room = lit ? Mats.Emissive(new Color(0.35f, 0.25f, 0.16f), new Color(0.9f, 0.55f, 0.25f)) : Mats.Lit(new Color(0.04f, 0.04f, 0.05f), 0f, 0.1f);
             // Everything stands proud of the wall face (z = 0): the dark room, the glass, then the frame.
@@ -142,14 +155,14 @@ namespace BoomYard.Game
             g.SetParent(h, false);
             g.localPosition = p + new Vector3(0f, 0f, -0.035f);
             Props.Part(g, MeshKit.RoundedBox(new Vector3(size.x, size.y, 0.015f), 0.005f, 1), Vector3.zero, Mats.Glass(Mats.GlassTint), true);
-            var d = Destructible.Add(g.gameObject, "window");
+            var d = Destructible.Add(g.gameObject, id);
             d.FirePoint = Vector3.zero;
             d.FireSize = 0.5f;
         }
 
         // ---------- set dressing ----------
 
-        static void Fences(Transform root)
+        static void TimberFences(Transform root)
         {
             // Timber privacy fences on the lot lines (scenery, not targets).
             var wood = Mats.Surface("wood", new Color(0.72f, 0.62f, 0.5f), 0f, 0.6f);
@@ -162,7 +175,7 @@ namespace BoomYard.Game
                 }
         }
 
-        static void Trees(Transform root, QualityTier tier)
+        static void Trees(Transform root, QualityTier tier, int near)
         {
             var bark = Mats.Surface("wood", new Color(0.42f, 0.35f, 0.3f), 0f, 0.3f, 0.4f);
             var rng = new System.Random(3);
@@ -172,6 +185,7 @@ namespace BoomYard.Game
                 new Vector3(-20f, 0f, -7f), new Vector3(20f, 0f, -8f), new Vector3(-34f, 0f, 4f), new Vector3(33f, 0f, 2f),
                 new Vector3(-4f, 0f, -26f), new Vector3(5f, 0f, -27f), new Vector3(-24f, 0f, -26f), new Vector3(26f, 0f, -26f),
             };
+            if (near < spots.Count) spots.RemoveRange(near, spots.Count - near);
             // A ring of trees closes the horizon.
             int ring = tier == QualityTier.Low ? 18 : 30;
             for (int i = 0; i < ring; i++)
@@ -199,6 +213,7 @@ namespace BoomYard.Game
                     Props.Part(tree, MeshKit.Blob((1.5f + (float)rng.NextDouble() * 0.8f) * scale, 0.35f, k++), offset, leaf, false);
                 }
             }
+            if (near < 8) return;
             // Low hedges along the house.
             var hedge = Mats.Lit(new Color(0.17f, 0.25f, 0.09f), 0f, 0.12f);
             for (int i = 0; i < 4; i++) Props.Part(root, MeshKit.Blob(0.75f, 0.3f, 100 + i), new Vector3(-7.4f + i * 1.3f, 0.45f, 12.8f), hedge, false);

@@ -17,17 +17,17 @@ namespace BoomYard.Core
     {
         public static readonly ShopItem[] Items =
         {
-            new ShopItem { Id = "pack_blackcat", Name = "Black Cats ×10", Kind = "explosive", Grants = "blackcat", Amount = 10, Coins = 120 },
-            new ShopItem { Id = "pack_string", Name = "Firecracker String ×2", Kind = "explosive", Grants = "string50", Amount = 2, Coins = 220 },
-            new ShopItem { Id = "pack_sparkler", Name = "Sparkler Bombs ×3", Kind = "explosive", Grants = "sparkler", Amount = 3, Coins = 200 },
-            new ShopItem { Id = "pack_m80", Name = "M-80 ×3", Kind = "explosive", Grants = "m80", Amount = 3, Coins = 450, UnlockLevel = 2 },
-            new ShopItem { Id = "pack_cherry", Name = "Cherry Bombs ×3", Kind = "explosive", Grants = "cherry", Amount = 3, Coins = 380, UnlockLevel = 3 },
-            new ShopItem { Id = "pack_pipe", Name = "Pipe Bomb ×1", Kind = "explosive", Grants = "pipe", Amount = 1, Coins = 900, UnlockLevel = 6 },
-            new ShopItem { Id = "pack_dynamite", Name = "Dynamite ×2", Kind = "explosive", Grants = "dynamite", Amount = 2, Coins = 1200, UnlockLevel = 8 },
+            new ShopItem { Id = "pack_blackcat", Name = "Black Cats ×10", Kind = "explosive", Grants = "blackcat", Amount = 10, Coins = 200 },
+            new ShopItem { Id = "pack_string", Name = "Firecracker String ×2", Kind = "explosive", Grants = "string50", Amount = 2, Coins = 400 },
+            new ShopItem { Id = "pack_sparkler", Name = "Sparkler Bombs ×3", Kind = "explosive", Grants = "sparkler", Amount = 3, Coins = 350 },
+            new ShopItem { Id = "pack_m80", Name = "M-80 ×3", Kind = "explosive", Grants = "m80", Amount = 3, Coins = 800, UnlockLevel = 2 },
+            new ShopItem { Id = "pack_cherry", Name = "Cherry Bombs ×3", Kind = "explosive", Grants = "cherry", Amount = 3, Coins = 650, UnlockLevel = 3 },
+            new ShopItem { Id = "pack_pipe", Name = "Pipe Bomb ×1", Kind = "explosive", Grants = "pipe", Amount = 1, Coins = 1500, UnlockLevel = 6 },
+            new ShopItem { Id = "pack_dynamite", Name = "Dynamite ×2", Kind = "explosive", Grants = "dynamite", Amount = 2, Coins = 2000, UnlockLevel = 8 },
             new ShopItem { Id = "lighter_zippo", Name = "Zippo", Kind = "lighter", Grants = "zippo", Amount = 1, Coins = 2500 },
             new ShopItem { Id = "lighter_turbo", Name = "Turbo Lighter", Kind = "lighter", Grants = "turbo", Amount = 1, Coins = 5000 },
-            new ShopItem { Id = "up_vest", Name = "Vest: +1 pocket slot", Kind = "upgrade", Grants = "vest", Amount = 1, Coins = 1500 },
-            new ShopItem { Id = "up_legs", Name = "Lungs: run longer & faster", Kind = "upgrade", Grants = "legs", Amount = 1, Coins = 1000 },
+            new ShopItem { Id = "up_vest", Name = "Vest: +1 pocket slot", Kind = "upgrade", Grants = "vest", Amount = 1, Coins = 2500 },
+            new ShopItem { Id = "up_legs", Name = "Lungs: run longer & faster", Kind = "upgrade", Grants = "legs", Amount = 1, Coins = 1800 },
             new ShopItem { Id = "up_watch", Name = "Watch: +10 s every level", Kind = "upgrade", Grants = "watch", Amount = 1, Coins = 3000 },
         };
 

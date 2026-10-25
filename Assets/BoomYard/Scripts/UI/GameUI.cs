@@ -334,10 +334,19 @@ namespace BoomYard.UI
 
         // ---------- feedback ----------
 
-        public void Toast(string text)
+        public void Toast(string text, float seconds = 2.2f)
         {
             toast.text = text;
-            toastLeft = 2.2f;
+            toastLeft = seconds;
+        }
+
+        /// <summary>The level's twist, shown for a few seconds as the round starts.</summary>
+        public void RuleCard(LevelDef level, Destructible spare)
+        {
+            string text = level.Rule == LevelRule.Spare
+                ? Loc.F("rule.Spare", spare != null ? spare.Name.ToUpperInvariant() : "IT")
+                : Loc.T("rule." + level.Rule);
+            Toast(text, 4.5f);
         }
 
         public void Bonus(BonusKind kind) { Toast(Loc.T("bonus." + kind)); }
@@ -536,7 +545,23 @@ namespace BoomYard.UI
                 img.color = off ? new Color(1f, 0.48f, 0.1f, 0.6f) : UIKit.Ember;
             }
             for (int i = used; i < markerPool.Count; i++) markerPool[i].gameObject.SetActive(false);
+
+            // The one to keep: a green KEEP label over it.
+            var spare = game.Arena.Spare;
+            if (spareLabel == null)
+            {
+                spareLabel = UIKit.Label(markers, "Keep", "KEEP", 22, UIKit.Ok, TextAnchor.MiddleCenter, true);
+                spareLabel.rectTransform.anchorMin = spareLabel.rectTransform.anchorMax = Vector2.zero;
+                spareLabel.rectTransform.sizeDelta = new Vector2(120f, 30f);
+                spareLabel.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.7f);
+            }
+            Vector2 at = Vector2.zero;
+            bool back = true;
+            bool show = spare != null && !spare.Destroyed && ToLocal(spare.transform.position + Vector3.up * (spare.Size().y + 0.35f), out at, out back) && !back;
+            spareLabel.gameObject.SetActive(show);
+            if (show) spareLabel.rectTransform.anchoredPosition = at;
         }
+        Text spareLabel;
 
         /// <summary>Zones are laid out by the predicted flight time of the current throw (spec §04).</summary>
         void UpdateFuse(Player player)

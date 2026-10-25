@@ -246,5 +246,29 @@ static class MetaTests
             }
             check(bones == 14, "four fingers of three bones and a thumb of two");
         }
+
+        check(Levels.All.Length == 50, "50 levels");
+        foreach (var l in Levels.All)
+        {
+            check(Streets.ForLevel(l.Number).FirstLevel <= l.Number && l.Number <= Streets.ForLevel(l.Number).LastLevel, "level " + l.Number + " is on a street");
+            if (l.Rule == LevelRule.Spare) check(l.Spare >= 0 && l.Spare < l.Props.Length && !l.IsTarget(l.Spare), "level " + l.Number + " spares a real prop");
+            int targets = 0;
+            for (int k = 0; k < l.Props.Length; k++) if (l.IsTarget(k)) targets++;
+            check(targets >= 3, "level " + l.Number + " has targets");
+            foreach (var p in l.Props)
+            {
+                check(Math.Abs(p.X) <= 12.6f, "level " + l.Number + " " + p.Id + " inside the lot");
+                check((p.Z <= 12f || p.Id == "acunit") && p.Z >= -20f, "level " + l.Number + " " + p.Id + " clear of the houses");
+                check(Math.Sqrt(p.X * p.X + (p.Z + 8) * (p.Z + 8)) >= 2.4, "level " + l.Number + " " + p.Id + " not on the player's start");
+            }
+        }
+        foreach (var st in Streets.All)
+        {
+            check(Levels.Get(st.LastLevel).Boss, st.Name + " ends with a boss level");
+            check(st.Walls.Length > 0 && st.Roof.Length == 3, st.Name + " has colours");
+        }
+        int prev = 0;
+        foreach (var st in Streets.All) { check(st.FirstLevel == prev + 1, st.Name + " follows on"); prev = st.LastLevel; }
+        check(prev == Levels.All.Length, "streets cover every level");
     }
 }

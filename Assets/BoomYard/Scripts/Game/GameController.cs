@@ -11,7 +11,7 @@ namespace BoomYard.Game
         public LevelDef Level;
         public ArenaDef Arena;
         public bool Cleared;
-        public string FailReason;   // "time", "empty"
+        public string FailReason;   // "time", "empty", "spare"
         public float TimeLeft;
         public int TargetsLeft, Targets;
         public long Total, Base, ChainExtra, PlacementExtra, Bonuses;
@@ -107,6 +107,8 @@ namespace BoomYard.Game
         void BuildArena()
         {
             if (Arena != null && Arena.Root != null) Destroy(Arena.Root);
+            if (rain != null) Destroy(rain);
+            spareBroken = false;
             foreach (var live in LiveExplosive.Active.ToArray()) if (live != null) Destroy(live.gameObject);
             FireGrid.I.Clear();
             var fx = GameObject.Find("Fx");
@@ -182,19 +184,34 @@ namespace BoomYard.Game
             BuildArena();
             seed = Daily.Seed(System.DateTime.Now) * 31 + save.roundsPlayed;
             Wind = new WindModel(seed);
+            if (Level.Rule == LevelRule.Windy) Wind.SpeedScale = 2f;
             Score = new RoundScore();
             Chain = new ChainTracker();
             killsPerBlast.Clear();
             idle = 0f;
             clearedAt = -1f;
             FillPocket();
-            Player.ResetForRound(Arena.Spawn, Arena.SpawnYaw, Catalog.Lighter(save.lighter), seed);
+            Player.ResetForRound(Arena.Spawn, Arena.SpawnYaw, LighterFor(Level, save), seed);
             Player.Controllable = true;
+            if (Raining) rain = Fx.Rain(Player.Cam.transform);
             Round = new RoundModel();
             Round.Changed += OnRoundState;
             Round.Start(Level.Time + (save.Has("watch") ? 10f : 0f));
             UI.ShowHud();
             if (Level.Tutorial && !save.tutorialDone) Tutorial.Begin(this);
+            else if (Level.Rule != LevelRule.None) UI.RuleCard(Level, Arena.Spare);
+        }
+
+        public bool Raining { get { return Current == Mode.Level && Level != null && Level.Rule == LevelRule.Rain; } }
+        GameObject rain;
+        bool spareBroken;
+
+        /// <summary>The lighter for a level: matches on a matches-only level, slower to catch in the rain.</summary>
+        static LighterDef LighterFor(LevelDef level, SaveData save)
+        {
+            var l = Catalog.Lighter(level.Rule == LevelRule.Matches ? "matches" : save.lighter);
+            if (level.Rule != LevelRule.Rain) return l;
+            return new LighterDef { Id = l.Id, NameEn = l.NameEn, NameHe = l.NameHe, CatchTime = l.CatchTime * 1.6f + 0.25f, WindBlowout = l.WindBlowout, Flames = l.Flames, BreakChance = l.BreakChance };
         }
 
         public void Restart() { StartLevel(Level.Number); }
@@ -224,6 +241,8 @@ namespace BoomYard.Game
                     UI.Toast("ALL CLEAR!");
                 }
                 if (clearedAt >= 0f && Time.time - clearedAt > 2f && Round.State != RoundState.Results) Round.Finish();
+                // The one thing that had to survive didn't.
+                if (Arena.Spare != null && Arena.Spare.Destroyed && clearedAt < 0f && Round.State != RoundState.Results) { spareBroken = true; Round.Finish(); }
                 if (clearedAt >= 0f && Round.State == RoundState.Settling) Round.Tick(0f, false);
 
                 // Out of explosives with targets standing and nothing going off: no need to wait out the clock.
@@ -366,7 +385,7 @@ namespace BoomYard.Game
                 if (d.Destroyed) destroyed++;
             }
             int targetsLeft = Arena.TargetsLeft;
-            bool cleared = targetsLeft == 0;
+            bool cleared = targetsLeft == 0 && !spareBroken;
             Score.CleanSweep = total > 0 && destroyed == total;
             var rec = save.Level(Level.Number);
             var sum = new RoundSummary
@@ -374,7 +393,7 @@ namespace BoomYard.Game
                 Level = Level,
                 Arena = ArenaDef,
                 Cleared = cleared,
-                FailReason = cleared ? "" : Round.TimeLeft <= 0f ? "time" : "empty",
+                FailReason = cleared ? "" : spareBroken ? "spare" : Round.TimeLeft <= 0f ? "time" : "empty",
                 TimeLeft = Round.TimeLeft,
                 TargetsLeft = targetsLeft,
                 Targets = Arena.Targets.Count,
@@ -397,7 +416,7 @@ namespace BoomYard.Game
             sum.FirstClear = cleared && rec.stars == 0;
             int newStars = Mathf.Max(0, sum.Stars - rec.stars);
             sum.Coins = Progress.LevelCoins(Level, cleared, sum.FirstClear, newStars, sum.Total);
-            sum.TipKey = cleared ? (Chain.LongestChain < 2 ? "tip.chain" : "tip.again") : (sum.FailReason == "empty" ? "tip.empty" : "tip.time");
+            sum.TipKey = cleared ? (Chain.LongestChain < 2 ? "tip.chain" : "tip.again") : sum.FailReason == "spare" ? "tip.spare" : (sum.FailReason == "empty" ? "tip.empty" : "tip.time");
 
             if (cleared)
             {
@@ -533,7 +552,7 @@ namespace BoomYard.Game
             return amp >= 0 ? v.Substring(0, amp) : v;
         }
 
-        /// <summary>?shot=title|map|shop|play|boom on the web page URL.</summary>
+        /// <summary>?shot=title|map|mapall|shop|play|boom|level&lt;n&gt; on the web page URL.</summary>
         System.Collections.IEnumerator RunShot(string mode)
         {
             SaveService.Data.disclaimerSeen = true;
@@ -541,6 +560,9 @@ namespace BoomYard.Game
             if (mode == "title") { GoHome(); yield break; }
             if (mode == "map") { GoMap(); yield break; }
             if (mode == "shop") { GoHome(); UI.ShowShop(); yield break; }
+            if (mode == "mapall") { SaveService.Data.unlocked = Levels.All.Length; GoMap(); yield break; }
+            int n;
+            if (mode.StartsWith("level") && int.TryParse(mode.Substring(5), out n)) { StartLevel(Mathf.Clamp(n, 1, Levels.All.Length)); yield break; }
             StartLevel(mode == "boom" ? 9 : 4);
             if (mode != "boom") yield break;
             // A scripted chain for the explosion screenshots: an M-80 under the van, then the barrels go.
