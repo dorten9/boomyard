@@ -324,6 +324,7 @@ namespace BoomYard.Game
             float mult = destroyed ? Chain.OnDestroyed(Time.time, hit.ByObject) : Chain.MultiplierFor(hit.ByObject);
             long v = Score.AddDamage(d.Def.Value, fraction, d.Def.Material, hit.Placement, mult);
             if (destroyed && hit.ByObject && Chain.Links >= 3 && Chain.Links % 3 == 0) SlowMo(0.3f, 0.9f);
+            if (destroyed && hit.ByObject && Chain.Links == ScoreCalculator.DominoLinks) Bonus(BonusKind.Domino);
             if (destroyed)
             {
                 Score.ObjectsDestroyed++;
@@ -344,10 +345,23 @@ namespace BoomYard.Game
             UI.Popup(d.transform.TransformPoint(d.FirePoint), v, destroyed && hit.ByObject ? mult : 0f);
         }
 
-        void Bonus(BonusKind kind)
+        public void Bonus(BonusKind kind)
         {
+            if (Current != Mode.Level) return;
+            var st = Round.State;
+            if (st != RoundState.Playing && st != RoundState.Stunned && st != RoundState.Settling) return;
             Score.AddBonus(kind);
             UI.Bonus(kind);
+        }
+
+        /// <summary>A launched object landed (StreetLife.Flight): long flights pay, gnomes get their distance called out.</summary>
+        public void OnFlight(Destructible d, float seconds, float metres)
+        {
+            if (d == null || seconds < ScoreCalculator.AirTimeSeconds || metres < 3f) return;
+            Bonus(BonusKind.AirTime);
+            UI.Toast(Loc.F("flight", d.Name.ToLowerInvariant(), Mathf.RoundToInt(metres)), 2.6f);
+            var save = SaveService.Data;
+            if (d.Def.Id == "gnome" && metres > save.bestGnome) save.bestGnome = metres;
         }
 
         public void OnIgnite(ExplosiveDef def) { Tutorial.OnEvent("lit"); }

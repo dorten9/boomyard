@@ -33,6 +33,7 @@ namespace BoomYard.Game
         public static Arena Build(LevelDef level, QualityTier tier)
         {
             var a = new Arena { Level = level, Def = Catalog.Arena(1) };
+            StreetLife.DarkRooms.Clear();
             a.Root = new GameObject("Level " + level.Number);
             var root = a.Root.transform;
             a.Spawn = new Vector3(0f, 0f, -8f);
@@ -60,6 +61,7 @@ namespace BoomYard.Game
                 else a.Spare = d;
             }
             foreach (var d in a.Root.GetComponentsInChildren<Destructible>()) a.Objects.Add(d);
+            StreetLife.Create(root, new Vector3(-21f, 0f, 6f));   // the dog is next door, behind the fence
             return a;
         }
 
@@ -126,11 +128,18 @@ namespace BoomYard.Game
             Box(h, "Canopy", new Vector3(dx, 2.65f, -0.55f), new Vector3(2.0f, 0.1f, 1.1f), trim, false);
             Box(h, "PorchLamp", new Vector3(dx + 0.8f, 2.1f, -0.1f), new Vector3(0.14f, 0.24f, 0.14f), Mats.Emissive(new Color(1f, 0.85f, 0.6f), new Color(2.2f, 1.5f, 0.8f)), false);
 
-            // Garage door (right side), ribbed steel.
+            // Garage door (right side), ribbed steel: it breaks, and a blast in front of it sends it flying.
             if (main)
             {
-                Box(h, "Garage", new Vector3(5.2f, 1.2f, -0.03f), new Vector3(3.2f, 2.4f, 0.08f), Mats.Surface("paint", new Color(0.88f, 0.88f, 0.85f), 0.3f, 0.5f), false);
-                for (int i = 0; i < 5; i++) Box(h, "Rib", new Vector3(5.2f, 0.3f + i * 0.48f, -0.08f), new Vector3(3.15f, 0.04f, 0.03f), trim, false);
+                Box(h, "Recess", new Vector3(5.2f, 1.2f, 0.02f), new Vector3(3.2f, 2.4f, 0.04f), Mats.Lit(new Color(0.05f, 0.05f, 0.055f), 0f, 0.1f), false);
+                var door = new GameObject("GarageDoor").transform;
+                door.SetParent(h, false);
+                door.localPosition = new Vector3(5.2f, 1.2f, -0.06f);
+                Box(door, "Garage", Vector3.zero, new Vector3(3.2f, 2.4f, 0.08f), Mats.Surface("paint", new Color(0.88f, 0.88f, 0.85f), 0.3f, 0.5f), true);
+                for (int i = 0; i < 5; i++) Box(door, "Rib", new Vector3(0f, -0.9f + i * 0.48f, -0.05f), new Vector3(3.15f, 0.04f, 0.03f), trim, false);
+                var gd = Destructible.Add(door.gameObject, "garagedoor");
+                gd.FirePoint = Vector3.zero;
+                gd.FireSize = 0.8f;
             }
 
             float[] xs = main ? new[] { -6.2f, -1.2f, 1.6f } : new[] { -5f, 0.5f, 4.5f };
@@ -144,7 +153,8 @@ namespace BoomYard.Game
         {
             var room = lit ? Mats.Emissive(new Color(0.35f, 0.25f, 0.16f), new Color(0.9f, 0.55f, 0.25f)) : Mats.Lit(new Color(0.04f, 0.04f, 0.05f), 0f, 0.1f);
             // Everything stands proud of the wall face (z = 0): the dark room, the glass, then the frame.
-            Box(h, "Room", p + new Vector3(0f, 0f, -0.012f), new Vector3(size.x, size.y, 0.02f), room, false);
+            var roomGo = Box(h, "Room", p + new Vector3(0f, 0f, -0.012f), new Vector3(size.x, size.y, 0.02f), room, false);
+            if (!lit) StreetLife.DarkRooms.Add(roomGo.GetComponent<Renderer>());   // a neighbour may switch it on
             Box(h, "FrameT", p + new Vector3(0f, size.y * 0.5f + 0.05f, -0.06f), new Vector3(size.x + 0.2f, 0.1f, 0.1f), trim, false);
             Box(h, "FrameL", p + new Vector3(-size.x * 0.5f - 0.05f, 0f, -0.06f), new Vector3(0.1f, size.y + 0.2f, 0.1f), trim, false);
             Box(h, "FrameR", p + new Vector3(size.x * 0.5f + 0.05f, 0f, -0.06f), new Vector3(0.1f, size.y + 0.2f, 0.1f), trim, false);

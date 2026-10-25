@@ -288,6 +288,17 @@ namespace BoomYard.Game
         void OnCollisionEnter(Collision c)
         {
             if (done) return;
+            // Thrown straight into a bin, a mailbox or a box: contained, and a hole in one.
+            if (Airborne && Lit && Placement == Placement.Thrown && Container == null)
+            {
+                var d = c.collider.GetComponentInParent<Destructible>();
+                if (d != null && !d.Destroyed && (d.Def.Reaction & Reaction.Contain) != 0 && d.Def.Mass < 100f)
+                {
+                    Container = d;
+                    Placement = Placement.Contained;
+                    if (GameController.I != null) GameController.I.Bonus(BonusKind.HoleInOne);
+                }
+            }
             Airborne = false;
             if (Def.Fuse <= 0f && Lit) Detonate();   // molotov: breaks on contact
         }

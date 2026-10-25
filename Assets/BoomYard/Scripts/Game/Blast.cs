@@ -42,6 +42,7 @@ namespace BoomYard.Game
 
             Fx.Explosion(c.Position, radius);
             Sfx.I.Boom(c.Position, radius, arena != null && !arena.Outdoors ? 1.6f : 1f);
+            if (StreetLife.I != null) StreetLife.I.OnBlast(c.Position, radius);
 
             int n = Physics.OverlapSphereNonAlloc(c.Position, Mathf.Max(wave, radius * 2f), hits, Layers.WorldMask, QueryTriggerInteraction.Ignore);
             seen.Clear();
