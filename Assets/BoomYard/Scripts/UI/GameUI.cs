@@ -183,7 +183,7 @@ namespace BoomYard.UI
             targets = UIKit.Label(targetsPill.transform, "Text", "", 24, new Color(0.07f, 0.04f, 0.02f), TextAnchor.MiddleCenter, true);
             UIKit.Stretch(targets.rectTransform);
 
-            // Top right: damage in shekels and the chain multiplier.
+            // Top right: damage in dollars and the chain multiplier.
             damage = UIKit.Label(hud, "Damage", Loc.Money(0), 40, UIKit.Fg, TextAnchor.UpperRight, true);
             UIKit.Place(damage.rectTransform, new Vector2(1f, 1f), new Vector2(-40f, -22f), new Vector2(460f, 52f));
             damage.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.6f);
@@ -353,7 +353,7 @@ namespace BoomYard.UI
             targetPulse = 1f;
         }
 
-        /// <summary>"+₪4,680" rising from what broke; chain links also show their multiplier.</summary>
+        /// <summary>"+$4,680" rising from what broke; chain links also show their multiplier.</summary>
         public void Popup(Vector3 world, long value, float chainMult)
         {
             if (value <= 0) return;

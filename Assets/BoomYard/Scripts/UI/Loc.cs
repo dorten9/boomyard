@@ -15,7 +15,7 @@ namespace BoomYard
 
         public static string F(string key, params object[] args) { return string.Format(T(key), args); }
 
-        public static string Money(long v) { return "₪" + v.ToString("#,0"); }
+        public static string Money(long v) { return "$" + v.ToString("#,0"); }
         public static string Coins(long v) { return v.ToString("#,0"); }
 
         public static string Time(float seconds)
@@ -40,10 +40,10 @@ namespace BoomYard
             { "toast.contained", "Contained ×1.8" },
             { "toast.placed", "Placed. Hold LIGHT next to it" },
             { "toast.runaway", "RUN!" },
-            { "bonus.CloseCall", "Close call +₪5,000" },
-            { "bonus.Multi", "Multi-kill +₪8,000" },
-            { "bonus.LastSecond", "Last second +₪3,000" },
-            { "bonus.HandBurn", "Went off in your hand −₪2,000" },
+            { "bonus.CloseCall", "Close call +$5,000" },
+            { "bonus.Multi", "Multi-kill +$8,000" },
+            { "bonus.LastSecond", "Last second +$3,000" },
+            { "bonus.HandBurn", "Went off in your hand −$2,000" },
             { "tip.chain", "Tip: hit things that explode by themselves. Every chain link adds ×0.5" },
             { "tip.again", "Tip: place charges under cars for ×1.8 containment" },
             { "tip.time", "Tip: light several charges before you run, and let the blasts chain" },
