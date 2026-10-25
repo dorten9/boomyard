@@ -120,7 +120,7 @@ namespace BoomYard.UI
             foreach (var m in save.TodaysMissions()) if (m.Done && !m.claimed) ready++;
             if (ready > 0 || game.DailyAvailable() >= 0) Badge(missions.transform, ready > 0 ? ready.ToString() : "!");
             var gear = UIKit.IconButton(s, "Settings", UIKit.Gear, new Color(0.12f, 0.11f, 0.12f, 0.95f), UIKit.Fg, () => { Sfx.I.Tap(); ShowSettings(false); }, 76f);
-            UIKit.Place((RectTransform)gear.transform, new Vector2(0f, 0f), new Vector2(70f, 40f), new Vector2(76f, 76f));
+            UIKit.Place((RectTransform)gear.transform, new Vector2(1f, 1f), new Vector2(-660f, -20f), new Vector2(76f, 76f));   // top bar, clear of the menu column
 
             Wallet(s);
             if (game.DailyAvailable() >= 0)
