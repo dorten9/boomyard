@@ -52,7 +52,8 @@ static class CoreTests
         Check(ScoreCalculator.Stars(yard, 59999) == 2, "2 stars under the threshold");
         Check(ScoreCalculator.Stars(yard, 60000) == 3, "3 stars at the threshold");
         Check(ScoreCalculator.Stars(yard, 1000) == 0, "no stars");
-        Near(ScoreCalculator.CoinsFromDamage(200000), 4000, "2% coins");
+        Near(ScoreCalculator.CoinsFromDamage(200000), 4000, "a coin per $50 of damage");
+        Near(ScoreCalculator.CoinsFromDamage(74), 1, "coins round to the nearest");
     }
 
     static void Chains()
@@ -212,7 +213,7 @@ static class MetaTests
             foreach (var k in l.Kit) check(Catalog.Explosive(k.id) != null, "level " + l.Number + " kit item exists: " + k.id);
         }
         foreach (var it in Shop.Items)
-            check((it.Coins > 0) != (it.Gems > 0), "shop item has one price: " + it.Id);
+            check(it.Coins > 0, "shop item has a price in coins: " + it.Id);
 
         var a = Missions.ForDay(20261024);
         var b = Missions.ForDay(20261024);
@@ -229,7 +230,8 @@ static class MetaTests
         check(DailyReward.NextDay(20261023, 2, new System.DateTime(2026, 10, 24)) == 3, "streak continues");
         check(DailyReward.NextDay(20261024, 2, new System.DateTime(2026, 10, 24)) == -1, "claimed today");
         check(DailyReward.NextDay(20261020, 4, new System.DateTime(2026, 10, 24)) == 0, "missed day restarts");
-        check(Progress.LevelCoins(lvl, true, 3, 100000) == lvl.Reward + 120 + 200, "level coins");
+        check(Progress.LevelCoins(lvl, true, true, 3, 100000) == 2000 + lvl.Reward + 120, "level coins: wreckage, reward, stars");
+        check(Progress.LevelCoins(lvl, false, false, 0, 100000) == 2000, "a failed round keeps the wreckage coins");
 
         foreach (var side in new[] { 1f, -1f })
         {

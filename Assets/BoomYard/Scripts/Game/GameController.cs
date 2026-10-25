@@ -396,7 +396,7 @@ namespace BoomYard.Game
             sum.Record = cleared && sum.Total > rec.bestDamage;
             sum.FirstClear = cleared && rec.stars == 0;
             int newStars = Mathf.Max(0, sum.Stars - rec.stars);
-            sum.Coins = cleared ? Progress.LevelCoins(Level, sum.FirstClear, newStars, sum.Total) : ScoreCalculator.CoinsFromDamage(sum.Total) / 20;
+            sum.Coins = Progress.LevelCoins(Level, cleared, sum.FirstClear, newStars, sum.Total);
             sum.TipKey = cleared ? (Chain.LongestChain < 2 ? "tip.chain" : "tip.again") : (sum.FailReason == "empty" ? "tip.empty" : "tip.time");
 
             if (cleared)
@@ -444,10 +444,8 @@ namespace BoomYard.Game
             var save = SaveService.Data;
             if (item.Kind == "lighter" && save.lighters.Contains(item.Grants)) { save.lighter = item.Grants; SaveService.Save(); return true; }
             if (item.Kind == "upgrade" && save.Has(item.Grants)) return false;
-            if (item.Coins > 0 && save.shekels < item.Coins) return false;
-            if (item.Gems > 0 && save.gems < item.Gems) return false;
+            if (save.shekels < item.Coins) return false;
             save.shekels -= item.Coins;
-            save.gems -= item.Gems;
             switch (item.Kind)
             {
                 case "explosive": save.Add(item.Grants, item.Amount); break;
@@ -464,7 +462,6 @@ namespace BoomYard.Game
             if (!m.Done || m.claimed) return;
             m.claimed = true;
             SaveService.Data.shekels += m.coins;
-            SaveService.Data.gems += m.gems;
             SaveService.Save();
             Sfx.I.Coin();
         }
@@ -484,7 +481,6 @@ namespace BoomYard.Game
             s.dailyStreak = day;
             s.dailyClaimDate = Daily.Seed(System.DateTime.Now);
             s.shekels += DailyReward.Coins[day];
-            s.gems += DailyReward.Gems[day];
             SaveService.Save();
             Sfx.I.Star();
         }

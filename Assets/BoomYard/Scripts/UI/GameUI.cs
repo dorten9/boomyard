@@ -23,7 +23,7 @@ namespace BoomYard.UI
 
         // HUD
         Text timer, targets, damage, chain, wind, prompt, fuseTime, tutText;
-        Image chainBadge, windArrow, joyBase, joyKnob, catchRing, powerFill, tutCard, targetsPill;
+        Image chainBadge, windArrow, joyBase, joyKnob, catchRing, powerFill, tutCard, targetsPill, hudCoin;
         RectTransform fuseBar, fusePointer, powerBar, markers;
         RectTransform lightBtn, throwBtn, placeBtn;
         Image fuseRed, fuseOrange, fuseGreen;
@@ -183,11 +183,13 @@ namespace BoomYard.UI
             targets = UIKit.Label(targetsPill.transform, "Text", "", 24, new Color(0.07f, 0.04f, 0.02f), TextAnchor.MiddleCenter, true);
             UIKit.Stretch(targets.rectTransform);
 
-            // Top right: damage in dollars and the chain multiplier.
+            // Top right: the coins this round's wreckage is worth, and the chain multiplier.
             damage = UIKit.Label(hud, "Damage", Loc.Money(0), 40, UIKit.Fg, TextAnchor.UpperRight, true);
-            UIKit.Place(damage.rectTransform, new Vector2(1f, 1f), new Vector2(-40f, -22f), new Vector2(460f, 52f));
+            UIKit.Place(damage.rectTransform, new Vector2(1f, 1f), new Vector2(-40f, -22f), new Vector2(400f, 52f));
             damage.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.6f);
-            var dl = UIKit.Label(hud, "DamageLabel", "DAMAGE", 18, UIKit.Muted, TextAnchor.UpperRight);
+            hudCoin = UIKit.Image(hud, "Coin", Color.white, UIKit.Coin);
+            UIKit.Place(hudCoin.rectTransform, new Vector2(1f, 1f), new Vector2(-40f, -26f), new Vector2(40f, 40f));
+            var dl = UIKit.Label(hud, "DamageLabel", "COINS", 18, UIKit.Muted, TextAnchor.UpperRight);
             UIKit.Place(dl.rectTransform, new Vector2(1f, 1f), new Vector2(-42f, -72f), new Vector2(300f, 24f));
             chainBadge = UIKit.Image(hud, "Chain", UIKit.Ember, UIKit.Pill);
             UIKit.Place(chainBadge.rectTransform, new Vector2(1f, 1f), new Vector2(-40f, -104f), new Vector2(210f, 44f));
@@ -353,10 +355,10 @@ namespace BoomYard.UI
             targetPulse = 1f;
         }
 
-        /// <summary>"+$4,680" rising from what broke; chain links also show their multiplier.</summary>
+        /// <summary>"+94" coins rising from what broke; chain links also show their multiplier.</summary>
         public void Popup(Vector3 world, long value, float chainMult)
         {
-            if (value <= 0) return;
+            if (ScoreCalculator.CoinsFromDamage(value) <= 0) return;
             if (pops.Count > 24) { Destroy(pops[0].Text.gameObject); pops.RemoveAt(0); }
             string s = "+" + Loc.Money(value) + (chainMult > 1f ? "  ×" + chainMult.ToString("0.0") : "");
             var t = UIKit.Label(markers, "Pop", s, value >= 5000 ? 34 : 26, chainMult > 1f ? UIKit.Ember : UIKit.Flame, TextAnchor.MiddleCenter, true);
@@ -419,6 +421,8 @@ namespace BoomYard.UI
             var g = game;
             var player = Player.I;
             damage.text = Loc.Money(g.Score.Total);
+            // The coin sits just left of the number, however wide it is.
+            hudCoin.rectTransform.anchoredPosition = new Vector2(-40f - damage.preferredWidth - 30f, -26f);
             float tl = g.Round.TimeLeft;
             timer.text = Loc.Time(tl);
             bool urgent = tl <= 10f && !g.Round.Frozen;

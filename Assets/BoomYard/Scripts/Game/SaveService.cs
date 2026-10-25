@@ -46,7 +46,7 @@ namespace BoomYard.Game
         public const int CurrentSchema = 2;
         public int schema = CurrentSchema;
         public long shekels;              // coins (dollars; the field keeps its name so saves still load)
-        public int gems;
+        public int gems;                  // retired: gems became coins (100 each) on load
         public string lighter = "basic";
         public List<string> lighters = new List<string> { "basic" };
         public List<string> upgrades = new List<string>();
@@ -134,6 +134,7 @@ namespace BoomYard.Game
             }
             catch (Exception e) { Debug.LogWarning("BoomYard: save unreadable, starting fresh. " + e.Message); }
             if (Data == null) Data = Fresh();
+            if (Data.gems > 0) { Data.shekels += Data.gems * 100L; Data.gems = 0; }   // one currency now
             return Data;
         }
 
@@ -141,8 +142,7 @@ namespace BoomYard.Game
         static SaveData Fresh()
         {
             var d = new SaveData();
-            d.shekels = 300;
-            d.gems = 5;
+            d.shekels = 500;
             return d;
         }
 

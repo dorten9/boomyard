@@ -58,8 +58,13 @@ namespace BoomYard.Core
             return 0;
         }
 
-        /// <summary>Soft currency earned from a round: 2% of the damage (spec §14).</summary>
-        public static long CoinsFromDamage(long damage) { return damage <= 0 ? 0 : damage * 2 / 100; }
+        /// <summary>
+        /// The game has one currency, coins, and damage is counted in them: every coin that rises from the
+        /// wreckage is yours. The values in the catalog are in dollars of damage, at 50 dollars a coin.
+        /// </summary>
+        public const int DamagePerCoin = 50;
+
+        public static long CoinsFromDamage(long damage) { return damage <= 0 ? 0 : (damage + DamagePerCoin / 2) / DamagePerCoin; }
     }
 
     public enum BonusKind { CloseCall, Multi, LastSecond, HandBurn }

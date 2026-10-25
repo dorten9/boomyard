@@ -3,13 +3,13 @@ using System.Collections.Generic;
 
 namespace BoomYard.Core
 {
-    /// <summary>What the shop sells: packs of explosives for coins, lighters and upgrades for coins or gems.</summary>
+    /// <summary>What the shop sells, all for coins: packs of explosives, lighters and upgrades.</summary>
     public sealed class ShopItem
     {
         public string Id, Name, Kind;   // Kind: "explosive", "lighter", "upgrade"
         public string Grants;            // explosive / lighter / upgrade id
         public int Amount;               // units in the pack
-        public int Coins, Gems;          // price (one of them)
+        public int Coins;                // price
         public int UnlockLevel;          // shown from this level on
     }
 
@@ -24,11 +24,11 @@ namespace BoomYard.Core
             new ShopItem { Id = "pack_cherry", Name = "Cherry Bombs ×3", Kind = "explosive", Grants = "cherry", Amount = 3, Coins = 380, UnlockLevel = 3 },
             new ShopItem { Id = "pack_pipe", Name = "Pipe Bomb ×1", Kind = "explosive", Grants = "pipe", Amount = 1, Coins = 900, UnlockLevel = 6 },
             new ShopItem { Id = "pack_dynamite", Name = "Dynamite ×2", Kind = "explosive", Grants = "dynamite", Amount = 2, Coins = 1200, UnlockLevel = 8 },
-            new ShopItem { Id = "lighter_zippo", Name = "Zippo", Kind = "lighter", Grants = "zippo", Amount = 1, Gems = 20 },
-            new ShopItem { Id = "lighter_turbo", Name = "Turbo Lighter", Kind = "lighter", Grants = "turbo", Amount = 1, Gems = 45 },
+            new ShopItem { Id = "lighter_zippo", Name = "Zippo", Kind = "lighter", Grants = "zippo", Amount = 1, Coins = 2500 },
+            new ShopItem { Id = "lighter_turbo", Name = "Turbo Lighter", Kind = "lighter", Grants = "turbo", Amount = 1, Coins = 5000 },
             new ShopItem { Id = "up_vest", Name = "Vest: +1 pocket slot", Kind = "upgrade", Grants = "vest", Amount = 1, Coins = 1500 },
             new ShopItem { Id = "up_legs", Name = "Lungs: run longer & faster", Kind = "upgrade", Grants = "legs", Amount = 1, Coins = 1000 },
-            new ShopItem { Id = "up_watch", Name = "Watch: +10 s every level", Kind = "upgrade", Grants = "watch", Amount = 1, Gems = 30 },
+            new ShopItem { Id = "up_watch", Name = "Watch: +10 s every level", Kind = "upgrade", Grants = "watch", Amount = 1, Coins = 3000 },
         };
 
         public static ShopItem Get(string id)
@@ -44,7 +44,7 @@ namespace BoomYard.Core
     {
         public string kind;     // destroy, destroy_id, chain, clear, stars, contained, blasts
         public string target;   // object id for destroy_id
-        public int goal, progress, coins, gems;
+        public int goal, progress, coins;
         public bool claimed;
         public bool Done { get { return progress >= goal; } }
 
@@ -83,9 +83,9 @@ namespace BoomYard.Core
             {
                 new Mission { kind = "destroy", goal = 15 + r.Next(3) * 5, coins = 150 },
                 new Mission { kind = "destroy_id", target = r.Next(2) == 0 ? "van" : "sedan", goal = 2, coins = 250 },
-                new Mission { kind = "chain", goal = 3 + r.Next(2), coins = 200, gems = 2 },
+                new Mission { kind = "chain", goal = 3 + r.Next(2), coins = 400 },
                 new Mission { kind = "clear", goal = 2 + r.Next(2), coins = 200 },
-                new Mission { kind = "stars", goal = 4 + r.Next(3), gems = 3 },
+                new Mission { kind = "stars", goal = 4 + r.Next(3), coins = 300 },
                 new Mission { kind = "contained", goal = 3, coins = 180 },
                 new Mission { kind = "blasts", goal = 20, coins = 120 },
                 new Mission { kind = "destroy_id", target = "window", goal = 10, coins = 150 },
@@ -113,11 +113,10 @@ namespace BoomYard.Core
         }
     }
 
-    /// <summary>The 7-day login calendar: coins every day, gems on days 3 and 7.</summary>
+    /// <summary>The 7-day login calendar: coins every day, a big pile on day 7.</summary>
     public static class DailyReward
     {
-        public static readonly int[] Coins = { 100, 150, 0, 250, 300, 400, 0 };
-        public static readonly int[] Gems = { 0, 0, 5, 0, 0, 0, 15 };
+        public static readonly int[] Coins = { 100, 150, 500, 250, 300, 400, 1500 };
 
         /// <summary>Next streak day (0–6) given the last claim day and today (days as Daily.Seed values).</summary>
         public static int NextDay(int lastClaimDate, int streak, DateTime today)
@@ -133,11 +132,15 @@ namespace BoomYard.Core
 
     public static class Progress
     {
-        /// <summary>Coins for clearing a level: its reward the first time, a share on replays, plus 2% of the damage.</summary>
-        public static int LevelCoins(LevelDef level, bool firstClear, int newStars, long damage)
+        /// <summary>
+        /// Coins from a round: everything the wreckage was worth, plus on a clear the level's reward (in full the
+        /// first time, a fifth on replays) and 40 for every new star.
+        /// </summary>
+        public static int LevelCoins(LevelDef level, bool cleared, bool firstClear, int newStars, long damage)
         {
-            int baseCoins = firstClear ? level.Reward : level.Reward / 5;
-            return baseCoins + newStars * 40 + (int)(ScoreCalculator.CoinsFromDamage(damage) / 10);
+            int wreck = (int)ScoreCalculator.CoinsFromDamage(damage);
+            if (!cleared) return wreck;
+            return wreck + (firstClear ? level.Reward : level.Reward / 5) + newStars * 40;
         }
     }
 }
