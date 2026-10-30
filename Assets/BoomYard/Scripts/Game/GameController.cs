@@ -844,7 +844,7 @@ namespace BoomYard.Game
                 // One of each firework on the road in front of the plaza, then the show.
                 StartCity();
                 yield return new WaitForSeconds(1.5f);
-                Player.Teleport(new Vector3(0f, 0.16f, -32f), 0f, -28f);
+                Player.Teleport(new Vector3(0f, 0.16f, -30.5f), 0f, -22f);
                 string[] kinds = { "fountain", "candle", "cake", "mortar", "rocket", "rocket" };
                 for (int i = 0; i < kinds.Length; i++)
                     LiveExplosive.SpawnUnlit(Catalog.Explosive(kinds[i]), new Vector3(-6f + i * 2.4f, 0.05f, -20f), Quaternion.identity, Placement.Placed);
@@ -857,7 +857,7 @@ namespace BoomYard.Game
                 // Every kind of shell, one after another, high over the plaza.
                 StartCity();
                 yield return new WaitForSeconds(1.5f);
-                Player.Teleport(new Vector3(0f, 0.16f, -32f), 0f, -30f);
+                Player.Teleport(new Vector3(0f, 0.16f, -30.5f), 0f, -30f);
                 foreach (ShellType t in System.Enum.GetValues(typeof(ShellType)))
                 {
                     Fireworks.Burst(new Vector3(Random.Range(-8f, 8f), 22f, 6f), t, 1f);

@@ -643,6 +643,7 @@ namespace BoomYard.Game
 
         void Update()
         {
+            if (l == null) { Destroy(this); return; }   // the light went out (a fuse burnt down)
             float n = Mathf.PerlinNoise(seed, Time.time * 9f);
             l.intensity = baseIntensity * (0.6f + 0.8f * n);
         }

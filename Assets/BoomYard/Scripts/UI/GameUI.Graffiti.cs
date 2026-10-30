@@ -269,9 +269,9 @@ namespace BoomYard.UI
             for (int i = 0; i < sizes.Length; i++)
             {
                 int k = i;
-                Btn(s, sizes[i], i == brushSize, () => { brushSize = k; if (canvas != null) canvas.Radius = BrushRadii[k]; ShowStudioPageKeep(); }, new Vector2(0f, 1f), new Vector2(right + 540f + (i % 2) * 120f, -370f - (i / 2) * 70f), new Vector2(110f, 56f), 20);
+                Btn(s, sizes[i], i == brushSize, () => { brushSize = k; if (canvas != null) canvas.Radius = BrushRadii[k]; ShowStudioPageKeep(); }, new Vector2(0f, 1f), new Vector2(right + 580f + (i % 2) * 120f, -370f - (i / 2) * 70f), new Vector2(110f, 56f), 20);
             }
-            Btn(s, "UNDO", false, () => { if (canvas != null) canvas.Undo(); }, new Vector2(0f, 1f), new Vector2(right + 600f, -510f), new Vector2(230f, 56f), 22);
+            Btn(s, "UNDO", false, () => { if (canvas != null) canvas.Undo(); }, new Vector2(0f, 1f), new Vector2(right + 640f, -510f), new Vector2(230f, 56f), 22);
         }
 
         /// <summary>Re-lays the page after a brush change, keeping the strokes not yet saved.</summary>

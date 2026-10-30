@@ -125,7 +125,7 @@ namespace BoomYard.Game
                         if (f > best) { best = f; bestCode = code; }
                     }
                     any = FieldAny(st, cx, cy);
-                    float a = Mathf.Clamp01((any - 0.42f) / 0.16f);
+                    float a = Mathf.Clamp01((any - 0.44f) / 0.12f);
                     if (a <= 0f) { px[py * w + pxl] = new Color32(0, 0, 0, 0); continue; }
                     var col = Graffiti.Paint(bestCode, can) ?? can;
                     px[py * w + pxl] = new Color32((byte)(col.R * 255), (byte)(col.G * 255), (byte)(col.B * 255), (byte)(a * 255));
@@ -137,28 +137,29 @@ namespace BoomYard.Game
             return tex;
         }
 
-        /// <summary>Bilinear blend of "this cell has <paramref name="code"/>" between the four nearest cell centres.</summary>
+        /// <summary>
+        /// How much of the neighbourhood of (x, y) is <paramref name="code"/> (any paint when it is '\0'): a
+        /// Gaussian-weighted share of the nearby cells, so corners round off and diagonals become straight edges.
+        /// </summary>
         static float Field(Stencil st, char code, float x, float y)
         {
-            int x0 = Mathf.FloorToInt(x), y0 = Mathf.FloorToInt(y);
-            float fx = x - x0, fy = y - y0;
-            fx = fx * fx * (3f - 2f * fx);
-            fy = fy * fy * (3f - 2f * fy);
-            float a = st.At(x0, y0) == code ? 1f : 0f, b = st.At(x0 + 1, y0) == code ? 1f : 0f;
-            float c = st.At(x0, y0 + 1) == code ? 1f : 0f, d = st.At(x0 + 1, y0 + 1) == code ? 1f : 0f;
-            return Mathf.Lerp(Mathf.Lerp(a, b, fx), Mathf.Lerp(c, d, fx), fy);
+            const float sigma = 0.62f;
+            int cx = Mathf.RoundToInt(x), cy = Mathf.RoundToInt(y);
+            float sum = 0f, total = 0f;
+            for (int j = -2; j <= 2; j++)
+                for (int i = -2; i <= 2; i++)
+                {
+                    int gx = cx + i, gy = cy + j;
+                    float dx = gx - x, dy = gy - y;
+                    float w = Mathf.Exp(-(dx * dx + dy * dy) / (2f * sigma * sigma));
+                    total += w;
+                    char c = st.At(gx, gy);
+                    if (code == '\0' ? c != '.' : c == code) sum += w;
+                }
+            return sum / total;
         }
 
-        static float FieldAny(Stencil st, float x, float y)
-        {
-            int x0 = Mathf.FloorToInt(x), y0 = Mathf.FloorToInt(y);
-            float fx = x - x0, fy = y - y0;
-            fx = fx * fx * (3f - 2f * fx);
-            fy = fy * fy * (3f - 2f * fy);
-            float a = st.At(x0, y0) != '.' ? 1f : 0f, b = st.At(x0 + 1, y0) != '.' ? 1f : 0f;
-            float c = st.At(x0, y0 + 1) != '.' ? 1f : 0f, d = st.At(x0 + 1, y0 + 1) != '.' ? 1f : 0f;
-            return Mathf.Lerp(Mathf.Lerp(a, b, fx), Mathf.Lerp(c, d, fx), fy);
-        }
+        static float FieldAny(Stencil st, float x, float y) { return Field(st, '\0', x, y); }
 
         /// <summary>
         /// Saves from before drawings and pictures were files (16 × 16 grids and 48-cell pictures in the save):
