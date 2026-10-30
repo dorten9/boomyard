@@ -208,7 +208,21 @@ namespace BoomYard.Core
 
         public const int DailyReward = 600;
 
-        /// <summary>The fireworks show: an empty yard on Holly Lane and forty rockets to set out and launch.</summary>
+        /// <summary>Seconds back on the clock for every target destroyed.</summary>
+        public const float TargetBonusSeconds = 3f;
+
+        /// <summary>
+        /// The clocks above were too tight to clear (the owner's call): every level gets half as much time again,
+        /// at least a minute and a half, rounded to 5 s. Each target destroyed also gives
+        /// <see cref="TargetBonusSeconds"/> back.
+        /// </summary>
+        public static float Relaxed(float time) { return (float)(Math.Round(Math.Max(90.0, time * 1.5) / 5.0) * 5.0); }
+
+        static Levels()
+        {
+            foreach (var l in All) if (!l.Tutorial) l.Time = Relaxed(l.Time);
+        }
+
         /// <summary>
         /// The big city: a whole downtown to wreck and paint, no targets and no clock. Every kind of firework,
         /// M-80s and the Black Cat come free; everything unlocked in the shop is there too, all unlimited. Pays for the wreckage

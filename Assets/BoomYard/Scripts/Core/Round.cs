@@ -69,6 +69,12 @@ namespace BoomYard.Core
             }
         }
 
+        /// <summary>Gives seconds back to the clock (a target destroyed), while the round is on.</summary>
+        public void AddTime(float seconds)
+        {
+            if (State == RoundState.Playing || State == RoundState.Stunned) TimeLeft += seconds;
+        }
+
         /// <summary>Holds the clock (the tutorial stops it while it explains).</summary>
         public bool Frozen;
 

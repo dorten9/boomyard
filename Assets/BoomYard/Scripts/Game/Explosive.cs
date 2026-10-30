@@ -294,6 +294,7 @@ namespace BoomYard.Game
 
         void Update()
         {
+            if (StuckTo != null && StuckTo.Destroyed && StuckTo.IsGlass) Unstick();
             if (done || !Lit) return;
             Remaining -= Time.deltaTime;
             if (Remaining <= 0f) { Detonate(); return; }
@@ -304,6 +305,46 @@ namespace BoomYard.Game
                 wetCheck += Time.deltaTime;
                 if (wetCheck >= 0.5f) { wetCheck = 0f; if (Random.value < 0.03f) Fizzle(); }
             }
+        }
+
+        /// <summary>The object it was set down on (it rides with it), or null.</summary>
+        public Destructible StuckTo;
+
+        /// <summary>
+        /// Holds it exactly where it was set down: resting on the surface (its underside on it, upright on the
+        /// ground, flat against a wall), not moved by physics, and riding along with the object it is on.
+        /// </summary>
+        public void StickTo(Vector3 point, Vector3 normal, Destructible on)
+        {
+            var rb = GetComponent<Rigidbody>();
+            rb.isKinematic = true;
+            // Fireworks stand upright whatever they are on; the rest lie the way the surface faces.
+            if (Def.Firework == null && normal.y < 0.95f) transform.rotation = Quaternion.FromToRotation(Vector3.up, normal) * transform.rotation;
+            transform.position = point;
+            // Lift it until its bottom just touches the surface.
+            var col = GetComponent<Collider>();
+            if (col != null)
+            {
+                Physics.SyncTransforms();
+                var b = col.bounds;
+                var up = Def.Firework != null ? Vector3.up : normal;
+                float below = Vector3.Dot(point - b.center, up) + Mathf.Abs(Vector3.Dot(b.extents, new Vector3(Mathf.Abs(up.x), Mathf.Abs(up.y), Mathf.Abs(up.z))));
+                transform.position += up * Mathf.Max(0f, below + 0.002f);
+            }
+            if (on != null && !on.Destroyed)
+            {
+                StuckTo = on;
+                transform.SetParent(on.transform, true);
+            }
+        }
+
+        /// <summary>The thing it was on broke away under it (a pane of glass): it falls.</summary>
+        void Unstick()
+        {
+            StuckTo = null;
+            transform.SetParent(null, true);
+            var rb = GetComponent<Rigidbody>();
+            if (rb != null && Motor == null) rb.isKinematic = false;
         }
 
         /// <summary>The fuse has burnt down: its sparks, glow and hiss stop.</summary>
@@ -485,6 +526,8 @@ namespace BoomYard.Game
             live = l;
             kind = k;
             dir = direction;
+            transform.SetParent(null, true);   // off whatever it was standing on
+            l.StuckTo = null;
             rb = GetComponent<Rigidbody>();
             rb.useGravity = k == Kind.Missile;
             rb.isKinematic = false;

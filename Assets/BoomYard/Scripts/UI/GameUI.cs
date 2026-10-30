@@ -93,7 +93,7 @@ namespace BoomYard.UI
             overlay = UIKit.Stretch(UIKit.Rect(safe, "Overlay"));
 
             toast = UIKit.Label(safe, "Toast", "", 34, UIKit.Fg, TextAnchor.MiddleCenter, true);
-            UIKit.Place(toast.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 120f), new Vector2(1400f, 60f));
+            UIKit.Place(toast.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 120f), new Vector2(1400f, 100f));
             toast.rectTransform.pivot = new Vector2(0.5f, 0.5f);
             toast.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.85f);
 
@@ -184,6 +184,9 @@ namespace BoomYard.UI
             clockBg.rectTransform.pivot = new Vector2(0.5f, 1f);
             timer = UIKit.Label(clockBg.transform, "Timer", "1:30", 50, UIKit.Fg, TextAnchor.MiddleCenter, true);
             UIKit.Stretch(timer.rectTransform);
+            timeBonus = UIKit.Label(hud, "TimeBonus", "", 34, UIKit.Ok, TextAnchor.MiddleLeft, true);
+            UIKit.Place(timeBonus.rectTransform, new Vector2(0.5f, 1f), new Vector2(120f, -32f), new Vector2(140f, 44f));
+            timeBonus.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.8f);
             targetsPill = UIKit.Image(hud, "Targets", UIKit.Ember, UIKit.Pill);
             UIKit.Place(targetsPill.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -98f), new Vector2(250f, 42f));
             targetsPill.rectTransform.pivot = new Vector2(0.5f, 1f);
@@ -381,8 +384,19 @@ namespace BoomYard.UI
             string text = level.Rule == LevelRule.Spare
                 ? Loc.F("rule.Spare", spare != null ? spare.Name.ToUpperInvariant() : "IT")
                 : Loc.T("rule." + level.Rule);
+            var goal = Goals.For(level);
+            if (goal != GoalKind.None && !level.Daily) text = (level.Rule != LevelRule.None ? text + "\n" : "") + "BONUS: " + Goals.Text(goal);
             Toast(text, 4.5f);
         }
+
+        /// <summary>"+3s" by the clock when a target goes down.</summary>
+        public void TimeBonus(float seconds)
+        {
+            timeBonus.text = "+" + Mathf.RoundToInt(seconds) + "s";
+            timeBonusLeft = 1.2f;
+        }
+        Text timeBonus;
+        float timeBonusLeft;
 
         public void Bonus(BonusKind kind) { Toast(Loc.T("bonus." + kind)); }
 
@@ -419,6 +433,11 @@ namespace BoomYard.UI
         {
             float dt = Time.unscaledDeltaTime;
             toastLeft -= dt;
+            if (timeBonus != null)
+            {
+                timeBonusLeft -= dt;
+                timeBonus.color = new Color(UIKit.Ok.r, UIKit.Ok.g, UIKit.Ok.b, Mathf.Clamp01(timeBonusLeft * 2f));
+            }
             toast.color = new Color(UIKit.Fg.r, UIKit.Fg.g, UIKit.Fg.b, Mathf.Clamp01(toastLeft * 2f));
             if (flashLeft > 0f)
             {

@@ -23,6 +23,9 @@ namespace BoomYard.Game
         public bool FirstClear, Unlocked;
         public string TipKey;
         public List<BonusKind> BonusLog;
+        public GoalKind Goal;
+        public bool GoalMet;
+        public int GoalCoins;
     }
 
     /// <summary>
@@ -247,7 +250,7 @@ namespace BoomYard.Game
             Round.Start(Level.Time + (save.Has("watch") ? 10f : 0f));
             UI.ShowHud();
             if (Level.Tutorial && !save.tutorialDone) Tutorial.Begin(this);
-            else if (Level.Rule != LevelRule.None) UI.RuleCard(Level, Arena.Spare);
+            else if (Level.Rule != LevelRule.None || Goals.For(Level) != GoalKind.None) UI.RuleCard(Level, Arena.Spare);
         }
 
         public bool Raining { get { return Current == Mode.Level && Level != null && Level.Rule == LevelRule.Rain; } }
@@ -389,7 +392,16 @@ namespace BoomYard.Game
                     killsPerBlast[hit.BlastId] = ++k;
                     if (k == ScoreCalculator.MultiCount) Bonus(BonusKind.Multi);
                 }
-                if (Arena.Targets.Contains(d)) UI.TargetDown(Arena.TargetsLeft, Arena.Targets.Count);
+                if (Arena.Targets.Contains(d))
+                {
+                    UI.TargetDown(Arena.TargetsLeft, Arena.Targets.Count);
+                    // Every target down gives a few seconds back.
+                    if (Arena.TargetsLeft > 0 && !Level.Show)
+                    {
+                        Round.AddTime(Levels.TargetBonusSeconds);
+                        UI.TimeBonus(Levels.TargetBonusSeconds);
+                    }
+                }
             }
             UI.Popup(d.transform.TransformPoint(d.FirePoint), v, destroyed && hit.ByObject ? mult : 0f);
         }
@@ -525,6 +537,15 @@ namespace BoomYard.Game
             sum.Coins = Progress.LevelCoins(Level, cleared, sum.FirstClear, newStars, sum.Total);
             sum.TipKey = cleared ? (Chain.LongestChain < 2 ? "tip.chain" : "tip.again") : sum.FailReason == "spare" ? "tip.spare" : (sum.FailReason == "empty" ? "tip.empty" : "tip.time");
 
+            // The bonus goal pays the first time it is met.
+            sum.Goal = Level.Daily ? GoalKind.None : Goals.For(Level);
+            sum.GoalMet = cleared && sum.Goal != GoalKind.None && Goals.Met(sum.Goal, Level, Chain.LongestChain, Round.TimeLeft, Score.ContainedHits, Score.BonusLog);
+            if (sum.GoalMet && !save.goalsDone.Contains(Level.Number))
+            {
+                save.goalsDone.Add(Level.Number);
+                sum.GoalCoins = Goals.Reward(Level);
+                sum.Coins += sum.GoalCoins;
+            }
             if (cleared)
             {
                 if (sum.Record) rec.bestDamage = sum.Total;
@@ -863,6 +884,14 @@ namespace BoomYard.Game
                     Fireworks.Burst(new Vector3(Random.Range(-8f, 8f), 22f, 6f), t, 1f);
                     yield return new WaitForSeconds(1.2f);
                 }
+                yield break;
+            }
+            if (mode == "placetest")
+            {
+                // Level 6's sedan from close by, the crosshair on its roof (the run presses E to place).
+                StartLevel(6);
+                yield return new WaitForSeconds(1.5f);
+                Player.Teleport(new Vector3(4.6f, 0f, -1.2f), 40f, 14f);
                 yield break;
             }
             if (mode == "inshop")

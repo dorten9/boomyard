@@ -252,7 +252,7 @@ namespace BoomYard.UI
         {
             var l = Levels.Get(number);
             var rec = SaveService.Data.Level(number);
-            var p = Modal("LevelInfo", new Vector2(980f, 600f));
+            var p = Modal("LevelInfo", new Vector2(980f, 660f));
             Text(p, "LEVEL " + l.Number + "  ·  " + l.Street.Name.ToUpperInvariant() + (l.Boss ? "  ·  BOSS" : ""), 26, l.Boss ? UIKit.Danger : UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -46f), new Vector2(900f, 34f), true);
             Text(p, l.Name.ToUpperInvariant(), 58, UIKit.Fg, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -100f), new Vector2(900f, 70f), true);
             Stars(p, rec.stars, new Vector2(0.5f, 1f), new Vector2(0f, -164f), 44f, 52f);
@@ -263,6 +263,12 @@ namespace BoomYard.UI
             Text(p, "Destroy all " + targets + " targets in " + Loc.Time(l.Time) + rule, 32, UIKit.Flame, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -226f), new Vector2(940f, 44f));
             Text(p, "TARGETS:  " + Summary(list.ToArray()), 24, UIKit.Fg, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -290f), new Vector2(900f, 70f));
             if (l.Number >= 2) Text(p, SaveService.Data.goldGnomes.Contains(l.Number) ? "GOLDEN GNOME FOUND" : "A GOLDEN GNOME IS HIDDEN HERE", 22, new Color(1f, 0.78f, 0.3f), TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -420f), new Vector2(900f, 30f), true);
+            var goal = Goals.For(l);
+            if (goal != GoalKind.None)
+            {
+                bool done = SaveService.Data.goalsDone.Contains(l.Number);
+                Text(p, "BONUS GOAL:  " + Goals.Text(goal).ToUpperInvariant() + (done ? "   ·   DONE" : "   ·   +" + Goals.Reward(l) + " COINS"), 22, done ? UIKit.Ok : UIKit.SteelBlue, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -462f), new Vector2(940f, 30f), true);
+            }
             Text(p, "YOU GET:  " + KitSummary(l.Kit) + Owned(), 24, UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -368f), new Vector2(900f, 70f));
             Btn(p, "PLAY", true, () => game.StartLevel(number), new Vector2(0.5f, 0f), new Vector2(110f, 80f), new Vector2(320f, 96f), 44);
             Btn(p, "CLOSE", false, CloseModal, new Vector2(0.5f, 0f), new Vector2(-200f, 80f), new Vector2(220f, 86f), 28);
@@ -733,7 +739,9 @@ namespace BoomYard.UI
                 Stat(s, 1, "WRECKAGE", Loc.Money(r.Total));
                 Stat(s, 2, "LONGEST CHAIN", r.LongestChain > 0 ? r.LongestChain + " links" : "–");
                 Stat(s, 3, "COINS EARNED", "+" + Loc.Coins(r.Coins));
-                if (r.Record && r.PreviousBest > 0) Text(s, "NEW WRECKAGE RECORD", 26, UIKit.Ember, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, -150f), new Vector2(800f, 34f), true);
+                if (r.Goal != GoalKind.None)
+                    Text(s, "BONUS GOAL: " + Goals.Text(r.Goal).ToUpperInvariant() + (r.GoalMet ? (r.GoalCoins > 0 ? "  ·  DONE  +" + r.GoalCoins + " COINS" : "  ·  DONE") : "  ·  NOT THIS TIME"), 24, r.GoalMet ? UIKit.Ok : UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, -128f), new Vector2(1300f, 34f), true);
+                if (r.Record && r.PreviousBest > 0) Text(s, "NEW WRECKAGE RECORD", 26, UIKit.Ember, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, -162f), new Vector2(800f, 34f), true);
                 Text(s, Loc.T(r.TipKey), 22, UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), new Vector2(0f, 190f), new Vector2(1300f, 34f));
                 bool last = r.Level.Daily || r.Level.Number >= Levels.All.Length;
                 Btn(s, last ? "MAP" : "NEXT LEVEL", true, () => { if (last) game.GoMap(); else game.NextLevel(); }, new Vector2(0.5f, 0f), new Vector2(0f, 100f), new Vector2(380f, 100f), 42);
