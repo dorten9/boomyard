@@ -1,5 +1,5 @@
 // iPhone: picks a picture for a stencil with the system photo picker (no photo library permission needed),
-// scales it down to 256 px and hands the game a PNG path (ImagePicker.OnPickedFile).
+// scales it down to 512 px and hands the game a PNG path (ImagePicker.OnPickedFile).
 #import <UIKit/UIKit.h>
 #import <PhotosUI/PhotosUI.h>
 
@@ -26,7 +26,7 @@ static NSObject* gPicker;
         dispatch_async(dispatch_get_main_queue(), ^{
             if (image == nil) { UnitySendMessage(target.UTF8String, "OnPickFailed", ""); return; }
             CGSize size = image.size;
-            CGFloat k = MIN(1.0, 256.0 / MAX(size.width, size.height));
+            CGFloat k = MIN(1.0, 512.0 / MAX(size.width, size.height));
             CGSize small = CGSizeMake(MAX(1.0, round(size.width * k)), MAX(1.0, round(size.height * k)));
             UIGraphicsImageRendererFormat* format = [UIGraphicsImageRendererFormat defaultFormat];
             format.scale = 1;

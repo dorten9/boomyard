@@ -66,6 +66,7 @@ namespace BoomYard.Game
             I = this;
             Mark("start");
             var save = SaveService.Load();
+            Stencils.MigrateOldSave(save);
             Purchases.Init();
             Purchases.Granted += pack => { Sfx.I.Coin(); if (UI != null) UI.Toast("+" + Loc.Coins(pack.Coins) + " coins. Thank you!", 3f); };
             Loc.Init("en");
@@ -198,11 +199,11 @@ namespace BoomYard.Game
             Round.Tick(0f, false);
         }
 
-        /// <summary>Every rocket standing in the street goes up, one after another, in the order they were set down.</summary>
+        /// <summary>Every firework standing in the street goes up, one after another, in the order they were set down.</summary>
         public void LaunchShow()
         {
             var list = new List<LiveExplosive>();
-            foreach (var l in LiveExplosive.Active) if (l != null && !l.Lit && l.Def.Id == "rocket") list.Add(l);
+            foreach (var l in LiveExplosive.Active) if (l != null && !l.Lit && l.Def.Firework != null) list.Add(l);
             if (list.Count == 0) return;
             StartCoroutine(Show(list));
         }
@@ -645,15 +646,14 @@ namespace BoomYard.Game
             if (Paused) UI.ShowShop(true);
         }
 
-        /// <summary>The next stencil owned (custom ones that have a drawing in them too), then none.</summary>
+        /// <summary>The next stencil owned (and every drawing and picture made), then none.</summary>
         public void CycleStencil()
         {
             var save = SaveService.Data;
             var ids = new List<string> { "" };
             foreach (var st in Graffiti.Stencils) if (save.Owns(Shop.Get("stencil_" + st.Id))) ids.Add(st.Id);
-            if (save.Owns(Shop.Get("maker")))
-                for (int i = 0; i < Graffiti.CustomSlots; i++) if (!Graffiti.Empty(save.Custom(i))) ids.Add(Graffiti.CustomId(i));
-            for (int i = 0; i < Graffiti.PictureSlots; i++) if (save.Picture(i) != null) ids.Add(Graffiti.PictureId(i));
+            for (int i = 0; i < Graffiti.CustomSlots; i++) if (Stencils.Has(Stencils.DrawingId(i))) ids.Add(Stencils.DrawingId(i));
+            for (int i = 0; i < Graffiti.PictureSlots; i++) if (Stencils.Has(Stencils.PictureId(i))) ids.Add(Stencils.PictureId(i));
             if (ids.Count == 1) { UI.Toast(Loc.T("toast.buystencil")); return; }
             int at = ids.IndexOf(save.stencil);
             save.stencil = ids[(at + 1) % ids.Count];
@@ -805,8 +805,7 @@ namespace BoomYard.Game
                 var save = SaveService.Data;
                 if (!save.styles.Contains("maker")) save.styles.Add("maker");
                 string smile = "....................########......############...####kk##kk####..####kk##kk####.####################################w######w#######kw######wk#######kkwwwwkk####.#####kkkk#####..##############...############......########....................................";
-                save.Custom(0);
-                save.customStencils[0] = smile;
+                Stencils.Save(Stencils.DrawingId(0), Stencils.Smooth(Graffiti.FromGrid("custom0", "Drawing", smile), Graffiti.Color("red")));
                 GoHome();
                 UI.ShowStudio(null);
                 yield break;
@@ -827,11 +826,9 @@ namespace BoomYard.Game
                     }
                 if (mode == "picture") { GoHome(); UI.ShowStudio(null); UI.OnPicture(rgba, px, px, 0); yield break; }
                 var save = SaveService.Data;
-                var st = Graffiti.PictureFrom(rgba, px, px, Graffiti.PictureId(0), "Picture 1");
-                while (save.pictures.Count < Graffiti.PictureSlots) save.pictures.Add("");
-                save.pictures[0] = Graffiti.EncodePicture(st);
-                save.stencil = Graffiti.PictureId(0);
-                Spray.StencilsVersion++;
+                var st = Graffiti.PictureFrom(rgba, px, px, Graffiti.PictureId(0), "Picture 1", true, Graffiti.PictureSharp);
+                Stencils.Save(Stencils.PictureId(0), Stencils.FromRgba(st.Rgba, st.PicWidth, st.PicHeight));
+                save.stencil = Stencils.PictureId(0);
                 StartCity();
                 yield return new WaitForSeconds(1f);
                 Player.Teleport(new Vector3(51f, 0.16f, -44.2f), 180f, -4f);
@@ -840,6 +837,32 @@ namespace BoomYard.Game
                 yield return new WaitForSeconds(0.5f);
                 var eye = Player.Cam.transform.position;
                 Spray.I.Stamp(new Ray(eye, new Vector3(51f, 2.6f, -48f) - eye));
+                yield break;
+            }
+            if (mode == "fireworks")
+            {
+                // One of each firework on the road in front of the plaza, then the show.
+                StartCity();
+                yield return new WaitForSeconds(1.5f);
+                Player.Teleport(new Vector3(0f, 0.16f, -32f), 0f, -28f);
+                string[] kinds = { "fountain", "candle", "cake", "mortar", "rocket", "rocket" };
+                for (int i = 0; i < kinds.Length; i++)
+                    LiveExplosive.SpawnUnlit(Catalog.Explosive(kinds[i]), new Vector3(-6f + i * 2.4f, 0.05f, -20f), Quaternion.identity, Placement.Placed);
+                yield return new WaitForSeconds(1f);
+                LaunchShow();
+                yield break;
+            }
+            if (mode == "bursts")
+            {
+                // Every kind of shell, one after another, high over the plaza.
+                StartCity();
+                yield return new WaitForSeconds(1.5f);
+                Player.Teleport(new Vector3(0f, 0.16f, -32f), 0f, -30f);
+                foreach (ShellType t in System.Enum.GetValues(typeof(ShellType)))
+                {
+                    Fireworks.Burst(new Vector3(Random.Range(-8f, 8f), 22f, 6f), t, 1f);
+                    yield return new WaitForSeconds(1.2f);
+                }
                 yield break;
             }
             if (mode == "inshop")

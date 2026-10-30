@@ -210,13 +210,13 @@ namespace BoomYard.Core
 
         /// <summary>The fireworks show: an empty yard on Holly Lane and forty rockets to set out and launch.</summary>
         /// <summary>
-        /// The big city: a whole downtown to wreck and paint, no targets and no clock. Rockets, M-80s and the
-        /// Black Cat come free; everything unlocked in the shop is there too, all unlimited. Pays for the wreckage
+        /// The big city: a whole downtown to wreck and paint, no targets and no clock. Every kind of firework,
+        /// M-80s and the Black Cat come free; everything unlocked in the shop is there too, all unlimited. Pays for the wreckage
         /// when the player cashes in.
         /// </summary>
         public static LevelDef City()
         {
-            return new LevelDef { Number = 0, Name = "Big City", Time = 3600f, Reward = 0, Props = new PropSpot[0], Kit = Kit("rocket", 1, "m80", 1, "blackcat", 1), Show = true };
+            return new LevelDef { Number = 0, Name = "Big City", Time = 3600f, Reward = 0, Props = new PropSpot[0], Kit = Kit("rocket", 1, "cake", 1, "mortar", 1, "candle", 1, "fountain", 1, "m80", 1, "blackcat", 1), Show = true };
         }
 
         /// <summary>

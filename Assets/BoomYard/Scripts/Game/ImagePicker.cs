@@ -14,7 +14,7 @@ namespace BoomYard.Game
     {
         public static ImagePicker I { get; private set; }
         /// <summary>Browser pixels are scaled to this; the stencil itself is smaller still (Graffiti.PictureSize).</summary>
-        const int MaxSide = 128;
+        const int MaxSide = 512;
 
         Action<byte[], int, int> done;
         Action<string> failed;

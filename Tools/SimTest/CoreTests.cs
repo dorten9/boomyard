@@ -182,7 +182,7 @@ static class CoreTests
 
     static void CatalogChecks()
     {
-        Check(Catalog.Explosives.Length == 16, "16 explosives (with the timer and remote charges)");
+        Check(Catalog.Explosives.Length == 20, "20 explosives (with the timer and remote charges and the ground fireworks)");
         Check(Catalog.Objects.Length >= 28, "28+ objects");
         Check(Catalog.Arenas.Length == 6, "6 arenas");
         foreach (var o in Catalog.Objects)
@@ -260,6 +260,8 @@ static class MetaTests
             }
         var pic = Graffiti.PictureFrom(img, pw, ph, "picture0", "P");
         check(pic.Picture && pic.Width == Graffiti.PictureSize && pic.Height == Graffiti.PictureSize / 2, "a picture is scaled to fit, keeping its shape");
+        var sharp = Graffiti.PictureFrom(img, pw, ph, "picture0", "P", true, Graffiti.PictureSharp);
+        check(sharp.Width == pw && sharp.Height == ph && sharp.At(0, 0) == '.' && sharp.At(100, 50) == '*', "a small picture is kept at full sharpness");
         check(pic.At(0, 0) == '.' && pic.At(pic.Width / 2, pic.Height / 2) == '*', "a plain background is cut away, the subject stays");
         var mid = Graffiti.Cells(pic).Find(c => c.X == pic.Width / 2 && c.Y == pic.Height / 2);
         check(mid.R > 200 && mid.G < 60, "a picture keeps its own colours");

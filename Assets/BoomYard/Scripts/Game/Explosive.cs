@@ -60,6 +60,31 @@ namespace BoomYard.Game
                     Part(root, MeshKit.RoundedBox(new Vector3(0.006f, 0.42f, 0.006f), 0.002f), new Vector3(0.017f, -0.2f, 0f), Mats.Surface("wood", Color.white, 0f, 0.4f));
                     tip = new Vector3(0f, -0.05f - fuseLen * 0.2f, 0f);
                     break;
+                case "cake":
+                    // A square battery of tubes in bright wrapping, the tube mouths dark on top.
+                    Part(root, MeshKit.RoundedBox(new Vector3(0.22f, 0.18f, 0.22f), 0.01f), new Vector3(0f, 0.07f, 0f), Mats.Lit(new Color(0.15f, 0.25f, 0.6f), 0f, 0.4f));
+                    Part(root, MeshKit.RoundedBox(new Vector3(0.225f, 0.05f, 0.225f), 0.005f), new Vector3(0f, 0.1f, 0f), Mats.Lit(new Color(0.95f, 0.75f, 0.15f), 0f, 0.4f));
+                    for (int i = 0; i < 16; i++)
+                        Part(root, MeshKit.Lathe("caketube", new[] { new Vector2(0.018f, 0f), new Vector2(0f, 0.001f) }, 10), new Vector3(-0.075f + (i % 4) * 0.05f, 0.161f, -0.075f + (i / 4) * 0.05f), Mats.Lit(new Color(0.05f, 0.04f, 0.04f), 0f, 0.2f));
+                    tip = new Vector3(0.11f, 0.03f + fuseLen, 0f);
+                    break;
+                case "mortar":
+                    // A thick fibreglass tube on a wooden base, the shell's fuse hanging out of the top.
+                    Part(root, MeshKit.RoundedBox(new Vector3(0.14f, 0.03f, 0.14f), 0.005f), new Vector3(0f, -0.005f, 0f), Mats.Surface("wood", Color.white, 0f, 0.4f));
+                    Tube(root, new Vector3(0f, 0.01f, 0f), 0.04f, 0.28f, Mats.Lit(new Color(0.12f, 0.12f, 0.13f), 0.1f, 0.5f), Mats.Lit(new Color(0.05f, 0.05f, 0.05f), 0f, 0.2f));
+                    tip = new Vector3(0.02f, 0.29f + fuseLen, 0f);
+                    break;
+                case "candle":
+                    // A long thin tube in stripes.
+                    for (int i = 0; i < 6; i++) Tube(root, new Vector3(0f, i * 0.06f, 0f), 0.013f, 0.06f, Mats.Lit(i % 2 == 0 ? new Color(0.8f, 0.15f, 0.12f) : new Color(0.95f, 0.85f, 0.3f), 0f, 0.4f), cap);
+                    tip = new Vector3(0f, 0.36f + fuseLen, 0f);
+                    break;
+                case "fountain":
+                    // A paper cone on a plastic foot.
+                    Part(root, MeshKit.Lathe("fountain", new[] { new Vector2(0.055f, 0f), new Vector2(0.05f, 0.02f), new Vector2(0.035f, 0.11f), new Vector2(0.012f, 0.14f), new Vector2(0f, 0.141f) }, 16, true, true), Vector3.zero, Mats.Lit(new Color(0.2f, 0.65f, 0.35f), 0f, 0.4f));
+                    Part(root, MeshKit.Lathe("fountainband", new[] { new Vector2(0.045f, 0f), new Vector2(0.041f, 0.03f) }, 16), new Vector3(0f, 0.05f, 0f), Mats.Lit(new Color(0.95f, 0.85f, 0.3f), 0f, 0.4f));
+                    tip = new Vector3(0f, 0.14f + fuseLen, 0f);
+                    break;
                 case "timer":
                     // Two sticks taped to a black kitchen-timer box with a green display and a red LED.
                     for (int i = 0; i < 2; i++) Tube(root, new Vector3((i - 0.5f) * 0.03f, -0.09f, -0.012f), 0.0145f, 0.18f, Mats.Lit(new Color(0.62f, 0.12f, 0.08f), 0f, 0.3f), cap);
@@ -123,6 +148,10 @@ namespace BoomYard.Game
                 case "pipe": return Mats.Steel;
                 case "timer": return new Color(0.12f, 0.35f, 0.18f);
                 case "rocket": return new Color(0.75f, 0.1f, 0.08f);
+                case "cake": return new Color(0.15f, 0.25f, 0.6f);
+                case "mortar": return new Color(0.15f, 0.15f, 0.16f);
+                case "candle": return new Color(0.95f, 0.8f, 0.25f);
+                case "fountain": return new Color(0.2f, 0.65f, 0.35f);
                 case "remote": return new Color(0.18f, 0.3f, 0.6f);
                 default: return new Color(0.61f, 0.16f, 0.13f);
             }
@@ -205,11 +234,12 @@ namespace BoomYard.Game
             if (col is CapsuleCollider)
             {
                 var cap = (CapsuleCollider)col;
-                cap.radius = def.Id == "keg" ? 0.19f : 0.02f;
-                cap.height = def.Id == "keg" ? 0.5f : 0.08f;
+                cap.radius = def.Id == "keg" ? 0.19f : def.Id == "cake" ? 0.12f : def.Id == "mortar" || def.Id == "fountain" ? 0.05f : 0.02f;
+                cap.height = def.Id == "keg" ? 0.5f : def.Id == "cake" ? 0.24f : def.Id == "candle" ? 0.4f : def.Id == "mortar" ? 0.3f : 0.08f;
+                if (def.Id == "cake" || def.Id == "mortar" || def.Id == "candle" || def.Id == "fountain") cap.center = new Vector3(0f, cap.height * 0.5f - 0.02f, 0f);
             }
             go.layer = Layers.Default;
-            if (def.Id == "rocket") rb.constraints = RigidbodyConstraints.FreezeRotation;   // a set-down rocket stays upright
+            if (def.Firework != null) rb.constraints = RigidbodyConstraints.FreezeRotation;   // a set-down firework stays upright
 
             Active.Add(live);
             if (lit) live.Light();
@@ -276,6 +306,17 @@ namespace BoomYard.Game
             }
         }
 
+        /// <summary>The fuse has burnt down: its sparks, glow and hiss stop.</summary>
+        void StopFuse()
+        {
+            if (sparks != null) Destroy(sparks.gameObject);
+            if (glow != null) Destroy(glow);
+            var tip = transform.Find("FuseTip");
+            if (tip == null) return;
+            var hiss = tip.GetComponent<AudioSource>();
+            if (hiss != null) hiss.Stop();
+        }
+
         /// <summary>The fuse goes out: it lies there unlit again, with the time it had left.</summary>
         void Fizzle()
         {
@@ -320,6 +361,14 @@ namespace BoomYard.Game
         {
             if (done) return;
             // A rocket whose fuse burns down on the ground goes up as a firework instead.
+            if (Def.Firework != null && Def.Firework != "rocket" && !Airborne)
+            {
+                // A firework that fires from the ground: it stays and fires, then it is gone.
+                done = true;
+                StopFuse();
+                FireworkDevice.Begin(this);
+                return;
+            }
             if (Def.Id == "rocket" && Motor == null && !Airborne)
             {
                 Motor = gameObject.AddComponent<RocketMotor>();
@@ -430,7 +479,6 @@ namespace BoomYard.Game
         Rigidbody rb;
         float age;
 
-        static readonly Color[] Stars = { new Color(1f, 0.25f, 0.2f), new Color(0.3f, 1f, 0.4f), new Color(0.35f, 0.55f, 1f), new Color(1f, 0.85f, 0.3f), new Color(1f, 0.4f, 1f), new Color(1f, 1f, 1f) };
 
         public void Launch(LiveExplosive l, Kind k, Vector3 direction)
         {
@@ -470,9 +518,7 @@ namespace BoomYard.Game
             rb.velocity = dir * Mathf.Lerp(8f, 20f, Mathf.Clamp01(age * 2f));
 #endif
             if (age < 1.05f) return;   // about 15 m up: high over the house, still in view from the yard
-            var c = Stars[Random.Range(0, Stars.Length)];
-            Fx.Shell(transform.position, c, Random.value < 0.4f ? Stars[Random.Range(0, Stars.Length)] : c);
-            Sfx.I.Boom(transform.position, 0.6f);
+            Fireworks.Burst(transform.position, Fireworks.RandomType(), 1f);
             Destroy(gameObject);
         }
     }

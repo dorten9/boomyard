@@ -45,6 +45,7 @@ namespace BoomYard.Core
         public float Mass = 0.08f;  // kg, for throwing
         public bool Timer;          // placed, it counts down by itself (no lighter); Fuse is the default delay
         public bool Remote;         // placed, it waits for the detonator button
+        public string Firework;     // a firework: "rocket", "cake", "mortar", "candle" or "fountain" (null for the rest)
         public string Note;
     }
 
@@ -93,7 +94,7 @@ namespace BoomYard.Core
             new ExplosiveDef { Id = "blackcat", NameHe = "נפץ קטן", NameEn = "Black Cat", Family = Family.Blast, Fuse = 2.5f, Damage = 60, Radius = 0.8f, Price = 0, FreePerRound = 4, Note = "The basics. Windows, bins, containment in a mailbox." },
             new ExplosiveDef { Id = "string50", NameHe = "מחרוזת 50", NameEn = "Firecracker string", Family = Family.Blast, Fuse = 1.5f, Damage = 20, Units = 50, UnitInterval = 0.1f, Radius = 0.5f, Price = 900, Note = "5 seconds of bangs along a line." },
             new ExplosiveDef { Id = "sparkler", NameHe = "חזיז", NameEn = "Sparkler bomb", Family = Family.Fire, Fuse = 3f, Damage = 40, Radius = 1f, Price = 400, BurnSeconds = 8f, Note = "Burns 8 s in place, lights anything flammable." },
-            new ExplosiveDef { Id = "rocket", NameHe = "רקטה", NameEn = "Rocket", Family = Family.Push, Fuse = 2.5f, Damage = 160, Radius = 1.4f, Price = 350, Mass = 0.1f, Note = "Light it and throw: it flies where you aim and bursts on impact. Light one standing on the ground and it goes up as a firework." },
+            new ExplosiveDef { Id = "rocket", NameHe = "רקטה", NameEn = "Rocket", Family = Family.Push, Fuse = 2.5f, Damage = 160, Radius = 1.4f, Price = 350, Mass = 0.1f, Firework = "rocket", Note = "Light it and throw: it flies where you aim and bursts on impact. Light one standing on the ground and it goes up as a firework." },
             new ExplosiveDef { Id = "m80", NameHe = "M-80", NameEn = "M-80", Family = Family.Blast, Fuse = 3f, Damage = 400, Radius = 2f, Price = 1800, UnlockArena = 2, Mass = 0.12f, Note = "First item that pops a fuel tank. Best placed under a car." },
             new ExplosiveDef { Id = "cherry", NameHe = "Cherry bomb", NameEn = "Cherry bomb", Family = Family.Blast, Fuse = 2f, Damage = 250, Radius = 1.5f, Price = 1100, UnlockArena = 2, Rolls = true, Note = "Round, rolls down slopes to where it is needed." },
             new ExplosiveDef { Id = "cake36", NameHe = "עוגת זיקוקים 36", NameEn = "Cake 36", Family = Family.Push, Fuse = 2f, Damage = 50, Units = 36, UnitInterval = 6f / 36f, Radius = 10f, Price = 2400, UnlockArena = 3, Throwable = false, Mass = 1.5f, Note = "Planned chaos. Tip it over for horizontal fire." },
@@ -105,6 +106,11 @@ namespace BoomYard.Core
             new ExplosiveDef { Id = "detcord", NameHe = "Det cord", NameEn = "Det cord", Family = Family.Timed, Fuse = 0f, Damage = 300, Radius = 0.6f, Price = 4000, UnlockArena = 5, Throwable = false, Note = "String it between objects, light one end: all at once." },
             new ExplosiveDef { Id = "timer", NameHe = "מטען שעון", NameEn = "Timer charge", Family = Family.Timed, Fuse = 10f, Damage = 500, Radius = 2.2f, Price = 0, Throwable = false, Timer = true, Mass = 0.6f, Note = "Place it and walk away: it goes off when the clock hits zero. Tap it again in the pocket for 5, 10 or 15 s." },
             new ExplosiveDef { Id = "remote", NameHe = "מטען שלט", NameEn = "Remote charge", Family = Family.Timed, Fuse = 0f, Damage = 450, Radius = 2f, Price = 0, Throwable = false, Remote = true, Mass = 0.5f, Note = "Place as many as you like, then press BOOM to set them all off at once." },
+            // Fireworks that stay on the ground and fire into the sky (FireworkDevice).
+            new ExplosiveDef { Id = "cake", NameHe = "עוגת זיקוקים", NameEn = "Firework cake", Family = Family.Push, Fuse = 3f, Damage = 30, Radius = 0.8f, Throwable = false, Mass = 1.2f, Firework = "cake", Note = "Sixteen shells, one after another: rings, crackles, willows." },
+            new ExplosiveDef { Id = "mortar", NameHe = "פגז זיקוקים", NameEn = "Mortar shell", Family = Family.Push, Fuse = 3f, Damage = 60, Radius = 1f, Throwable = false, Mass = 0.8f, Firework = "mortar", Note = "One huge shell, high over the rooftops." },
+            new ExplosiveDef { Id = "candle", NameHe = "נר רומי", NameEn = "Roman candle", Family = Family.Push, Fuse = 2.5f, Damage = 20, Radius = 0.5f, Throwable = false, Mass = 0.3f, Firework = "candle", Note = "Eight coloured balls, one every half second." },
+            new ExplosiveDef { Id = "fountain", NameHe = "מזרקת זיקוקים", NameEn = "Fountain", Family = Family.Fire, Fuse = 2f, Damage = 20, Radius = 0.6f, Throwable = false, Mass = 0.4f, Firework = "fountain", Note = "Eight seconds of gold sparks; sets light to anything flammable right next to it." },
             new ExplosiveDef { Id = "thermite", NameHe = "Thermite", NameEn = "Thermite", Family = Family.Fire, Fuse = 3f, Damage = 80, Units = 12, UnitInterval = 1f, Radius = 0.5f, Price = 5500, UnlockArena = 6, Throwable = false, Note = "Burns through metal: opens tanks, lights engines." },
         };
 

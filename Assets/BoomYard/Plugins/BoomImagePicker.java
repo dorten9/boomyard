@@ -15,7 +15,7 @@ import java.io.InputStream;
 
 /**
  * Android: picks a picture for a stencil with the system picker (no storage permission needed), scales it down
- * to 256 px and hands the game a PNG path (ImagePicker.OnPickedFile). A headless fragment receives the result.
+ * to 512 px and hands the game a PNG path (ImagePicker.OnPickedFile). A headless fragment receives the result.
  */
 @SuppressWarnings("deprecation")
 public class BoomImagePicker extends Fragment {
@@ -70,14 +70,14 @@ public class BoomImagePicker extends Fragment {
         BitmapFactory.decodeStream(in, null, bounds);
         in.close();
         int sample = 1;
-        while (Math.max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= 256) sample *= 2;
+        while (Math.max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= 512) sample *= 2;
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inSampleSize = sample;
         in = activity.getContentResolver().openInputStream(uri);
         Bitmap bmp = BitmapFactory.decodeStream(in, null, options);
         in.close();
         if (bmp == null) return null;
-        float k = Math.min(1f, 256f / Math.max(bmp.getWidth(), bmp.getHeight()));
+        float k = Math.min(1f, 512f / Math.max(bmp.getWidth(), bmp.getHeight()));
         if (k < 1f) bmp = Bitmap.createScaledBitmap(bmp, Math.max(1, Math.round(bmp.getWidth() * k)), Math.max(1, Math.round(bmp.getHeight() * k)), true);
         File file = new File(activity.getCacheDir(), "boomyard_pick.png");
         FileOutputStream out = new FileOutputStream(file);
