@@ -349,21 +349,22 @@ namespace BoomYard.Game
             var ps = go.AddComponent<ParticleSystem>();
             var main = ps.main;
             main.loop = true;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(0.2f, 0.45f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(1.5f, 3f);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.02f, 0.06f);
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.25f, 0.55f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(4f, 7f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.03f, 0.09f);
             main.startColor = c;
+            main.maxParticles = 600;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             var em = ps.emission;
-            em.rateOverTime = 60f;
+            em.rateOverTime = 260f;
             em.enabled = false;
             var shape = ps.shape;
             shape.shapeType = ParticleSystemShapeType.Cone;
-            shape.angle = 9f;
+            shape.angle = 7f;
             shape.radius = 0.002f;
             var size = ps.sizeOverLifetime;
             size.enabled = true;
-            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.5f, 1f, 3f));
+            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.4f, 1f, 4f));
             var col = ps.colorOverLifetime;
             col.enabled = true;
             var g = new Gradient();
@@ -401,64 +402,6 @@ namespace BoomYard.Game
             r.lengthScale = 1.5f;
             ps.Play();
             return ps;
-        }
-
-        /// <summary>
-        /// A firework burst high in the air: a ball of coloured stars that falls and fades (two colours for a
-        /// ring-and-core shell), a flash of light over the street and a few glittering embers.
-        /// </summary>
-        public static void Shell(Vector3 pos, Color a, Color b)
-        {
-            var go = new GameObject("Shell");
-            go.transform.position = pos;
-            for (int k = 0; k < 2; k++)
-            {
-                var g = new GameObject(k == 0 ? "Stars" : "Core");
-                g.transform.SetParent(go.transform, false);
-                var ps = g.AddComponent<ParticleSystem>();
-                ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-                var main = ps.main;
-                main.loop = false;
-                main.duration = 0.1f;
-                main.startLifetime = new ParticleSystem.MinMaxCurve(k == 0 ? 1.6f : 1.1f, k == 0 ? 2.3f : 1.5f);
-                main.startSpeed = new ParticleSystem.MinMaxCurve(k == 0 ? 9f : 3.5f, k == 0 ? 11f : 5f);
-                main.startSize = new ParticleSystem.MinMaxCurve(0.12f, 0.22f);
-                main.startColor = (k == 0 ? a : b) * 2.5f;
-                main.gravityModifier = 0.25f;
-                main.simulationSpace = ParticleSystemSimulationSpace.World;
-                main.maxParticles = 400;
-                var em = ps.emission;
-                em.rateOverTime = 0f;
-                em.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)(k == 0 ? 160 : 70)) });
-                var shape = ps.shape;
-                shape.shapeType = ParticleSystemShapeType.Sphere;
-                shape.radius = 0.2f;
-                var limit = ps.limitVelocityOverLifetime;
-                limit.enabled = true;
-                limit.drag = 1.6f;
-                var col = ps.colorOverLifetime;
-                col.enabled = true;
-                var grad = new Gradient();
-                grad.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
-                    new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0.8f, 0.6f), new GradientAlphaKey(0f, 1f) });
-                col.color = grad;
-                var trails = ps.trails;
-                trails.enabled = Quality.Tier != QualityTier.Low;
-                trails.lifetime = 0.25f;
-                trails.widthOverTrail = 0.5f;
-                var r = g.GetComponent<ParticleSystemRenderer>();
-                r.sharedMaterial = Mats.ParticleAdd;
-                r.trailMaterial = Mats.ParticleAdd;
-                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                ps.Play();
-            }
-            var light = go.AddComponent<Light>();
-            light.type = LightType.Point;
-            light.color = a;
-            light.range = 45f;
-            light.intensity = 3f;
-            go.AddComponent<FadeLight>().Duration = 0.9f;
-            Object.Destroy(go, 3f);
         }
 
         /// <summary>Rain around the camera (LevelRule.Rain): falling streaks in a box that moves with the player.</summary>
@@ -700,6 +643,7 @@ namespace BoomYard.Game
 
         void Update()
         {
+            if (l == null) { Destroy(this); return; }   // the light went out (a fuse burnt down)
             float n = Mathf.PerlinNoise(seed, Time.time * 9f);
             l.intensity = baseIntensity * (0.6f + 0.8f * n);
         }

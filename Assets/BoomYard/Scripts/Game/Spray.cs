@@ -25,6 +25,8 @@ namespace BoomYard.Game
         const float DabRate = 45f;
         /// <summary>SPRAY held by a screenshot run.</summary>
         public bool HeldForShot;
+        /// <summary>Where the can is pointing while it sprays (the mist flies that way).</summary>
+        public Vector3 AimDir = Vector3.forward;
         /// <summary>Bumped when a drawing or picture changes, so the cached stencil is rebuilt.</summary>
         public static int StencilsVersion;
 
@@ -36,7 +38,9 @@ namespace BoomYard.Game
         int dabs;
         string cachedId;
         int cachedVersion = -1;
-        Stencil cached;
+        string cachedColour;
+        StencilImage cached;
+        int stamps;
 
         public static Spray Create(GameObject host)
         {
@@ -49,16 +53,18 @@ namespace BoomYard.Game
         public SprayCap Cap { get { return Graffiti.Cap(SaveService.Data.sprayCap); } }
 
         /// <summary>The stencil set on the can (shop, drawing or picture), or null for freehand.</summary>
-        public Stencil Stencil
+        public StencilImage Stencil
         {
             get
             {
                 var id = SaveService.Data.stencil;
-                if (id != cachedId || cachedVersion != StencilsVersion)
+                var colourKey = SaveService.Data.sprayColor;
+                if (id != cachedId || cachedVersion != StencilsVersion || colourKey != cachedColour)
                 {
                     cachedId = id;
                     cachedVersion = StencilsVersion;
-                    cached = SaveService.Data.StencilById(id);
+                    cachedColour = colourKey;
+                    cached = Stencils.Get(id, Color);
                 }
                 return cached;
             }
@@ -95,6 +101,7 @@ namespace BoomYard.Game
         public void Paint(Ray ray)
         {
             Painting = true;
+            AimDir = ray.direction;
             Sfx.I.Spray(true);
             RaycastHit hit;
             if (!Surface(ray, Reach, out hit)) { hasLast = false; return; }
@@ -200,35 +207,36 @@ namespace BoomYard.Game
             return true;
         }
 
-        IEnumerator StampRun(Stencil st, Vector3 centre, Vector3 n, Vector3 look, SprayColor can)
+        /// <summary>
+        /// The stencil goes on as one picture laid flat on the surface (upright on a wall, pointing away from the
+        /// player on the ground), sprayed in over half a second.
+        /// </summary>
+        IEnumerator StampRun(StencilImage st, Vector3 centre, Vector3 n, Vector3 look, SprayColor can)
         {
-            // The stencil's axes on the surface: upright on a wall, pointing away from the player on the ground.
-            Vector3 right;
-            if (Mathf.Abs(n.y) < 0.7f) right = Vector3.Cross(n, Vector3.up).normalized;
-            else right = Vector3.Cross(Vector3.up, Vector3.ProjectOnPlane(look, Vector3.up).normalized).normalized * Mathf.Sign(n.y);
-            var up = Vector3.Cross(right, n).normalized;
-            if (Mathf.Abs(n.y) >= 0.7f) up = Vector3.Cross(n, right).normalized;
-            float cell = Graffiti.CellSize(st);
-            var cells = Graffiti.Cells(st);
-            var origin = centre - right * (st.Width * cell * 0.5f) + up * (st.Height * cell * 0.5f);
+            Vector3 up = Mathf.Abs(n.y) < 0.7f ? Vector3.ProjectOnPlane(Vector3.up, n).normalized : Vector3.ProjectOnPlane(look, n).normalized;
+            if (up.sqrMagnitude < 0.01f) up = Vector3.Cross(n, Vector3.right).normalized;
+            if (root == null) Layer(false, true);   // makes the graffiti root
+            var go = new GameObject("Stencil " + st.Name);
+            go.transform.SetParent(root, true);
+            go.transform.position = centre + n * (0.012f + 0.0004f * (stamps++ % 20));
+            go.transform.rotation = Quaternion.LookRotation(-n, up);
+            go.transform.localScale = new Vector3(st.Width, st.Height, 1f);
+            go.AddComponent<MeshFilter>().sharedMesh = Mats.Quad;
+            var r = go.AddComponent<MeshRenderer>();
+            r.sharedMaterial = Mats.StencilDecal(st.Texture, st.Glow);
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            var mpb = new MaterialPropertyBlock();
+            var tint = st.Glow ? 1.5f : 0.95f;
             Sfx.I.Spray(true);
-            int perFrame = Mathf.Max(6, cells.Count / 24);
-            for (int i = 0; i < cells.Count; i++)
+            for (float t = 0f; t < 0.5f; t += Time.deltaTime)
             {
-                var c = cells[i];
-                var at = origin + right * ((c.X + 0.5f) * cell) - up * ((c.Y + 0.5f) * cell);
-                RaycastHit h;
-                if (Surface(new Ray(at + n * 0.3f, -n), 0.7f, out h))
-                {
-                    if (c.Code == '*') Dab(h.point, h.normal, cell * 1.5f, c.R / 255f, c.G / 255f, c.B / 255f, false, 0.95f, true);
-                    else
-                    {
-                        var col = Graffiti.Paint(c.Code, can);
-                        Dab(h.point, h.normal, cell * 1.5f, col.R, col.G, col.B, col.Glow, 0.95f, true);
-                    }
-                }
-                if (i % perFrame == perFrame - 1) yield return null;
+                mpb.SetColor("_Tint", new Color(tint, tint, tint, Mathf.SmoothStep(0f, 1f, t / 0.5f)));
+                r.SetPropertyBlock(mpb);
+                yield return null;
             }
+            mpb.SetColor("_Tint", new Color(tint, tint, tint, 1f));
+            r.SetPropertyBlock(mpb);
             if (!Painting) Sfx.I.Spray(false);
         }
     }

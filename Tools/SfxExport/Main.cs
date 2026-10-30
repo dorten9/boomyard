@@ -17,6 +17,12 @@ namespace BoomYard.Game
             double streetMs = sw.Elapsed.TotalMilliseconds;
             sw.Restart();
             all["spray"] = SfxGen.SprayClip();
+            all["shellBoom"] = SfxGen.ShellBoomClip(false);
+            all["shellBoomBig"] = SfxGen.ShellBoomClip(true);
+            all["shellCrackle"] = SfxGen.CrackleClip();
+            all["mortarThump"] = SfxGen.ThumpClip();
+            all["candlePop"] = SfxGen.CoughClip();
+            all["fountain"] = SfxGen.FountainClip(new System.Random(51));
             all["rattle"] = SfxGen.RattleClip();
             double lazyMs = sw.Elapsed.TotalMilliseconds;
             System.Console.WriteLine("time: Sfx startup " + gen.awakeMs.ToString("0") + " ms, music " + gen.musicMs.ToString("0") + " ms, street " + streetMs.ToString("0") + " ms, spray+rattle " + lazyMs.ToString("0") + " ms");

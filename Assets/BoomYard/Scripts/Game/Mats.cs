@@ -162,6 +162,19 @@ namespace BoomYard.Game
         }
 
         static Texture2D sprayTex, stencilTex;
+        static readonly Dictionary<Texture2D, Material> decals = new Dictionary<Texture2D, Material>();
+
+        /// <summary>A sprayed stencil: its picture on a quad, unlit like the rest of the paint (one material per picture).</summary>
+        public static Material StencilDecal(Texture2D tex, bool glow)
+        {
+            Material m;
+            if (decals.TryGetValue(tex, out m) && m != null) return m;
+            m = new Material(Shader.Find("BoomYard/ParticleAlpha")) { name = "Stencil" };
+            m.mainTexture = tex;
+            m.SetColor("_Tint", glow ? new Color(1.5f, 1.5f, 1.5f, 1f) : new Color(0.95f, 0.95f, 0.95f, 1f));
+            decals[tex] = m;
+            return m;
+        }
 
         static Texture2D SprayTexture
         {

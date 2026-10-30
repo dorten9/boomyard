@@ -10,7 +10,7 @@ namespace BoomYard.Game
     /// Near and far versions of each blast, firecracker pops, glass, metal debris, fire, the lighter and fuse,
     /// an evening ambience, UI sounds and a menu music loop.
     /// </summary>
-    public sealed class Sfx : MonoBehaviour
+    public sealed partial class Sfx : MonoBehaviour
     {
         public static Sfx I { get; private set; }
 

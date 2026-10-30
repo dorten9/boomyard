@@ -210,7 +210,7 @@ namespace BoomYard.Game
             {
                 var em = mist.emission;
                 em.enabled = Spraying && can != null;
-                mist.transform.rotation = transform.parent.rotation;   // straight ahead, at the crosshair
+                mist.transform.rotation = Quaternion.LookRotation(Spray.I != null ? Spray.I.AimDir : transform.parent.forward);   // at the paint
             }
             sway += dt;
 

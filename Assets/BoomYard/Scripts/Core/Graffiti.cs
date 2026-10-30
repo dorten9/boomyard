@@ -187,8 +187,8 @@ namespace BoomYard.Core
 
         // ---------- pictures: a photo as a stencil ----------
 
-        /// <summary>A picture stencil is at most this many cells across; on the wall it is about 2 m.</summary>
-        public const int PictureSize = 48, PictureSlots = 6, PicturePrice = 500;
+        /// <summary>Pictures in old saves were at most this many cells across; new ones are kept sharper (PictureSharp).</summary>
+        public const int PictureSize = 48, PictureSharp = 384, PictureSlots = 6, PicturePrice = 500;
         public const float PictureMetres = 2f;
 
         /// <summary>The first picture is free, every one after it costs <see cref="PicturePrice"/> coins.</summary>
@@ -202,10 +202,10 @@ namespace BoomYard.Core
         /// colour, that background cut away (a flood from the edges), so a logo or a face on a plain backdrop
         /// comes out as just the shape.
         /// </summary>
-        public static Stencil PictureFrom(byte[] src, int w, int h, string id, string name, bool cutBackground = true)
+        public static Stencil PictureFrom(byte[] src, int w, int h, string id, string name, bool cutBackground = true, int maxSide = PictureSize)
         {
             if (src == null || w <= 0 || h <= 0 || src.Length < w * h * 4) return null;
-            float scale = Math.Min(1f, PictureSize / (float)Math.Max(w, h));
+            float scale = Math.Min(1f, maxSide / (float)Math.Max(w, h));
             int pw = Math.Max(1, (int)Math.Round(w * scale)), ph = Math.Max(1, (int)Math.Round(h * scale));
             var dst = new byte[pw * ph * 4];
             for (int y = 0; y < ph; y++)
