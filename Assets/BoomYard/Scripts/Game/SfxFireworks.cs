@@ -15,8 +15,8 @@ namespace BoomYard.Game
         /// <summary>A shell bursting at <paramref name="pos"/>; <paramref name="size"/> 1 a rocket, 2 a mortar.</summary>
         public void ShellBurst(Vector3 pos, float size, bool crackle)
         {
-            if (shellBoom == null) shellBoom = Reverb(ShellBoom(new System.Random(41), 1f), 0.7f, 2.2f, new System.Random(42), 3f);
-            if (shellBoomBig == null && size > 1.4f) shellBoomBig = Reverb(ShellBoom(new System.Random(43), 1.8f), 0.8f, 3f, new System.Random(44), 3.5f);
+            if (shellBoom == null) shellBoom = ShellBoomClip(false);
+            if (shellBoomBig == null && size > 1.4f) shellBoomBig = ShellBoomClip(true);
             float delay = Delay(pos);
             Play(size > 1.4f ? shellBoomBig : shellBoom, pos, Mathf.Clamp01(0.75f + 0.15f * size) * Volume, Random.Range(0.9f, 1.1f) / Mathf.Sqrt(size), 25f * size, delay);
             if (crackle) Crackle(pos, delay + Random.Range(0.6f, 1f));
@@ -25,21 +25,21 @@ namespace BoomYard.Game
         /// <summary>Crackling stars popping as they fall, from <paramref name="delay"/> s on.</summary>
         public void Crackle(Vector3 pos, float delay)
         {
-            if (shellCrackle == null) shellCrackle = Reverb(Crackling(new System.Random(45)), 0.45f, 1f, new System.Random(46), 2.5f);
+            if (shellCrackle == null) shellCrackle = CrackleClip();
             Play(shellCrackle, pos, 0.8f * Volume, Random.Range(0.9f, 1.15f), 20f, delay);
         }
 
         /// <summary>A mortar or cake tube firing.</summary>
         public void Launch(Vector3 pos, float size)
         {
-            if (mortarThump == null) mortarThump = Reverb(Thump(new System.Random(47)), 0.4f, 1.2f, new System.Random(48), 2f);
+            if (mortarThump == null) mortarThump = ThumpClip();
             Play(mortarThump, pos, Mathf.Clamp01(0.55f + 0.25f * size) * Volume, Random.Range(0.95f, 1.1f) / Mathf.Sqrt(size), 8f);
         }
 
         /// <summary>A Roman candle coughing out a ball.</summary>
         public void CandlePop(Vector3 pos)
         {
-            if (candlePop == null) candlePop = Reverb(Cough(new System.Random(49)), 0.3f, 0.6f, new System.Random(50), 1.5f);
+            if (candlePop == null) candlePop = CoughClip();
             Play(candlePop, pos, 0.7f * Volume, Random.Range(0.9f, 1.15f), 6f);
         }
 
@@ -66,6 +66,16 @@ namespace BoomYard.Game
         }
 
         // ---------- synthesis ----------
+
+        internal static AudioClip ShellBoomClip(bool big)
+        {
+            return big ? Reverb(ShellBoom(new System.Random(43), 1.8f), 0.8f, 3f, new System.Random(44), 3.5f)
+                : Reverb(ShellBoom(new System.Random(41), 1f), 0.7f, 2.2f, new System.Random(42), 3f);
+        }
+
+        internal static AudioClip CrackleClip() { return Reverb(Crackling(new System.Random(45)), 0.45f, 1f, new System.Random(46), 2.5f); }
+        internal static AudioClip ThumpClip() { return Reverb(Thump(new System.Random(47)), 0.4f, 1.2f, new System.Random(48), 2f); }
+        internal static AudioClip CoughClip() { return Reverb(Cough(new System.Random(49)), 0.3f, 0.6f, new System.Random(50), 1.5f); }
 
         /// <summary>
         /// A shell bursting high up, heard from below: the break charge's sharp report (rounded by distance), the
@@ -102,7 +112,7 @@ namespace BoomYard.Game
             }
             Bq.Lp(1800f, 0.6f).Apply(d);
             Bq.Hp(28f).Apply(d);
-            for (int i = 0; i < n; i++) d[i] = SoftClip(d[i] * 1.4f) * 0.7f;
+            for (int i = 0; i < n; i++) d[i] = SoftClip(d[i] * 1.8f) * 0.85f;
             return d;
         }
 
@@ -171,7 +181,7 @@ namespace BoomYard.Game
         }
 
         /// <summary>A fountain: a roaring hiss of sparks, fluttering, with spits and crackles all through it.</summary>
-        static AudioClip FountainClip(System.Random r)
+        internal static AudioClip FountainClip(System.Random r)
         {
             var hp = Bq.Hp(1500f);
             var body = Bq.Bp(700f, 0.7f);

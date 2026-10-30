@@ -14,6 +14,8 @@ s = open(sys.argv[1]).read()
 fields = re.search(r"\n(\s*AudioClip flick,[^;]*;)", s).group(1)
 awake = s[s.index("var r = new System.Random(7);"):s.index("ui = gameObject.AddComponent")]
 synth = s[s.index("// ---------- synthesis ----------"):s.rindex("}", 0, s.rindex("}"))]
+fw = open(sys.argv[1].replace("Sfx.cs", "SfxFireworks.cs")).read()
+synth += fw[fw.index("// ---------- synthesis ----------"):fw.rindex("}", 0, fw.rindex("}"))]
 consts = "\n".join(re.findall(r"\n\s*(const int \w+ = \d+;)", s))
 names = re.findall(r"\b(\w+) = ", fields.replace("AudioClip", "").replace(",", " = ").replace(";", " = "))
 names = [n for n in re.findall(r"\w+", fields) if n != "AudioClip"]
