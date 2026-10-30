@@ -6,9 +6,9 @@ using UnityEngine;
 namespace BoomYard.Game
 {
     /// <summary>
-    /// Graffiti. With the can in hand, a finger dragged over the screen paints where it is (on a computer: the
-    /// left mouse button, or SPRAY/F at the crosshair), and a quick tap stamps the chosen stencil where it lands,
-    /// cell by cell, wrapping round corners. Like a real can, the line is wider and lighter from further away,
+    /// Graffiti. With the can in hand, SPRAY held paints: it starts at the crosshair and the paint follows the
+    /// finger as it slides on the button (F on a keyboard paints at the crosshair). Walking stays on the stick
+    /// and turning on the view, as always. A quick tap on a wall stamps the chosen stencil there. Like a real can, the line is wider and lighter from further away,
     /// builds up where the can lingers and, held still on a wall, the paint starts to run. Paint goes on
     /// anything that does not break (walls, roads, pavements), drawn in a few big meshes so a whole wall of it
     /// costs a handful of draw calls. It lasts until the level is left.

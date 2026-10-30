@@ -25,14 +25,14 @@ namespace BoomYard.UI
         /// <summary>Where the paint lands while SPRAY is held and dragged (screen pixels), for the HUD's marker.</summary>
         public Vector2 SprayCursor { get; private set; }
         public bool SprayCursorActive { get; private set; }
-        const float SprayDragGain = 1.6f;
+        const float SprayDragGain = 2f;
         public float ThrowPower { get; private set; }
 
         const float LookDegreesPerScreen = 130f;
         const float JoyRadiusShare = 0.11f;   // of the screen height
         const float TapSeconds = 0.25f;
 
-        enum Role { None, Move, Look, Paint, Lighter, Throw, Place, Detonate, Ui }
+        enum Role { None, Move, Look, Lighter, Throw, Place, Detonate, Ui }
 
         sealed class Finger
         {
@@ -76,8 +76,6 @@ namespace BoomYard.UI
                     f = new Finger { Role = RoleAt(p.Pos, input), Start = p.Pos, Last = p.Pos, Time = Time.unscaledTime };
                     fingers[p.Id] = f;
                     if (f.Role == Role.Lighter) input.LighterDown = true;
-                    // With the spray can out, a finger on the view paints instead of turning it.
-                    if (f.Role == Role.Look && player.Spraying && p.Id != -2) f.Role = Role.Paint;
                     if (f.Role == Role.Move && Time.unscaledTime - lastMoveEnd < 0.3f) runLatched = true;
                 }
                 if (!fingers.TryGetValue(p.Id, out f)) continue;
@@ -107,23 +105,11 @@ namespace BoomYard.UI
                             input.PlaceScreen = p.Pos;
                         }
                         break;
-                    case Role.Paint:
-                        bool tap = Time.unscaledTime - f.Time < TapSeconds && f.Travel < Screen.height * 0.025f;
-                        if (ended)
-                        {
-                            if (tap) { input.Place = true; input.PlaceScreen = p.Pos; }
-                        }
-                        else if (!tap || Time.unscaledTime - f.Time > 0.12f)
-                        {
-                            input.PaintHeld = true;
-                            input.PaintScreen = p.Pos;
-                            EdgePan(input, p.Pos);
-                        }
-                        break;
                     case Role.Lighter:
                         if (player.Spraying)
                         {
                             // SPRAY held: the paint starts at the crosshair and follows the finger as it slides.
+                            // It only moves the paint: walking stays on the stick and turning on the view.
                             if (!ended)
                             {
                                 var centre = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
@@ -133,7 +119,6 @@ namespace BoomYard.UI
                                 input.PaintScreen = cur;
                                 SprayCursor = cur;
                                 SprayCursorActive = true;
-                                EdgePan(input, cur);
                             }
                             break;
                         }
@@ -157,17 +142,6 @@ namespace BoomYard.UI
             Keyboard(input);
             input.ThrowHeld = ThrowHeld;
             input.Run = runLatched || Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-        }
-
-        /// <summary>Painting near the edge of the screen turns the view that way, so a long wall can be painted in one go.</summary>
-        static void EdgePan(InputFrame input, Vector2 pos)
-        {
-            float ex = pos.x / Screen.width, ey = pos.y / Screen.height;
-            float pan = 70f * Time.unscaledDeltaTime;
-            if (ex > 0.88f) input.Look.x += (ex - 0.88f) / 0.12f * pan;
-            if (ex < 0.12f) input.Look.x -= (0.12f - ex) / 0.12f * pan;
-            if (ey > 0.85f) input.Look.y += (ey - 0.85f) / 0.15f * pan * 0.7f;
-            if (ey < 0.15f) input.Look.y -= (0.15f - ey) / 0.15f * pan * 0.7f;
         }
 
         Role RoleAt(Vector2 pos, InputFrame input)
