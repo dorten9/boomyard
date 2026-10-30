@@ -296,6 +296,30 @@ static class MetaTests
         foreach (var it in Shop.Items)
             check(it.Coins > 0 || Shop.Keepsake(it), "shop item has a price in coins: " + it.Id);
         GraffitiTests(check);
+        // Clocks with room to clear, and a bonus goal on every level but the tutorial that its props allow.
+        foreach (var l in Levels.All)
+        {
+            if (l.Tutorial) continue;
+            check(l.Time >= 90f, "level " + l.Number + " has at least a minute and a half");
+            var g = Goals.For(l);
+            check(g != GoalKind.None && Goals.Text(g) != "", "level " + l.Number + " has a bonus goal");
+            if (g == GoalKind.HoleInOne || g == GoalKind.Contained)
+            {
+                bool room = false;
+                foreach (var p in l.Props) { var o = Catalog.Object(p.Id); if (o != null && (o.Reaction & Reaction.Contain) != 0) room = true; }
+                check(room, "level " + l.Number + " goal has something to put a charge in");
+            }
+        }
+        check(Goals.For(Levels.Get(1)) == GoalKind.None, "no bonus goal in the tutorial");
+        check(Levels.Relaxed(70f) == 105f && Levels.Relaxed(50f) == 90f && Levels.Relaxed(150f) == 225f, "the clocks are half as long again, at least 90 s");
+        var lv = Levels.Get(5);
+        check(Goals.Met(GoalKind.Chain, lv, 3, 0f, 0, new System.Collections.Generic.List<BonusKind>()), "a chain of 3 meets the chain goal");
+        check(!Goals.Met(GoalKind.HalfClock, lv, 0, lv.Time * 0.4f, 0, new System.Collections.Generic.List<BonusKind>()), "40% of the clock is not half");
+        check(Goals.Met(GoalKind.AirTime, lv, 0, 0f, 0, new System.Collections.Generic.List<BonusKind> { BonusKind.AirTime }), "air time meets its goal");
+        var round = new RoundModel();
+        round.Start(60f);
+        round.AddTime(Levels.TargetBonusSeconds);
+        check(round.TimeLeft == 63f, "a target down gives seconds back");
         var city = Levels.City();
         check(city.Show && city.Props.Length == 0 && city.Kit.Length >= 3, "the big city: no targets, a kit to start");
         check(Progress.CityCoins(50 * 400) == 100, "the city pays a quarter of the wreckage");

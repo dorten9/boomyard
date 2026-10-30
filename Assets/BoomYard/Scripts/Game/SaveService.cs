@@ -48,6 +48,7 @@ namespace BoomYard.Game
         public long shekels;              // coins (the field keeps its old name so saves still load)
         public float bestGnome;           // longest gnome flight, metres
         public List<int> goldGnomes = new List<int>();   // levels whose golden gnome was found
+        public List<int> goalsDone = new List<int>();    // levels whose bonus goal was met (paid once)
         public string glove = "", lighterSkin = "";     // style (looks only)
         public int purchases;                             // coin packs bought for real money
         public int challengeDate;                         // the daily challenge: day played (Daily.Seed), best and whether cleared

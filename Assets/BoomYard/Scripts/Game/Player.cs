@@ -1,3 +1,4 @@
+using System.Linq;
 using BoomYard.Core;
 using UnityEngine;
 
@@ -39,7 +40,7 @@ namespace BoomYard.Game
 
         public const float EyeHeight = 1.65f, Fov = 75f;
         public const float WalkSpeed = 2.4f, RunSpeed = 5f;
-        public const float PlaceReach = 3.2f;
+        public const float PlaceReach = 4.5f;
         public const float MinThrow = 4f, MaxThrow = 15f;
 
         public Camera Cam;
@@ -101,6 +102,9 @@ namespace BoomYard.Game
             ring = Line("SafeRing", new Color(1f, 0.48f, 0.1f, 0.8f), 0.03f);
             ring.loop = true;
             ring.positionCount = 40;
+            placeMark = Line("PlaceMark", new Color(0.55f, 1f, 0.6f, 0.85f), 0.012f);
+            placeMark.loop = true;
+            placeMark.positionCount = 24;
         }
 
         LineRenderer Line(string name, Color color, float width)
@@ -187,10 +191,12 @@ namespace BoomYard.Game
                 // When the clock runs out with a lit item in the hand, it can still be thrown.
                 bool late = game.Round.State == RoundState.Settling && HeldLit && !Knocked && !game.Paused;
                 if ((act || late) && !Spraying) ThrowAndPlace(game);
+                PlaceMarker(act);
             }
             else
             {
                 Ignition.Release();
+                if (placeMark != null) placeMark.enabled = false;
                 if (Spraying && Spray.I.Painting) Spray.I.Release();
                 Hands.Spraying = false;
             }
@@ -400,18 +406,53 @@ namespace BoomYard.Game
         {
             if (In.ThrowUp && HeldDef != null)
             {
-                if (!HeldDef.Throwable) PlaceAt(GroundAhead(), null, game);
+                // Things that cannot be thrown are set down where the crosshair points (or at the feet).
+                if (!HeldDef.Throwable) PlaceFrom(new Vector2(Screen.width * 0.5f, Screen.height * 0.5f), true, game);
                 else Throw(In.ThrowPower, game);
             }
-            if (In.Place && HeldDef != null)
+            if (In.Place && HeldDef != null) PlaceFrom(In.PlaceScreen, false, game);
+        }
+
+        /// <summary>The surface under a screen point (the crosshair, or where the screen was tapped), within reach.</summary>
+        bool PlaceSpot(Vector2 screen, out RaycastHit hit)
+        {
+            var ray = Cam.ScreenPointToRay(screen);
+            foreach (var h in Physics.RaycastAll(ray, PlaceReach, Layers.WorldMask, QueryTriggerInteraction.Ignore).OrderBy(x => x.distance))
             {
-                RaycastHit hit;
-                var ray = Cam.ScreenPointToRay(In.PlaceScreen);
-                if (Physics.Raycast(ray, out hit, PlaceReach, Layers.WorldMask, QueryTriggerInteraction.Ignore))
-                    PlaceAt(hit.point + hit.normal * 0.03f, hit.collider.GetComponentInParent<Destructible>(), game);
-                else PlaceAt(GroundAhead(), null, game);
+                if (h.collider.GetComponentInParent<LiveExplosive>() != null) continue;   // not on top of another charge
+                hit = h;
+                return true;
+            }
+            hit = default(RaycastHit);
+            return false;
+        }
+
+        void PlaceFrom(Vector2 screen, bool feetIfNone, GameController game)
+        {
+            RaycastHit hit;
+            if (PlaceSpot(screen, out hit)) PlaceAt(hit.point, hit.normal, hit.collider.GetComponentInParent<Destructible>(), game);
+            else if (feetIfNone) PlaceAt(GroundAhead(), Vector3.up, null, game);
+            else game.Toast("toast.toofar");
+        }
+
+        /// <summary>A ring where a placed item would land, while one is in the hand.</summary>
+        void PlaceMarker(bool show)
+        {
+            RaycastHit hit;
+            show = show && HeldDef != null && !Spraying && PlaceSpot(new Vector2(Screen.width * 0.5f, Screen.height * 0.5f), out hit);
+            placeMark.enabled = show;
+            if (!show) return;
+            PlaceSpot(new Vector2(Screen.width * 0.5f, Screen.height * 0.5f), out hit);
+            var n = hit.normal;
+            var a = Vector3.Cross(n, Mathf.Abs(n.y) < 0.9f ? Vector3.up : Vector3.forward).normalized;
+            var b = Vector3.Cross(n, a);
+            for (int i = 0; i < placeMark.positionCount; i++)
+            {
+                float t = i / (float)placeMark.positionCount * Mathf.PI * 2f;
+                placeMark.SetPosition(i, hit.point + n * 0.01f + (a * Mathf.Cos(t) + b * Mathf.Sin(t)) * 0.1f);
             }
         }
+        LineRenderer placeMark;
 
         /// <summary>The ground just in front of the player's feet.</summary>
         Vector3 GroundAhead()
@@ -459,31 +500,25 @@ namespace BoomYard.Game
         }
 
         /// <summary>
-        /// Sets the item down. In or under something with room (a bin, a mailbox, under a car) it is contained:
-        /// ×1.8 (spec §04, §07).
+        /// Sets the item down exactly where it was aimed, and it stays there: on the ground, on a wall, or on an
+        /// object (riding with it if it is knocked about). Into something small with room (a bin, a mailbox) it
+        /// goes inside; on or in anything that can hold a charge it counts as contained: ×1.8 (spec §04, §07).
         /// </summary>
-        void PlaceAt(Vector3 point, Destructible target, GameController game)
+        void PlaceAt(Vector3 point, Vector3 normal, Destructible target, GameController game)
         {
             Destructible container = null;
             if (target != null && !target.Destroyed && (target.Def.Reaction & Reaction.Contain) != 0) container = target;
             else
             {
                 RaycastHit up;
-                if (Physics.Raycast(point + Vector3.up * 0.02f, Vector3.up, out up, 1.4f, Layers.WorldMask, QueryTriggerInteraction.Ignore))
+                if (Physics.Raycast(point + normal * 0.02f, Vector3.up, out up, 1.4f, Layers.WorldMask, QueryTriggerInteraction.Ignore))
                 {
                     var over = up.collider.GetComponentInParent<Destructible>();
                     if (over != null && !over.Destroyed && (over.Def.Reaction & Reaction.Contain) != 0) container = over;
                 }
             }
             var placement = container != null ? Placement.Contained : Placement.Placed;
-            bool under = container != null && target == container && container.Def.Mass >= 300f;
-            if (under)
-            {
-                // Tapping a car slides the item underneath it, toward the fuel tank.
-                var tank = container.transform.TransformPoint(container.FirePoint);
-                point = Vector3.Lerp(point, tank, 0.5f);
-                point.y = 0.08f;
-            }
+            bool inside = container != null && target == container && container.Def.Mass < 100f;
             LiveExplosive live;
             bool timer = !HeldLit && HeldDef.Timer, remote = !HeldLit && HeldDef.Remote;
             if (HeldLit) live = LiveExplosive.Spawn(HeldDef, point, Quaternion.Euler(0f, yaw, 0f), HeldRemaining, placement);
@@ -494,7 +529,8 @@ namespace BoomYard.Game
                 else live = LiveExplosive.SpawnUnlit(HeldDef, point, Quaternion.Euler(0f, yaw, 0f), placement);
             }
             live.Container = container;
-            if (container != null && target == container && !under)
+            if (!inside) live.StickTo(point, normal, target);
+            else
             {
                 // Pushed inside: it rides with the container.
                 var rb = live.GetComponent<Rigidbody>();

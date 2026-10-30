@@ -63,6 +63,7 @@ namespace BoomYard
             { "tip.city", "Rockets set down in a row go up together with SHOW. Try the spray can on the tower." },
             { "toast.nostencil", "No stencil on the can: tap STENCIL above the pocket" },
             { "toast.nowall", "Get closer to a wall" },
+            { "toast.toofar", "Too far: get closer to where you want it" },
             { "toast.buystencil", "Stencils are in the shop: GRAFFITI" },
             { "toast.buycap", "More caps are in the shop: GRAFFITI" },
             { "goldgnome", "Golden gnome! +{0} coins  ({1} of {2} found)" },
