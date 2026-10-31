@@ -125,8 +125,7 @@ namespace BoomYard.Game
             FireGrid.I.Clear();
             Spray.I.Clear();
             Replay.I.Clear();
-            var fx = GameObject.Find("Fx");
-            if (fx != null) Destroy(fx);
+            Fx.Clear();
             Arena = ArenaBuilder.Build(Level, Quality.Tier);
             if (Rendering.I != null) Rendering.I.RefreshReflections();
         }

@@ -45,6 +45,7 @@ namespace BoomYard.Game
             if (StreetLife.I != null) StreetLife.I.OnBlast(c.Position, radius);
 
             int n = Physics.OverlapSphereNonAlloc(c.Position, Mathf.Max(wave, radius * 2f), hits, Layers.WorldMask, QueryTriggerInteraction.Ignore);
+            if (GameController.I != null && GameController.I.Shot != "") Debug.Log("BoomYard: blast at " + c.Position + " r " + radius + " dmg " + c.Damage + " concrete " + c.BreaksConcrete + " colliders " + n);
             seen.Clear();
             pushed.Clear();
             for (int i = 0; i < n; i++)

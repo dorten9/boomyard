@@ -16,6 +16,13 @@ namespace BoomYard.Game
         static readonly Queue<Rigidbody> shards = new Queue<Rigidbody>();
         static Transform root;
 
+        /// <summary>A new level: the effects of the old one go.</summary>
+        public static void Clear()
+        {
+            if (root != null) Object.Destroy(root.gameObject);
+            root = null;
+        }
+
         static Transform Root
         {
             get

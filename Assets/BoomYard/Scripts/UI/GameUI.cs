@@ -98,7 +98,7 @@ namespace BoomYard.UI
             toast.rectTransform.pivot = new Vector2(0.5f, 0.5f);
             toast.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.85f);
 
-            var fx = UIKit.Stretch(UIKit.Rect(root, "Fx"));
+            var fx = UIKit.Stretch(UIKit.Rect(root, "ScreenFlash"));   // not "Fx": that name is the world effects' root
             flash = UIKit.Image(fx, "Flash", new Color(1f, 1f, 1f, 0f));
             UIKit.Stretch(flash.rectTransform);
         }
