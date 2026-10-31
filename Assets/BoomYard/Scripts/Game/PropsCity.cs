@@ -19,6 +19,7 @@ namespace BoomYard.Game
                 case "streetlamp": return StreetLamp(t);
                 case "parkingmeter": return ParkingMeter(t);
                 case "planter": return Planter(t, variant);
+                case "tenement": return Tenement(t, Mathf.Max(2, variant));
             }
             return null;
         }
@@ -176,6 +177,54 @@ namespace BoomYard.Game
             return Finish(t, "parkingmeter", new Vector3(0f, 1.1f, 0f), 0.2f);
         }
 
+        /// <summary>
+        /// A derelict tenement, <paramref name="floors"/> storeys of brick, 8 × 6 m: each storey is its own target
+        /// (it takes dynamite or TNT, concrete shrugs off the rest). Blow out a storey and everything above it
+        /// comes down onto what is left (Building), cracking as it lands. Returns the ground floor.
+        /// </summary>
+        static Destructible Tenement(Transform t, int floors)
+        {
+            const float w = 8f, d = 6f, h = 3f;
+            var brick = Mats.Surface("brick", new Color(0.85f, 0.62f, 0.5f), 0f, 1f);
+            var slabMat = Mats.Surface("concrete", new Color(0.72f, 0.7f, 0.66f), 0f, 0.6f);
+            var dark = Mats.Lit(new Color(0.05f, 0.05f, 0.06f), 0f, 0.1f);
+            var plank = Mats.Surface("wood", new Color(0.6f, 0.5f, 0.38f), 0f, 0.4f);
+            var building = t.gameObject.AddComponent<Building>();
+            for (int f = 0; f < floors; f++)
+            {
+                var storey = new GameObject("Storey " + (f + 1)).transform;
+                storey.SetParent(t, false);
+                storey.localPosition = new Vector3(0f, f * h, 0f);
+                Part(storey, MeshKit.RoundedBox(new Vector3(w, 0.25f, d), 0.02f, 1), new Vector3(0f, h - 0.125f, 0f), slabMat, true);
+                var ds = Destructible.Add(storey.gameObject, "storey");
+                ds.FirePoint = new Vector3(0f, h * 0.5f, 0f);
+                ds.FireSize = 1.6f;
+                // Four walls, each its own piece to fly off, with boarded-up windows.
+                for (int side = 0; side < 4; side++)
+                {
+                    bool front = side < 2;
+                    float sign = side % 2 == 0 ? -1f : 1f;
+                    var wall = new GameObject("Wall").transform;
+                    wall.SetParent(storey, false);
+                    wall.localPosition = front ? new Vector3(0f, (h - 0.25f) * 0.5f, sign * (d * 0.5f - 0.15f)) : new Vector3(sign * (w * 0.5f - 0.15f), (h - 0.25f) * 0.5f, 0f);
+                    float len = front ? w : d - 0.6f;
+                    Part(wall, MeshKit.RoundedBox(front ? new Vector3(len, h - 0.25f, 0.3f) : new Vector3(0.3f, h - 0.25f, len), 0.02f, 1), Vector3.zero, brick, true);
+                    int windows = front ? 3 : 1;
+                    for (int k = 0; k < windows; k++)
+                    {
+                        float o = (k - (windows - 1) * 0.5f) * 2.4f;
+                        var at = front ? new Vector3(o, 0.2f, sign * 0.16f) : new Vector3(sign * 0.16f, 0.2f, o);
+                        Part(wall, MeshKit.RoundedBox(front ? new Vector3(1.1f, 1.3f, 0.02f) : new Vector3(0.02f, 1.3f, 1.1f), 0.005f, 1), at, dark, false);
+                        if ((k + f) % 2 == 0)
+                            Part(wall, MeshKit.RoundedBox(front ? new Vector3(1.2f, 0.18f, 0.03f) : new Vector3(0.03f, 0.18f, 1.2f), 0.005f, 1), at + new Vector3(0f, 0.15f, 0f) + (front ? new Vector3(0f, 0f, sign * 0.02f) : new Vector3(sign * 0.02f, 0f, 0f)), plank, false);
+                    }
+                    ds.Parts.Add(wall);
+                }
+                building.Floors.Add(ds);
+            }
+            return building.Floors[0];
+        }
+
         /// <summary>A timber planter box with a shrub in it.</summary>
         static Destructible Planter(Transform t, int variant)
         {
@@ -184,6 +233,57 @@ namespace BoomYard.Game
             B(t, new Vector3(1.3f, 0.05f, 1.3f), new Vector3(0f, 0.58f, 0f), Mats.Lit(new Color(0.18f, 0.13f, 0.09f), 0f, 0.1f));
             Part(t, MeshKit.Blob(0.6f, 0.35f, 400 + variant), new Vector3(0f, 1.05f, 0f), Mats.Lit(new Color(0.2f, 0.3f, 0.11f), 0f, 0.15f), false);
             return Finish(t, "planter", new Vector3(0f, 0.6f, 0f), 0.5f);
+        }
+    }
+
+    /// <summary>
+    /// A building that comes down in stages: when a storey is blown out, it is cleared away and every storey
+    /// above it falls; a storey that lands hard cracks (most of its strength gone, so the next blast finishes it).
+    /// </summary>
+    public sealed class Building : MonoBehaviour
+    {
+        public readonly System.Collections.Generic.List<Destructible> Floors = new System.Collections.Generic.List<Destructible>();
+        readonly System.Collections.Generic.HashSet<Destructible> gone = new System.Collections.Generic.HashSet<Destructible>();
+
+        void Update()
+        {
+            for (int i = 0; i < Floors.Count; i++)
+            {
+                var f = Floors[i];
+                if (f == null || !f.Destroyed || gone.Contains(f)) continue;
+                gone.Add(f);
+                // The storey is rubble: clear what is left so the ones above can fall into its place.
+                foreach (var c in f.GetComponentsInChildren<Collider>()) c.enabled = false;
+                foreach (var r in f.GetComponentsInChildren<Renderer>()) r.enabled = false;
+                for (int k = i + 1; k < Floors.Count; k++)
+                {
+                    var above = Floors[k];
+                    if (above == null || above.Destroyed || above.GetComponent<Rigidbody>() != null) continue;
+                    var rb = above.gameObject.AddComponent<Rigidbody>();
+                    rb.mass = 20000f;
+                    rb.interpolation = RigidbodyInterpolation.Interpolate;
+                    rb.AddTorque(Random.insideUnitSphere * 2f, ForceMode.VelocityChange);
+                    above.gameObject.AddComponent<FloorFall>();
+                    above.gameObject.AddComponent<ImpactDamage>().Arm(6f);
+                }
+                Sfx.I.Boom(f.transform.position + Vector3.up * 1.5f, 3.5f);
+            }
+        }
+    }
+
+    /// <summary>A falling storey: the first hard landing cracks it.</summary>
+    public sealed class FloorFall : MonoBehaviour
+    {
+        bool landed;
+
+        void OnCollisionEnter(Collision c)
+        {
+            if (landed || c.relativeVelocity.magnitude < 3f) return;
+            landed = true;
+            var d = GetComponent<Destructible>();
+            if (d == null || d.Destroyed) return;
+            Fx.Debris(transform.position + Vector3.up, transform.position + Vector3.down, 8, new Color(0.6f, 0.45f, 0.38f), 2f);
+            d.Damage(new Hit { Amount = d.Hp * 0.7f, Origin = transform.position + Vector3.down, ByObject = true, BreaksConcrete = true });
         }
     }
 }

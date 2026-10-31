@@ -799,6 +799,7 @@ namespace BoomYard.UI
                 Btn(s, "SHOP", false, () => ShowShop(), new Vector2(0.5f, 0f), new Vector2(-360f, 100f), new Vector2(220f, 86f), 30);
                 Btn(s, "HOME", false, () => game.GoHome(), new Vector2(0.5f, 0f), new Vector2(360f, 100f), new Vector2(220f, 86f), 30);
                 DoubleCoinsAd(s, r);
+                ReplayButton(s);
                 Wallet(s);
                 return;
             }
@@ -820,6 +821,7 @@ namespace BoomYard.UI
                 Btn(s, "RETRY", false, () => Ads.I.BetweenLevels(game.Restart), new Vector2(0.5f, 0f), new Vector2(-330f, 100f), new Vector2(220f, 86f), 30);
                 Btn(s, "MAP", false, () => Ads.I.BetweenLevels(game.GoMap), new Vector2(0.5f, 0f), new Vector2(330f, 100f), new Vector2(220f, 86f), 30);
                 DoubleCoinsAd(s, r);
+                ReplayButton(s);
             }
             else
             {
@@ -833,6 +835,7 @@ namespace BoomYard.UI
                 Btn(s, "MAP", false, () => Ads.I.BetweenLevels(game.GoMap), new Vector2(0.5f, 0f), new Vector2(330f, 110f), new Vector2(220f, 86f), 30);
                 // A video for a second go with more time.
                 AdButton(s, "RETRY +30 s", "WATCH A VIDEO", "retry_time", () => game.RetryWithTime(30f));
+                ReplayButton(s);
             }
             Wallet(s);
         }

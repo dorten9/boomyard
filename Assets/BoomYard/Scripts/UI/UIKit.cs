@@ -24,7 +24,7 @@ namespace BoomYard.UI
         public static readonly Color Scrim = new Color(0.04f, 0.035f, 0.04f, 0.86f);
 
         static Font text, display;
-        static Sprite canIcon, bagIcon, rounded, circle, ring, glow, vignette, star, arrow, diamond, flame, play, coin, gear, back, gift, lockIcon, drop, check, pill;
+        static Sprite canIcon, bagIcon, cameraIcon, rounded, circle, ring, glow, vignette, star, arrow, diamond, flame, play, coin, gear, back, gift, lockIcon, drop, check, pill;
 
         public static Font Text
         {
@@ -340,6 +340,25 @@ namespace BoomYard.UI
                         return body || shoulder || nozzle || puff ? 1f : 0f;
                     }, Vector4.zero);
                 return canIcon;
+            }
+        }
+
+        /// <summary>A camera: a body, a lens and the viewfinder bump.</summary>
+        public static Sprite CameraIcon
+        {
+            get
+            {
+                if (cameraIcon == null)
+                    cameraIcon = Shape(64, (x, y, n) =>
+                    {
+                        float u = (x + 0.5f) / n, v = (y + 0.5f) / n;
+                        bool body = u > 0.1f && u < 0.9f && v > 0.2f && v < 0.7f;
+                        bool bump = u > 0.32f && u < 0.58f && v >= 0.7f && v < 0.8f;
+                        float r = Vector2.Distance(new Vector2(u, v), new Vector2(0.5f, 0.45f));
+                        bool lens = r < 0.17f && r > 0.1f;
+                        return (body || bump) && !(r < 0.17f && !lens) ? 1f : 0f;
+                    }, Vector4.zero);
+                return cameraIcon;
             }
         }
 

@@ -83,6 +83,7 @@ namespace BoomYard.Game
             Mark("sound ready");
             gameObject.AddComponent<FireGrid>();
             Spray.Create(gameObject);
+            Replay.Create(gameObject);
             ImagePicker.Create();
             Rendering.Create(Quality.Tier);
             Mark("rendering ready");
@@ -123,6 +124,7 @@ namespace BoomYard.Game
             foreach (var live in LiveExplosive.Active.ToArray()) if (live != null) Destroy(live.gameObject);
             FireGrid.I.Clear();
             Spray.I.Clear();
+            Replay.I.Clear();
             var fx = GameObject.Find("Fx");
             if (fx != null) Destroy(fx);
             Arena = ArenaBuilder.Build(Level, Quality.Tier);
@@ -456,6 +458,7 @@ namespace BoomYard.Game
             if (st != RoundState.Playing && st != RoundState.Stunned && st != RoundState.Settling) return;
             float mult = destroyed ? Chain.OnDestroyed(Time.time, hit.ByObject) : Chain.MultiplierFor(hit.ByObject);
             long v = Score.AddDamage(d.Def.Value, fraction, d.Def.Material, hit.Placement, mult);
+            Replay.I.Notice(v);
             if (destroyed && hit.ByObject && Chain.Links >= 3 && Chain.Links % 3 == 0) SlowMo(0.3f, 0.9f);
             if (destroyed && hit.ByObject && Chain.Links == ScoreCalculator.DominoLinks) Bonus(BonusKind.Domino);
             if (destroyed)
@@ -1036,6 +1039,15 @@ namespace BoomYard.Game
                 LiveExplosive.Spawn(Catalog.Explosive("dynamite"), Player.transform.position + Player.transform.forward * 0.6f + Vector3.up * 0.05f, Quaternion.identity, 0.3f, Placement.Placed);
                 yield break;
             }
+            if (mode == "demolition")
+            {
+                // Level 51's tenement: a TNT bundle at the foot of it, the camera back far enough to see it fall.
+                StartLevel(51);
+                yield return new WaitForSeconds(1.5f);
+                Player.Teleport(new Vector3(0f, 0f, -7f), 0f, -14f);
+                LiveExplosive.Spawn(Catalog.Explosive("tnt"), new Vector3(0f, 0.05f, 3.8f), Quaternion.identity, 1f, Placement.Placed);
+                yield break;
+            }
             if (mode == "inshop")
             {
                 StartCity();
@@ -1060,7 +1072,7 @@ namespace BoomYard.Game
                 // A timer charge and two remote charges round the van; the remotes go when the timer does.
                 StartLevel(4);
                 yield return new WaitForSeconds(1.5f);
-                var timer = LiveExplosive.Spawn(Catalog.Explosive("timer"), new Vector3(3.5f, 0.05f, 3f), Quaternion.identity, 4f, Placement.Placed);
+                LiveExplosive.Spawn(Catalog.Explosive("timer"), new Vector3(3.5f, 0.05f, 3f), Quaternion.identity, 4f, Placement.Placed);
                 var remote = Catalog.Explosive("remote");
                 LiveExplosive.SpawnUnlit(remote, new Vector3(-4f, 0.05f, 8f), Quaternion.identity, Placement.Placed);
                 LiveExplosive.SpawnUnlit(remote, new Vector3(-3.4f, 0.05f, 8.2f), Quaternion.identity, Placement.Placed);

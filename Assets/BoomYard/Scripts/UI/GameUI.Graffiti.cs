@@ -140,6 +140,7 @@ namespace BoomYard.UI
             ShowLayer(false);
             var s = NewScreen("Studio");
             TopBar(s, "STENCIL STUDIO", () => { if (studioBack != null) studioBack(); else game.GoHome(); });
+            Btn(s, "PHOTOS", false, () => ShowPhotos(() => ShowStudioPage(studioPictures, makerSlot)), new Vector2(1f, 1f), new Vector2(-420f, -58f), new Vector2(200f, 64f), 24);
             var save = SaveService.Data;
 
             var frame = UIKit.Image(s, "Frame", new Color(0.05f, 0.045f, 0.05f, 0.95f), UIKit.Rounded);

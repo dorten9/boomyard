@@ -377,7 +377,7 @@ static class MetaTests
             check(bones == 14, "four fingers of three bones and a thumb of two");
         }
 
-        check(Levels.All.Length == 50, "50 levels");
+        check(Levels.All.Length == 53, "53 levels");
         foreach (var l in Levels.All)
         {
             check(Streets.ForLevel(l.Number).FirstLevel <= l.Number && l.Number <= Streets.ForLevel(l.Number).LastLevel, "level " + l.Number + " is on a street");

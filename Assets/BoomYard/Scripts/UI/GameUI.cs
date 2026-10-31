@@ -230,6 +230,13 @@ namespace BoomYard.UI
             UIKit.Place(bag.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(38f, 38f));
             bag.rectTransform.pivot = new Vector2(0.5f, 0.5f);
             controls.ShopButton = shopBtn.rectTransform;
+            // Photo: the view as it is, without the HUD, into the gallery.
+            var photoBtn = UIKit.Image(hud, "Photo", new Color(0.03f, 0.03f, 0.035f, 0.6f), UIKit.Circle);
+            UIKit.Place(photoBtn.rectTransform, new Vector2(0f, 1f), new Vector2(530f, -20f), new Vector2(70f, 70f));
+            var cam = UIKit.Image(photoBtn.transform, "Camera", UIKit.Fg, UIKit.CameraIcon);
+            UIKit.Place(cam.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(40f, 40f));
+            cam.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            controls.Taps.Add(new KeyValuePair<RectTransform, System.Action>(photoBtn.rectTransform, TakePhoto));
             controls.OpenShop = () => game.OpenShopInLevel();
             var windRing = UIKit.Image(hud, "Wind", new Color(1f, 1f, 1f, 0.25f), UIKit.Ring);
             UIKit.Place(windRing.rectTransform, new Vector2(0f, 1f), new Vector2(124f, -24f), new Vector2(60f, 60f));
@@ -394,6 +401,18 @@ namespace BoomYard.UI
             var goal = Goals.For(level);
             if (goal != GoalKind.None && !level.Daily) text = (level.Rule != LevelRule.None ? text + "\n" : "") + "BONUS: " + Goals.Text(goal);
             Toast(text, 4.5f);
+        }
+
+        /// <summary>A photo of the view (no HUD) into the gallery, with a flash.</summary>
+        void TakePhoto()
+        {
+            if (Player.I == null) return;
+            var tex = Gallery.Shoot(Player.I.Cam);
+            Gallery.Save(tex);
+            Destroy(tex);
+            Flash(new Color(1f, 1f, 1f, 0.7f), 0.25f);
+            Sfx.I.Tap();
+            Toast("Photo saved: STENCILS, then PHOTOS", 2.5f);
         }
 
         /// <summary>The death card: blown up, and a countdown to getting back up.</summary>
@@ -624,7 +643,7 @@ namespace BoomYard.UI
             if (key == stripKey) return;
             stripKey = key;
             for (int i = strip.childCount - 1; i >= 0; i--) Destroy(strip.GetChild(i).gameObject);
-            controls.Taps.Clear();
+            controls.Taps.RemoveAll(t => t.Key == null || t.Key.IsChildOf(strip));
             float x = 0f;
             foreach (var c in colours)
             {

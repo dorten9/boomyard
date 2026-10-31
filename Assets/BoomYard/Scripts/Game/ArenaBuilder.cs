@@ -58,7 +58,9 @@ namespace BoomYard.Game
                 var spot = level.Props[i];
                 var pos = new Vector3(spot.X, spot.Id == "acunit" ? 1.25f : 0f, spot.Z);
                 var d = Props.Spawn(spot.Id, root, pos, spot.Yaw, spot.Variant);
-                if (level.IsTarget(i)) a.Targets.Add(d);
+                var building = d.GetComponentInParent<Building>();
+                if (building != null) a.Targets.AddRange(building.Floors);   // every storey must come down
+                else if (level.IsTarget(i)) a.Targets.Add(d);
                 else a.Spare = d;
             }
             foreach (var d in a.Root.GetComponentsInChildren<Destructible>()) a.Objects.Add(d);

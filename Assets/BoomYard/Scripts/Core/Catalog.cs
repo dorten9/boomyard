@@ -189,6 +189,8 @@ namespace BoomYard.Core
             new ObjectDef { Id = "busstop", NameHe = "תחנת אוטובוס", NameEn = "Bus shelter glass", Hp = 10, Value = 4000, Material = Material.Glass, Reaction = Reaction.Shatter, Mass = 40 },
             new ObjectDef { Id = "parkingmeter", NameHe = "מדחן", NameEn = "Parking meter", Hp = 20, Value = 700, Material = Material.Metal, Reaction = Reaction.Launch | Reaction.Contain, Mass = 20 },
             new ObjectDef { Id = "planter", NameHe = "עציץ רחוב", NameEn = "Street planter", Hp = 30, Value = 500, Material = Material.Wood, Reaction = Reaction.Launch | Reaction.Burn, BurnSeconds = 8f, Mass = 60 },
+            new ObjectDef { Id = "tenement", NameHe = "בניין נטוש", NameEn = "Derelict tenement", Hp = 1, Value = 1, Material = Material.Concrete, Reaction = Reaction.Collapse, Mass = 60000 },   // a prop of storeys (Building); each storey is the target
+            new ObjectDef { Id = "storey", NameHe = "קומה", NameEn = "Storey", Hp = 160, Value = 30000, Material = Material.Concrete, Reaction = Reaction.Collapse, Mass = 20000 },
             new ObjectDef { Id = "industrialtank", NameHe = "מיכל תעשייתי 50 קוב", NameEn = "Industrial tank", Hp = 900, Value = 900000, Material = Material.Metal, Reaction = Reaction.Explode, BlastRadius = 15f, BlastDamage = 5000, BlastDelay = 2f, ThermiteOnly = true, Mass = 20000 },
         };
 
