@@ -85,6 +85,95 @@ namespace BoomYard.Game
                     Part(root, MeshKit.Lathe("fountainband", new[] { new Vector2(0.045f, 0f), new Vector2(0.041f, 0.03f) }, 16), new Vector3(0f, 0.05f, 0f), Mats.Lit(new Color(0.95f, 0.85f, 0.3f), 0f, 0.4f));
                     tip = new Vector3(0f, 0.14f + fuseLen, 0f);
                     break;
+                case "whistler":
+                case "bigrocket":
+                    {
+                        // Rockets: the whistler slim and silver, the big one fat and gold.
+                        bool big = def.Id == "bigrocket";
+                        float r = big ? 0.024f : 0.011f, h = big ? 0.18f : 0.1f;
+                        Tube(root, new Vector3(0f, -h * 0.5f, 0f), r, h, Mats.Lit(big ? new Color(0.85f, 0.65f, 0.2f) : new Color(0.75f, 0.77f, 0.8f), 0.6f, 0.6f), cap);
+                        Part(root, MeshKit.Lathe("rocketcone" + r, new[] { new Vector2(r * 1.05f, 0f), new Vector2(0f, r * 3.5f) }, 12, false, true), new Vector3(0f, h * 0.5f, 0f), Mats.Lit(big ? new Color(0.75f, 0.1f, 0.08f) : new Color(0.2f, 0.5f, 0.9f), 0.3f, 0.5f));
+                        Part(root, MeshKit.RoundedBox(new Vector3(0.006f, big ? 0.6f : 0.4f, 0.006f), 0.002f), new Vector3(r + 0.004f, -(big ? 0.3f : 0.2f), 0f), Mats.Surface("wood", Color.white, 0f, 0.4f));
+                        tip = new Vector3(0f, -h * 0.5f - fuseLen * 0.2f, 0f);
+                        break;
+                    }
+                case "spinner":
+                    // A flat paper wheel with a tube wound round its rim.
+                    Part(root, MeshKit.Lathe("spinner", new[] { new Vector2(0.04f, 0f), new Vector2(0.045f, 0.006f), new Vector2(0.04f, 0.012f), new Vector2(0f, 0.012f) }, 16, true, true), Vector3.zero, Mats.Lit(new Color(0.85f, 0.2f, 0.5f), 0f, 0.4f));
+                    tip = new Vector3(0.045f, 0.006f + fuseLen * 0.4f, 0f);
+                    break;
+                case "ufo":
+                    Part(root, MeshKit.Lathe("ufo", new[] { new Vector2(0.06f, 0f), new Vector2(0.065f, 0.006f), new Vector2(0.03f, 0.02f), new Vector2(0.012f, 0.03f), new Vector2(0f, 0.031f) }, 20, true, true), Vector3.zero, Mats.Lit(new Color(0.75f, 0.78f, 0.82f), 0.7f, 0.6f));
+                    tip = new Vector3(0.065f, 0.006f + fuseLen * 0.4f, 0f);
+                    break;
+                case "smoke":
+                    Tube(root, Vector3.zero, 0.02f, 0.07f, Mats.Lit(new Color(0.25f, 0.55f, 0.3f), 0f, 0.4f), cap);
+                    Part(root, MeshKit.Lathe("smokeband", new[] { new Vector2(0.0205f, 0f), new Vector2(0.0205f, 0.015f) }, 16), new Vector3(0f, 0.03f, 0f), Mats.Lit(new Color(0.95f, 0.85f, 0.2f), 0f, 0.4f));
+                    tip = new Vector3(0f, 0.07f + fuseLen, 0f);
+                    break;
+                case "strobepot":
+                    Part(root, MeshKit.Lathe("strobepot", new[] { new Vector2(0.03f, 0f), new Vector2(0.034f, 0.05f), new Vector2(0.03f, 0.055f), new Vector2(0f, 0.056f) }, 16, true, true), Vector3.zero, Mats.Lit(new Color(0.08f, 0.08f, 0.09f), 0.2f, 0.4f));
+                    tip = new Vector3(0f, 0.056f + fuseLen, 0f);
+                    break;
+                case "saturn":
+                    // A row of thin tubes on a long strip of card.
+                    Part(root, MeshKit.RoundedBox(new Vector3(0.3f, 0.05f, 0.06f), 0.005f), new Vector3(0f, 0.025f, 0f), Mats.Lit(new Color(0.2f, 0.2f, 0.55f), 0f, 0.4f));
+                    for (int i = 0; i < 10; i++)
+                        Part(root, MeshKit.Lathe("saturntube", new[] { new Vector2(0.006f, 0f), new Vector2(0f, 0.001f) }, 8), new Vector3(-0.135f + i * 0.03f, 0.051f, 0f), Mats.Lit(new Color(0.05f, 0.04f, 0.04f), 0f, 0.2f));
+                    tip = new Vector3(-0.15f, 0.02f + fuseLen, 0f);
+                    break;
+                case "willowcake":
+                case "finale":
+                    {
+                        bool finale = def.Id == "finale";
+                        float side = finale ? 0.3f : 0.22f;
+                        Part(root, MeshKit.RoundedBox(new Vector3(side, 0.2f, side), 0.01f), new Vector3(0f, 0.08f, 0f), Mats.Lit(finale ? new Color(0.6f, 0.08f, 0.1f) : new Color(0.85f, 0.65f, 0.2f), 0f, 0.4f));
+                        int n = finale ? 6 : 4;
+                        for (int i = 0; i < n * n; i++)
+                            Part(root, MeshKit.Lathe("caketube", new[] { new Vector2(0.018f, 0f), new Vector2(0f, 0.001f) }, 10), new Vector3(-side * 0.35f + (i % n) * side * 0.7f / (n - 1), 0.181f, -side * 0.35f + (i / n) * side * 0.7f / (n - 1)), Mats.Lit(new Color(0.05f, 0.04f, 0.04f), 0f, 0.2f));
+                        tip = new Vector3(side * 0.5f, 0.03f + fuseLen, 0f);
+                        break;
+                    }
+                case "bigmortar":
+                    Part(root, MeshKit.RoundedBox(new Vector3(0.22f, 0.04f, 0.22f), 0.006f), new Vector3(0f, -0.005f, 0f), Mats.Surface("wood", Color.white, 0f, 0.4f));
+                    Tube(root, new Vector3(0f, 0.015f, 0f), 0.07f, 0.45f, Mats.Lit(new Color(0.2f, 0.25f, 0.2f), 0.1f, 0.5f), Mats.Lit(new Color(0.05f, 0.05f, 0.05f), 0f, 0.2f));
+                    tip = new Vector3(0.03f, 0.46f + fuseLen, 0f);
+                    break;
+                case "megacracker":
+                    Tube(root, new Vector3(0f, -0.05f, 0f), 0.017f, 0.1f, Mats.Lit(new Color(0.85f, 0.15f, 0.1f), 0f, 0.4f), cap);
+                    Part(root, MeshKit.Lathe("megaband", new[] { new Vector2(0.0175f, -0.012f), new Vector2(0.0175f, 0.012f) }, 16), new Vector3(0f, 0.01f, 0f), Mats.Lit(new Color(0.95f, 0.85f, 0.2f), 0f, 0.4f));
+                    tip = new Vector3(0f, 0.05f + fuseLen, 0f);
+                    break;
+                case "bigbang":
+                    Part(root, MeshKit.Blob(0.045f, 0.03f, 903), Vector3.zero, Mats.Lit(new Color(0.08f, 0.08f, 0.09f), 0.2f, 0.6f));
+                    Part(root, MeshKit.Lathe("bigbangband", new[] { new Vector2(0.0455f, -0.006f), new Vector2(0.0455f, 0.006f) }, 20), Vector3.zero, Mats.Lit(new Color(0.9f, 0.15f, 0.1f), 0f, 0.4f));
+                    tip = new Vector3(0f, 0.045f + fuseLen, 0f);
+                    break;
+                case "string100":
+                    for (int i = 0; i < 14; i++)
+                    {
+                        var c = Tube(root, new Vector3((i - 6.5f) * 0.011f, -0.009f, 0f), 0.0045f, 0.018f, Mats.Lit(new Color(0.85f, 0.2f, 0.1f), 0f, 0.35f), band);
+                        c.transform.localRotation = Quaternion.Euler(0f, 0f, (i % 2 == 0 ? 8f : -8f));
+                    }
+                    tip = new Vector3(-0.08f, 0.02f, 0f);
+                    break;
+                case "sticky":
+                    Part(root, MeshKit.Blob(0.03f, 0.25f, 904), Vector3.zero, Mats.Lit(new Color(0.35f, 0.75f, 0.2f), 0f, 0.8f));
+                    tip = new Vector3(0f, 0.03f + fuseLen, 0f);
+                    break;
+                case "tnt":
+                    for (int i = 0; i < 6; i++) Tube(root, new Vector3((i % 3 - 1) * 0.029f, -0.1f, (i / 3 - 0.5f) * 0.029f), 0.0145f, 0.2f, Mats.Lit(new Color(0.75f, 0.12f, 0.08f), 0f, 0.3f), cap);
+                    for (int k = -1; k <= 1; k += 2) Part(root, MeshKit.RoundedBox(new Vector3(0.095f, 0.025f, 0.065f), 0.008f), new Vector3(0f, k * 0.05f, 0f), Mats.Lit(new Color(0.15f, 0.15f, 0.16f), 0f, 0.5f));
+                    tip = new Vector3(0f, 0.1f + fuseLen, 0f);
+                    break;
+                case "cluster":
+                    for (int i = 0; i < 7; i++) Part(root, MeshKit.Blob(0.016f, 0.05f, 910 + i), new Vector3(Mathf.Cos(i * 0.9f) * 0.018f * (i > 0 ? 1f : 0f), (i % 3) * 0.01f, Mathf.Sin(i * 0.9f) * 0.018f * (i > 0 ? 1f : 0f)), Mats.Lit(new Color(0.3f, 0.32f, 0.2f), 0.3f, 0.4f));
+                    tip = new Vector3(0f, 0.035f + fuseLen, 0f);
+                    break;
+                case "thermite":
+                    Tube(root, new Vector3(0f, -0.04f, 0f), 0.025f, 0.08f, Mats.Lit(new Color(0.55f, 0.56f, 0.58f), 0.8f, 0.5f), Mats.Lit(new Color(0.3f, 0.3f, 0.32f), 0.8f, 0.4f));
+                    tip = new Vector3(0f, 0.04f + fuseLen, 0f);
+                    break;
                 case "timer":
                     // Two sticks taped to a black kitchen-timer box with a green display and a red LED.
                     for (int i = 0; i < 2; i++) Tube(root, new Vector3((i - 0.5f) * 0.03f, -0.09f, -0.012f), 0.0145f, 0.18f, Mats.Lit(new Color(0.62f, 0.12f, 0.08f), 0f, 0.3f), cap);
@@ -152,6 +241,23 @@ namespace BoomYard.Game
                 case "mortar": return new Color(0.15f, 0.15f, 0.16f);
                 case "candle": return new Color(0.95f, 0.8f, 0.25f);
                 case "fountain": return new Color(0.2f, 0.65f, 0.35f);
+                case "whistler": return new Color(0.75f, 0.77f, 0.8f);
+                case "bigrocket": return new Color(0.85f, 0.65f, 0.2f);
+                case "spinner": return new Color(0.85f, 0.2f, 0.5f);
+                case "ufo": return new Color(0.7f, 0.74f, 0.8f);
+                case "smoke": return new Color(0.25f, 0.55f, 0.3f);
+                case "strobepot": return new Color(0.1f, 0.1f, 0.12f);
+                case "saturn": return new Color(0.2f, 0.2f, 0.55f);
+                case "willowcake": return new Color(0.85f, 0.65f, 0.2f);
+                case "finale": return new Color(0.6f, 0.08f, 0.1f);
+                case "bigmortar": return new Color(0.2f, 0.25f, 0.2f);
+                case "megacracker": return new Color(0.85f, 0.15f, 0.1f);
+                case "bigbang": return new Color(0.1f, 0.1f, 0.12f);
+                case "string100": return new Color(0.85f, 0.2f, 0.1f);
+                case "sticky": return new Color(0.35f, 0.75f, 0.2f);
+                case "tnt": return new Color(0.75f, 0.12f, 0.08f);
+                case "cluster": return new Color(0.3f, 0.32f, 0.2f);
+                case "thermite": return new Color(0.55f, 0.56f, 0.58f);
                 case "remote": return new Color(0.18f, 0.3f, 0.6f);
                 default: return new Color(0.61f, 0.16f, 0.13f);
             }
@@ -230,7 +336,7 @@ namespace BoomYard.Game
             Collider col;
             if (def.Rolls || def.Id == "sparkler") col = go.AddComponent<SphereCollider>();
             else col = go.AddComponent<CapsuleCollider>();
-            if (col is SphereCollider) ((SphereCollider)col).radius = def.Id == "cherry" ? 0.02f : 0.03f;
+            if (col is SphereCollider) ((SphereCollider)col).radius = def.Id == "cherry" ? 0.02f : def.Id == "bigbang" ? 0.045f : 0.03f;
             if (col is CapsuleCollider)
             {
                 var cap = (CapsuleCollider)col;
@@ -379,6 +485,14 @@ namespace BoomYard.Game
         void OnCollisionEnter(Collision c)
         {
             if (done) return;
+            // A sticky bomb grabs whatever it hits first.
+            if (Def.Sticky && Airborne && StuckTo == null && Motor == null && c.contactCount > 0)
+            {
+                var contact = c.GetContact(0);
+                StickTo(contact.point, contact.normal, c.collider.GetComponentInParent<Destructible>());
+                Airborne = false;
+                return;
+            }
             // Thrown straight into a bin, a mailbox or a box: contained, and a hole in one.
             if (Airborne && Lit && Placement == Placement.Thrown && Container == null)
             {
@@ -402,7 +516,7 @@ namespace BoomYard.Game
         {
             if (done) return;
             // A rocket whose fuse burns down on the ground goes up as a firework instead.
-            if (Def.Firework != null && Def.Firework != "rocket" && !Airborne)
+            if (Def.Firework != null && Def.Firework != "rocket" && (!Airborne || Def.Firework == "smoke"))
             {
                 // A firework that fires from the ground: it stays and fires, then it is gone.
                 done = true;
@@ -410,7 +524,7 @@ namespace BoomYard.Game
                 FireworkDevice.Begin(this);
                 return;
             }
-            if (Def.Id == "rocket" && Motor == null && !Airborne)
+            if (Def.Firework == "rocket" && Motor == null && !Airborne)
             {
                 Motor = gameObject.AddComponent<RocketMotor>();
                 Motor.Launch(this, RocketMotor.Kind.Shell, (transform.up + Random.insideUnitSphere * 0.12f).normalized);
@@ -444,7 +558,7 @@ namespace BoomYard.Game
             for (int i = 0; i < def.Units; i++)
             {
                 Vector3 p = pos;
-                if (def.Id == "string50") p += new Vector3(dir.x, 0f, dir.y) * (i * 0.04f) + Random.insideUnitSphere * 0.1f;
+                if (def.Id.StartsWith("string")) p += new Vector3(dir.x, 0f, dir.y) * (i * 0.04f) + Random.insideUnitSphere * 0.1f;
                 else p += Random.insideUnitSphere * Mathf.Min(def.Radius, 2f);
                 p.y = Mathf.Max(0.05f, p.y);
                 Charge(def, p, placement, container, blastId);
@@ -537,7 +651,7 @@ namespace BoomYard.Game
             Fx.FuseSparks(tip != null ? tip : transform);
             var hiss = gameObject.AddComponent<AudioSource>();
             hiss.clip = StreetSounds.Whistle;
-            hiss.pitch = Random.Range(1.1f, 1.35f);
+            hiss.pitch = l.Def.Id == "whistler" ? Random.Range(1.7f, 1.9f) : l.Def.Id == "bigrocket" ? Random.Range(0.85f, 0.95f) : Random.Range(1.1f, 1.35f);
             hiss.spatialBlend = 1f;
             hiss.minDistance = 3f;
             hiss.maxDistance = 90f;
@@ -561,7 +675,10 @@ namespace BoomYard.Game
             rb.velocity = dir * Mathf.Lerp(8f, 20f, Mathf.Clamp01(age * 2f));
 #endif
             if (age < 1.05f) return;   // about 15 m up: high over the house, still in view from the yard
-            Fireworks.Burst(transform.position, Fireworks.RandomType(), 1f);
+            // The whistler bursts in strobes and crackles; the big rocket's shell is half as big again.
+            var def = live != null ? live.Def : null;
+            var type = def != null && def.Id == "whistler" ? (Random.value < 0.5f ? ShellType.Strobe : ShellType.Crackling) : Fireworks.RandomType();
+            Fireworks.Burst(transform.position, type, def != null && def.Id == "bigrocket" ? 1.5f : 1f);
             Destroy(gameObject);
         }
     }

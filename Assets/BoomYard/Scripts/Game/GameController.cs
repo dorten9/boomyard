@@ -71,6 +71,7 @@ namespace BoomYard.Game
             var save = SaveService.Load();
             Stencils.MigrateOldSave(save);
             Purchases.Init();
+            Ads.Create();
             Purchases.Granted += pack => { Sfx.I.Coin(); if (UI != null) UI.Toast("+" + Loc.Coins(pack.Coins) + " coins. Thank you!", 3f); };
             Loc.Init("en");
             var tier = save.settings.quality >= 0 ? (QualityTier)save.settings.quality : Quality.Detect();
@@ -106,6 +107,7 @@ namespace BoomYard.Game
             Tutorial = gameObject.AddComponent<Tutorial>();
 
             UI = GameUI.Create(this);
+            Ads.I.TestAd = UI.ShowTestAd;
             Mark("ui built");
             Shot = ShotMode();
             GoHome();
@@ -247,7 +249,9 @@ namespace BoomYard.Game
             if (Raining) rain = Fx.Rain(Player.Cam.transform);
             Round = new RoundModel();
             Round.Changed += OnRoundState;
-            Round.Start(Level.Time + (save.Has("watch") ? 10f : 0f));
+            Round.Start(Level.Time + (save.Has("watch") ? 10f : 0f) + bonusTime);
+            if (bonusTime > 0f) UI.Toast("+" + Mathf.RoundToInt(bonusTime) + " SECONDS ON THE CLOCK", 3f);
+            bonusTime = 0f;
             UI.ShowHud();
             if (Level.Tutorial && !save.tutorialDone) Tutorial.Begin(this);
             else if (Level.Rule != LevelRule.None || Goals.For(Level) != GoalKind.None) UI.RuleCard(Level, Arena.Spare);
@@ -295,6 +299,36 @@ namespace BoomYard.Game
         }
 
         public void Restart() { if (Level.Show) StartCity(); else if (Level.Daily) StartDaily(); else StartLevel(Level.Number); }
+
+        /// <summary>Extra seconds on the next start of a level (the retry a video pays for).</summary>
+        float bonusTime;
+
+        /// <summary>Retry with <paramref name="seconds"/> more on the clock.</summary>
+        public void RetryWithTime(float seconds) { bonusTime = seconds; Restart(); }
+
+        public const int AdCoins = 150, AdsPerDay = 3;
+
+        /// <summary>Free coins for a video, a few times a day.</summary>
+        public int AdCoinsLeftToday()
+        {
+            var s = SaveService.Data;
+            int today = Daily.Seed(System.DateTime.Now);
+            return s.adDate == today ? Mathf.Max(0, AdsPerDay - s.adsToday) : AdsPerDay;
+        }
+
+        public void GrantAdCoins(int coins, bool daily)
+        {
+            var s = SaveService.Data;
+            if (daily)
+            {
+                int today = Daily.Seed(System.DateTime.Now);
+                if (s.adDate != today) { s.adDate = today; s.adsToday = 0; }
+                s.adsToday++;
+            }
+            s.shekels += coins;
+            SaveService.Save();
+            Sfx.I.Coin();
+        }
 
         public void NextLevel() { StartLevel(Mathf.Min(Level.Number + 1, Levels.All.Length)); }
 
@@ -460,6 +494,14 @@ namespace BoomYard.Game
             Round.Stun(RoundModel.HandBurnStun);
             UI.Flash(Color.white, 1.4f);
             Sfx.I.Ring();
+        }
+
+        /// <summary>The player was blown up: four seconds out (the clock keeps running), then back at the start.</summary>
+        public void OnDeath(float seconds)
+        {
+            Round.Stun(seconds);
+            UI.Flash(new Color(0.8f, 0.05f, 0.02f, 0.85f), 1.2f);
+            UI.Death(seconds);
         }
 
         public void OnKnockdown()
@@ -892,6 +934,27 @@ namespace BoomYard.Game
                 StartLevel(6);
                 yield return new WaitForSeconds(1.5f);
                 Player.Teleport(new Vector3(4.6f, 0f, -1.2f), 40f, 14f);
+                yield break;
+            }
+            if (mode == "fireworks2")
+            {
+                // The new fireworks in a row on the plaza road.
+                StartCity();
+                yield return new WaitForSeconds(1.5f);
+                Player.Teleport(new Vector3(0f, 0.16f, -30.5f), 0f, -22f);
+                string[] kinds = { "spinner", "ufo", "smoke", "strobepot", "saturn", "finale", "whistler", "bigmortar" };
+                for (int i = 0; i < kinds.Length; i++)
+                    LiveExplosive.SpawnUnlit(Catalog.Explosive(kinds[i]), new Vector3(-8f + i * 2.2f, 0.05f, -21f), Quaternion.identity, Placement.Placed);
+                yield return new WaitForSeconds(1f);
+                LaunchShow();
+                yield break;
+            }
+            if (mode == "death")
+            {
+                // A dynamite stick at the player's feet: blown up, back at the start four seconds later.
+                StartLevel(4);
+                yield return new WaitForSeconds(1.5f);
+                LiveExplosive.Spawn(Catalog.Explosive("dynamite"), Player.transform.position + Player.transform.forward * 0.6f + Vector3.up * 0.05f, Quaternion.identity, 0.3f, Placement.Placed);
                 yield break;
             }
             if (mode == "inshop")

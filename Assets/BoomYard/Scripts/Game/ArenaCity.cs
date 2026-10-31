@@ -21,7 +21,8 @@ namespace BoomYard.Game
             StreetLife.DarkRooms.Clear();
             a.Root = new GameObject("Big City");
             var root = a.Root.transform;
-            a.Spawn = new Vector3(0f, Kerb, -30.5f);
+            // The start: on the plaza, facing its free wall, spray can at the ready.
+            a.Spawn = new Vector3(-8f, Kerb, -16.4f);
             a.SpawnYaw = 0f;
             var shops = Streets.ForLevel(27);
             var rng = new System.Random(2024);
@@ -416,12 +417,32 @@ namespace BoomYard.Game
             Spawn("foodcart", b, new Vector3(-12f, 0f, 4f), 90f);
             Spawn("fireworkstand", b, new Vector3(12f, 0f, 5f), 270f);
             for (int i = 0; i < 4; i++) Spawn("cafetable", b, new Vector3(-13f + (i % 2) * 2.6f, 0f, -6f + (i / 2) * 2.6f), rng.Next(360), i);
-            Spawn("newsbox", b, new Vector3(-4f, 0f, -14.5f), 180f, 0);
-            Spawn("newsbox", b, new Vector3(-3.3f, 0f, -14.5f), 180f, 1);
-            Spawn("vending", b, new Vector3(4f, 0f, -14.6f), 0f, 0);
+            Spawn("newsbox", b, new Vector3(3f, 0f, -14.5f), 180f, 0);
+            Spawn("newsbox", b, new Vector3(3.7f, 0f, -14.5f), 180f, 1);
+            Spawn("vending", b, new Vector3(6f, 0f, -14.6f), 0f, 0);
+            FreeWall(b, new Vector3(-8f, 0f, -12.8f));
             Spawn("gnome", b, new Vector3(1.2f, 0.62f, 3.6f), 200f, 1);   // someone left a garden gnome on the fountain
             // A bus shelter on the plaza road, its glass in three panes.
             BusShelter(b, new Vector3(-12.5f, 0f, -16.5f));
+        }
+
+        /// <summary>
+        /// The plaza's free wall: a long, clean concrete wall for graffiti (where the big city starts), capped, on
+        /// a plinth, with a strip of paint at each end so it reads as a place that is meant to be painted.
+        /// </summary>
+        static void FreeWall(Transform b, Vector3 local)
+        {
+            var w = Group(b, "FreeWall", b.TransformPoint(local), 0f);
+            const float len = 12f, high = 3.2f;
+            var face = Mats.Surface("concrete", new Color(0.97f, 0.96f, 0.93f), 0f, 0.5f, 0.8f, 0.5f);
+            var cap = Mats.Surface("concrete", new Color(0.7f, 0.69f, 0.66f), 0f, 0.6f);
+            Box(w, "Wall", new Vector3(0f, high * 0.5f, 0.2f), new Vector3(len, high, 0.4f), face, true);
+            Box(w, "Coping", new Vector3(0f, high + 0.06f, 0.2f), new Vector3(len + 0.2f, 0.12f, 0.55f), cap, false);
+            Box(w, "Plinth", new Vector3(0f, 0.12f, 0.2f), new Vector3(len + 0.1f, 0.24f, 0.5f), cap, true);
+            var stripes = new[] { new Color(0.9f, 0.2f, 0.15f), new Color(0.98f, 0.8f, 0.1f), new Color(0.2f, 0.5f, 0.95f) };
+            for (int i = 0; i < 3; i++)
+                for (int s = -1; s <= 1; s += 2)
+                    Box(w, "Stripe", new Vector3(s * (len * 0.5f - 0.15f - i * 0.22f), high * 0.5f, -0.005f), new Vector3(0.2f, high - 0.3f, 0.02f), Mats.Lit(stripes[i], 0f, 0.4f), false);
         }
 
         static void BusShelter(Transform b, Vector3 local)

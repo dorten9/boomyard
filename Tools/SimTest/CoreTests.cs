@@ -52,8 +52,8 @@ static class CoreTests
         Check(ScoreCalculator.Stars(yard, 59999) == 2, "2 stars under the threshold");
         Check(ScoreCalculator.Stars(yard, 60000) == 3, "3 stars at the threshold");
         Check(ScoreCalculator.Stars(yard, 1000) == 0, "no stars");
-        Near(ScoreCalculator.CoinsFromDamage(200000), 4000, "a coin per $50 of damage");
-        Near(ScoreCalculator.CoinsFromDamage(74), 1, "coins round to the nearest");
+        Near(ScoreCalculator.CoinsFromDamage(150000), 1000, "a coin per $150 of damage");
+        Near(ScoreCalculator.CoinsFromDamage(76), 1, "coins round to the nearest");
     }
 
     static void Chains()
@@ -182,7 +182,7 @@ static class CoreTests
 
     static void CatalogChecks()
     {
-        Check(Catalog.Explosives.Length == 20, "20 explosives (with the timer and remote charges and the ground fireworks)");
+        Check(Catalog.Explosives.Length == 35, "35 explosives and fireworks");
         Check(Catalog.Objects.Length >= 28, "28+ objects");
         Check(Catalog.Arenas.Length == 6, "6 arenas");
         foreach (var o in Catalog.Objects)
@@ -322,7 +322,7 @@ static class MetaTests
         check(round.TimeLeft == 63f, "a target down gives seconds back");
         var city = Levels.City();
         check(city.Show && city.Props.Length == 0 && city.Kit.Length >= 3, "the big city: no targets, a kit to start");
-        check(Progress.CityCoins(50 * 400) == 100, "the city pays a quarter of the wreckage");
+        check(Progress.CityCoins(150 * 600) == 100, "the city pays a sixth of the wreckage");
 
         var a = Missions.ForDay(20261024);
         var b = Missions.ForDay(20261024);
@@ -339,8 +339,8 @@ static class MetaTests
         check(DailyReward.NextDay(20261023, 2, new System.DateTime(2026, 10, 24)) == 3, "streak continues");
         check(DailyReward.NextDay(20261024, 2, new System.DateTime(2026, 10, 24)) == -1, "claimed today");
         check(DailyReward.NextDay(20261020, 4, new System.DateTime(2026, 10, 24)) == 0, "missed day restarts");
-        check(Progress.LevelCoins(lvl, true, true, 3, 100000) == 2000 + lvl.Reward + 120, "level coins: wreckage, reward, stars");
-        check(Progress.LevelCoins(lvl, false, false, 0, 100000) == 2000, "a failed round keeps the wreckage coins");
+        check(Progress.LevelCoins(lvl, true, true, 3, 150000) == 1000 + lvl.Reward * Progress.RewardShare / 100 + 75, "level coins: wreckage, part of the reward, stars");
+        check(Progress.LevelCoins(lvl, false, false, 0, 150000) == 1000, "a failed round keeps the wreckage coins");
 
         foreach (var side in new[] { 1f, -1f })
         {

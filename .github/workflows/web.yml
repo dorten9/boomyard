@@ -1,6 +1,7 @@
 # Builds the Unity project for the browser (WebGL, the Low profile for testing and demos) and deploys it to Vercel.
 # Required repository secrets: UNITY_LICENSE, UNITY_EMAIL, UNITY_PASSWORD, VERCEL_TOKEN (the same as Overlane's).
 # Runs only from main. Without the Unity secrets the run is skipped instead of failing.
+# Optional: ADSENSE_CLIENT (ca-pub-...) turns on real ads; repository variable ADSENSE_TEST=on shows Google test ads.
 name: Web build
 
 on:
@@ -172,10 +173,18 @@ jobs:
 
       - name: Deploy to Vercel
         if: env.VERCEL_TOKEN != ''
+        env:
+          ADSENSE_CLIENT: ${{ secrets.ADSENSE_CLIENT }}
+          ADSENSE_TEST: ${{ vars.ADSENSE_TEST }}
         run: |
           # The Unity container writes the build as root; deploy from a copy we own.
           site="$RUNNER_TEMP/site"
           rm -rf "$site" && cp -r "${{ steps.out.outputs.dir }}" "$site"
+          # Real ads once an AdSense publisher id is configured (repository secret ADSENSE_CLIENT = ca-pub-...).
+          if [ -n "$ADSENSE_CLIENT" ]; then
+            sed -i "s/__ADSENSE_CLIENT__/$ADSENSE_CLIENT/; s/__ADSENSE_TEST__/$ADSENSE_TEST/" "$site/index.html"
+            echo "google.com, ${ADSENSE_CLIENT#ca-}, DIRECT, f08c47fec0942fa0" > "$site/ads.txt"
+          fi
           cp Tools/web/vercel.json Tools/web/privacy.html Tools/web/terms.html "$site/"
           cd "$site"
           npx --yes vercel@latest link --yes --project boomyard --token "$VERCEL_TOKEN"

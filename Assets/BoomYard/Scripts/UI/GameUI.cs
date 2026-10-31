@@ -389,6 +389,22 @@ namespace BoomYard.UI
             Toast(text, 4.5f);
         }
 
+        /// <summary>The death card: blown up, and a countdown to getting back up.</summary>
+        public void Death(float seconds)
+        {
+            deathLeft = seconds;
+            if (deathText == null)
+            {
+                deathText = UIKit.Label(safe, "Death", "", 60, UIKit.Fg, TextAnchor.MiddleCenter, true);
+                UIKit.Place(deathText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 40f), new Vector2(1400f, 200f));
+                deathText.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+                deathText.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.9f);
+            }
+            deathText.gameObject.SetActive(true);
+        }
+        Text deathText;
+        float deathLeft;
+
         /// <summary>"+3s" by the clock when a target goes down.</summary>
         public void TimeBonus(float seconds)
         {
@@ -433,6 +449,12 @@ namespace BoomYard.UI
         {
             float dt = Time.unscaledDeltaTime;
             toastLeft -= dt;
+            if (deathText != null && deathText.gameObject.activeSelf)
+            {
+                deathLeft -= Time.deltaTime;
+                deathText.text = "BLOWN UP!\n<size=34>Back on your feet in " + Mathf.Max(1, Mathf.CeilToInt(deathLeft)) + "</size>";
+                if (deathLeft <= 0f || game.Current != GameController.Mode.Level) deathText.gameObject.SetActive(false);
+            }
             if (timeBonus != null)
             {
                 timeBonusLeft -= dt;

@@ -206,7 +206,7 @@ namespace BoomYard.Core
                 P("fuelpump", -3f, 6f), P("fuelpump", 1f, 6f), P("fueltruck", 6.5f, 2f, 180f), P("barrel", -6f, 8f), P("barrel", -5.4f, 8.4f, 0f, 1), P("gascyl", 3f, 9f), P("gascyl", 3.5f, 9.3f), P("newsbox", -8f, 10.5f)).AsBoss(),
         };
 
-        public const int DailyReward = 600;
+        public const int DailyReward = 300;
 
         /// <summary>Seconds back on the clock for every target destroyed.</summary>
         public const float TargetBonusSeconds = 3f;

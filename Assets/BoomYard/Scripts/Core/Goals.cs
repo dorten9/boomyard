@@ -52,7 +52,7 @@ namespace BoomYard.Core
             }
         }
 
-        public static int Reward(LevelDef l) { return 100 + l.Number * 10; }
+        public static int Reward(LevelDef l) { return 60 + l.Number * 6; }
 
         /// <summary>Whether the goal was met in a round that cleared the level.</summary>
         public static bool Met(GoalKind g, LevelDef l, int longestChain, float timeLeft, int containedHits, IList<BonusKind> bonuses)

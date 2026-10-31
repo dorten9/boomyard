@@ -18,25 +18,42 @@ namespace BoomYard.Core
         public static readonly ShopItem[] Items =
         {
             // Explosives are unlocked once and are then unlimited in every level.
-            new ShopItem { Id = "pack_string", Name = "Firecracker String", Kind = "explosive", Grants = "string50", Amount = 1, Coins = 600 },
-            new ShopItem { Id = "pack_sparkler", Name = "Sparkler Bomb", Kind = "explosive", Grants = "sparkler", Amount = 1, Coins = 500 },
-            new ShopItem { Id = "pack_rocket", Name = "Rocket", Kind = "explosive", Grants = "rocket", Amount = 1, Coins = 800, UnlockLevel = 3 },
-            new ShopItem { Id = "pack_fountain", Name = "Fountain", Kind = "explosive", Grants = "fountain", Amount = 1, Coins = 400 },
-            new ShopItem { Id = "pack_candle", Name = "Roman Candle", Kind = "explosive", Grants = "candle", Amount = 1, Coins = 700 },
-            new ShopItem { Id = "pack_cake", Name = "Firework Cake", Kind = "explosive", Grants = "cake", Amount = 1, Coins = 1500, UnlockLevel = 4 },
-            new ShopItem { Id = "pack_mortar", Name = "Mortar Shell", Kind = "explosive", Grants = "mortar", Amount = 1, Coins = 2000, UnlockLevel = 6 },
-            new ShopItem { Id = "pack_m80", Name = "M-80", Kind = "explosive", Grants = "m80", Amount = 1, Coins = 1200, UnlockLevel = 2 },
-            new ShopItem { Id = "pack_cherry", Name = "Cherry Bomb", Kind = "explosive", Grants = "cherry", Amount = 1, Coins = 1000, UnlockLevel = 3 },
-            new ShopItem { Id = "pack_timer", Name = "Timer Charge", Kind = "explosive", Grants = "timer", Amount = 1, Coins = 1500, UnlockLevel = 14 },
-            new ShopItem { Id = "pack_pipe", Name = "Pipe Bomb", Kind = "explosive", Grants = "pipe", Amount = 1, Coins = 2500, UnlockLevel = 6 },
-            new ShopItem { Id = "pack_remote", Name = "Remote Charge", Kind = "explosive", Grants = "remote", Amount = 1, Coins = 2500, UnlockLevel = 22 },
-            new ShopItem { Id = "pack_dynamite", Name = "Dynamite", Kind = "explosive", Grants = "dynamite", Amount = 1, Coins = 3500, UnlockLevel = 8 },
-            new ShopItem { Id = "pack_keg", Name = "Powder Keg", Kind = "explosive", Grants = "keg", Amount = 1, Coins = 5000, UnlockLevel = 18 },
-            new ShopItem { Id = "lighter_zippo", Name = "Zippo", Kind = "lighter", Grants = "zippo", Amount = 1, Coins = 2500 },
-            new ShopItem { Id = "lighter_turbo", Name = "Turbo Lighter", Kind = "lighter", Grants = "turbo", Amount = 1, Coins = 5000 },
-            new ShopItem { Id = "up_vest", Name = "Vest: +2 pocket slots", Kind = "upgrade", Grants = "vest", Amount = 1, Coins = 2500 },
-            new ShopItem { Id = "up_legs", Name = "Lungs: run longer & faster", Kind = "upgrade", Grants = "legs", Amount = 1, Coins = 1800 },
-            new ShopItem { Id = "up_watch", Name = "Watch: +10 s every level", Kind = "upgrade", Grants = "watch", Amount = 1, Coins = 3000 },
+            new ShopItem { Id = "pack_string", Name = "Firecracker String", Kind = "explosive", Grants = "string50", Amount = 1, Coins = 900 },
+            new ShopItem { Id = "pack_sparkler", Name = "Sparkler Bomb", Kind = "explosive", Grants = "sparkler", Amount = 1, Coins = 700 },
+            new ShopItem { Id = "pack_rocket", Name = "Rocket", Kind = "explosive", Grants = "rocket", Amount = 1, Coins = 1200, UnlockLevel = 3 },
+            new ShopItem { Id = "pack_fountain", Name = "Fountain", Kind = "explosive", Grants = "fountain", Amount = 1, Coins = 600 },
+            new ShopItem { Id = "pack_candle", Name = "Roman Candle", Kind = "explosive", Grants = "candle", Amount = 1, Coins = 1000 },
+            new ShopItem { Id = "pack_cake", Name = "Firework Cake", Kind = "explosive", Grants = "cake", Amount = 1, Coins = 2200, UnlockLevel = 4 },
+            new ShopItem { Id = "pack_mortar", Name = "Mortar Shell", Kind = "explosive", Grants = "mortar", Amount = 1, Coins = 3000, UnlockLevel = 6 },
+            new ShopItem { Id = "pack_smoke", Name = "Smoke Bomb", Kind = "explosive", Grants = "smoke", Amount = 1, Coins = 400 },
+            new ShopItem { Id = "pack_spinner", Name = "Ground Spinner", Kind = "explosive", Grants = "spinner", Amount = 1, Coins = 500 },
+            new ShopItem { Id = "pack_megacracker", Name = "Mega Cracker", Kind = "explosive", Grants = "megacracker", Amount = 1, Coins = 800 },
+            new ShopItem { Id = "pack_strobepot", Name = "Strobe Pot", Kind = "explosive", Grants = "strobepot", Amount = 1, Coins = 900 },
+            new ShopItem { Id = "pack_ufo", Name = "Flying Saucer", Kind = "explosive", Grants = "ufo", Amount = 1, Coins = 1100, UnlockLevel = 3 },
+            new ShopItem { Id = "pack_whistler", Name = "Whistling Rocket", Kind = "explosive", Grants = "whistler", Amount = 1, Coins = 1400, UnlockLevel = 3 },
+            new ShopItem { Id = "pack_string100", Name = "Dragon String", Kind = "explosive", Grants = "string100", Amount = 1, Coins = 1900, UnlockLevel = 5 },
+            new ShopItem { Id = "pack_saturn", Name = "Saturn Battery", Kind = "explosive", Grants = "saturn", Amount = 1, Coins = 2400, UnlockLevel = 5 },
+            new ShopItem { Id = "pack_bigrocket", Name = "Big Rocket", Kind = "explosive", Grants = "bigrocket", Amount = 1, Coins = 2600, UnlockLevel = 7 },
+            new ShopItem { Id = "pack_willowcake", Name = "Willow Cake", Kind = "explosive", Grants = "willowcake", Amount = 1, Coins = 2800, UnlockLevel = 8 },
+            new ShopItem { Id = "pack_sticky", Name = "Sticky Bomb", Kind = "explosive", Grants = "sticky", Amount = 1, Coins = 3200, UnlockLevel = 9 },
+            new ShopItem { Id = "pack_bigbang", Name = "Big Bang Ball", Kind = "explosive", Grants = "bigbang", Amount = 1, Coins = 4200, UnlockLevel = 11 },
+            new ShopItem { Id = "pack_cluster", Name = "Cluster Bomb", Kind = "explosive", Grants = "cluster", Amount = 1, Coins = 4800, UnlockLevel = 13 },
+            new ShopItem { Id = "pack_finale", Name = "Finale Cake", Kind = "explosive", Grants = "finale", Amount = 1, Coins = 5500, UnlockLevel = 15 },
+            new ShopItem { Id = "pack_thermite", Name = "Thermite", Kind = "explosive", Grants = "thermite", Amount = 1, Coins = 6000, UnlockLevel = 20 },
+            new ShopItem { Id = "pack_bigmortar", Name = "Giant Mortar", Kind = "explosive", Grants = "bigmortar", Amount = 1, Coins = 6500, UnlockLevel = 20 },
+            new ShopItem { Id = "pack_tnt", Name = "TNT Bundle", Kind = "explosive", Grants = "tnt", Amount = 1, Coins = 9000, UnlockLevel = 25 },
+            new ShopItem { Id = "pack_m80", Name = "M-80", Kind = "explosive", Grants = "m80", Amount = 1, Coins = 1800, UnlockLevel = 2 },
+            new ShopItem { Id = "pack_cherry", Name = "Cherry Bomb", Kind = "explosive", Grants = "cherry", Amount = 1, Coins = 1500, UnlockLevel = 3 },
+            new ShopItem { Id = "pack_timer", Name = "Timer Charge", Kind = "explosive", Grants = "timer", Amount = 1, Coins = 2200, UnlockLevel = 14 },
+            new ShopItem { Id = "pack_pipe", Name = "Pipe Bomb", Kind = "explosive", Grants = "pipe", Amount = 1, Coins = 3800, UnlockLevel = 6 },
+            new ShopItem { Id = "pack_remote", Name = "Remote Charge", Kind = "explosive", Grants = "remote", Amount = 1, Coins = 3800, UnlockLevel = 22 },
+            new ShopItem { Id = "pack_dynamite", Name = "Dynamite", Kind = "explosive", Grants = "dynamite", Amount = 1, Coins = 5200, UnlockLevel = 8 },
+            new ShopItem { Id = "pack_keg", Name = "Powder Keg", Kind = "explosive", Grants = "keg", Amount = 1, Coins = 7500, UnlockLevel = 18 },
+            new ShopItem { Id = "lighter_zippo", Name = "Zippo", Kind = "lighter", Grants = "zippo", Amount = 1, Coins = 3500 },
+            new ShopItem { Id = "lighter_turbo", Name = "Turbo Lighter", Kind = "lighter", Grants = "turbo", Amount = 1, Coins = 7000 },
+            new ShopItem { Id = "up_vest", Name = "Vest: +2 pocket slots", Kind = "upgrade", Grants = "vest", Amount = 1, Coins = 3500 },
+            new ShopItem { Id = "up_legs", Name = "Lungs: run longer & faster", Kind = "upgrade", Grants = "legs", Amount = 1, Coins = 2500 },
+            new ShopItem { Id = "up_watch", Name = "Watch: +10 s every level", Kind = "upgrade", Grants = "watch", Amount = 1, Coins = 4500 },
             // Style: what your hands and lighter look like. Looks only.
             new ShopItem { Id = "glove_none", Name = "Bare Hands", Kind = "glove", Grants = "", Amount = 1, Coins = 0 },
             new ShopItem { Id = "glove_work", Name = "Work Gloves", Kind = "glove", Grants = "work", Amount = 1, Coins = 600 },
@@ -178,14 +195,14 @@ namespace BoomYard.Core
             var r = new Random(daySeed);
             var pool = new List<Mission>
             {
-                new Mission { kind = "destroy", goal = 15 + r.Next(3) * 5, coins = 150 },
-                new Mission { kind = "destroy_id", target = r.Next(2) == 0 ? "van" : "sedan", goal = 2, coins = 250 },
-                new Mission { kind = "chain", goal = 3 + r.Next(2), coins = 400 },
-                new Mission { kind = "clear", goal = 2 + r.Next(2), coins = 200 },
-                new Mission { kind = "stars", goal = 4 + r.Next(3), coins = 300 },
-                new Mission { kind = "contained", goal = 3, coins = 180 },
-                new Mission { kind = "blasts", goal = 20, coins = 120 },
-                new Mission { kind = "destroy_id", target = "window", goal = 10, coins = 150 },
+                new Mission { kind = "destroy", goal = 15 + r.Next(3) * 5, coins = 75 },
+                new Mission { kind = "destroy_id", target = r.Next(2) == 0 ? "van" : "sedan", goal = 2, coins = 125 },
+                new Mission { kind = "chain", goal = 3 + r.Next(2), coins = 200 },
+                new Mission { kind = "clear", goal = 2 + r.Next(2), coins = 100 },
+                new Mission { kind = "stars", goal = 4 + r.Next(3), coins = 150 },
+                new Mission { kind = "contained", goal = 3, coins = 90 },
+                new Mission { kind = "blasts", goal = 20, coins = 60 },
+                new Mission { kind = "destroy_id", target = "window", goal = 10, coins = 75 },
             };
             var today = new List<Mission>();
             while (today.Count < 3)
@@ -213,7 +230,7 @@ namespace BoomYard.Core
     /// <summary>The 7-day login calendar: coins every day, a big pile on day 7.</summary>
     public static class DailyReward
     {
-        public static readonly int[] Coins = { 100, 150, 500, 250, 300, 400, 1500 };
+        public static readonly int[] Coins = { 50, 75, 250, 120, 150, 200, 750 };
 
         /// <summary>Next streak day (0–6) given the last claim day and today (days as Daily.Seed values).</summary>
         public static int NextDay(int lastClaimDate, int streak, DateTime today)
@@ -233,15 +250,18 @@ namespace BoomYard.Core
         /// Coins from a round: everything the wreckage was worth, plus on a clear the level's reward (in full the
         /// first time, a fifth on replays) and 40 for every new star.
         /// </summary>
+        /// <summary>Per cent of a level's listed reward paid for its first clear (a tighter economy).</summary>
+        public const int RewardShare = 40;
+
         public static int LevelCoins(LevelDef level, bool cleared, bool firstClear, int newStars, long damage)
         {
             int wreck = (int)ScoreCalculator.CoinsFromDamage(damage);
             if (!cleared) return wreck;
-            return wreck + (firstClear ? level.Reward : level.Reward / 5) + newStars * 40;
+            return wreck + (firstClear ? level.Reward * RewardShare / 100 : level.Reward / 10) + newStars * 25;
         }
 
-        /// <summary>The big city pays a quarter of what its wreckage is worth (there is a whole downtown of it).</summary>
-        public const int CityShare = 4;
+        /// <summary>The big city pays a sixth of what its wreckage is worth (there is a whole downtown of it).</summary>
+        public const int CityShare = 6;
 
         public static int CityCoins(long damage) { return (int)(ScoreCalculator.CoinsFromDamage(damage) / CityShare); }
     }
