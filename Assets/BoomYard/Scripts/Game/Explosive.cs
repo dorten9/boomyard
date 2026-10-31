@@ -542,11 +542,14 @@ namespace BoomYard.Game
             Destroy(gameObject);
         }
 
+        /// <summary>Blasts are half as big again in a Big Bangs week in the city.</summary>
+        static float Scale { get { return GameController.I != null ? GameController.I.BlastScale : 1f; } }
+
         static void Charge(ExplosiveDef def, Vector3 pos, Placement placement, Destructible container, int blastId)
         {
             Blast.Detonate(new Blast.Charge
             {
-                Position = pos, Damage = def.Damage, Radius = def.Radius, Shrapnel = def.ShrapnelRadius, Placement = placement,
+                Position = pos, Damage = def.Damage * Scale, Radius = def.Radius * Scale, Shrapnel = def.ShrapnelRadius, Placement = placement,
                 BreaksConcrete = def.BreaksConcrete, Thermite = def.Id == "thermite", BlastId = blastId, Container = container,
             });
         }

@@ -26,7 +26,8 @@ namespace BoomYard.UI
         Image chainBadge, windArrow, joyBase, joyKnob, catchRing, powerFill, tutCard, targetsPill, hudCoin;
         RectTransform fuseBar, fusePointer, powerBar, markers;
         RectTransform lightBtn, throwBtn, placeBtn, boomBtn, sprayBtn, strip;
-        Text boomCaption, lightCaption, placeCaption, sprayCaption;
+        Text boomCaption, lightCaption, placeCaption, sprayCaption, jobText;
+        Image jobPill;
         Image lightIcon, sprayRing, sprayMarker;
         string stripKey = "";
         float wreckedAt;
@@ -192,6 +193,12 @@ namespace BoomYard.UI
             targetsPill.rectTransform.pivot = new Vector2(0.5f, 1f);
             targets = UIKit.Label(targetsPill.transform, "Text", "", 24, new Color(0.07f, 0.04f, 0.02f), TextAnchor.MiddleCenter, true);
             UIKit.Stretch(targets.rectTransform);
+            // The city's current job, under the wreck count.
+            jobPill = UIKit.Image(hud, "Job", new Color(0.03f, 0.03f, 0.035f, 0.75f), UIKit.Pill);
+            UIKit.Place(jobPill.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -148f), new Vector2(560f, 40f));
+            jobPill.rectTransform.pivot = new Vector2(0.5f, 1f);
+            jobText = UIKit.Label(jobPill.transform, "Text", "", 21, UIKit.Flame, TextAnchor.MiddleCenter, true);
+            UIKit.Stretch(jobText.rectTransform);
 
             // Top right: the coins this round's wreckage is worth, and the chain multiplier.
             damage = UIKit.Label(hud, "Damage", Loc.Money(0), 40, UIKit.Fg, TextAnchor.UpperRight, true);
@@ -520,6 +527,9 @@ namespace BoomYard.UI
                 }
                 targets.text = "WRECKED  " + wrecked + " / " + g.Arena.Objects.Count;
             }
+            var job = g.InCity ? g.Contract : null;
+            jobPill.gameObject.SetActive(job != null);
+            if (job != null) jobText.text = "JOB:  " + job.Text + "   " + Loc.Time(job.Left) + "   +" + job.Reward;
             UpdateSpray(player);
             // The coin sits just left of the number, however wide it is.
             hudCoin.rectTransform.anchoredPosition = new Vector2(-40f - damage.preferredWidth - 30f, -26f);

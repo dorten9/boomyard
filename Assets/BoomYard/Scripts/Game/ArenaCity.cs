@@ -49,6 +49,7 @@ namespace BoomYard.Game
             Skyline(root, rng);
 
             foreach (var d in a.Root.GetComponentsInChildren<Destructible>()) a.Objects.Add(d);
+            MaybeRare(a.Objects, new System.Random(), 1f, 2);   // two rare cars somewhere in town
             StreetLife.Create(root, new Vector3(-48f, 0f, 46f));   // the dog lives in the terraces' back gardens
             a.Root.AddComponent<CityCull>();
             return a;

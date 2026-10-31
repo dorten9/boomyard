@@ -114,7 +114,11 @@ namespace BoomYard.UI
             UIKit.Place(dsub.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 8f), new Vector2(400f, 26f));
             dsub.rectTransform.pivot = new Vector2(0.5f, 0f);
             ((RectTransform)daily.transform.Find("Label")).offsetMin = new Vector2(0f, 18f);
-            Btn(s, "BIG CITY", false, () => game.StartCity(), new Vector2(0f, 0.5f), new Vector2(170f, -294f), new Vector2(200f, 72f), 26);
+            var city = Btn(s, "BIG CITY", false, () => game.StartCity(), new Vector2(0f, 0.5f), new Vector2(170f, -294f), new Vector2(200f, 72f), 24);
+            var week = UIKit.Label(city.transform, "Week", CityEvents.Name(CityEvents.For(System.DateTime.Now)), 15, UIKit.Flame, TextAnchor.LowerCenter, true);
+            UIKit.Place(week.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 5f), new Vector2(200f, 20f));
+            week.rectTransform.pivot = new Vector2(0.5f, 0f);
+            ((RectTransform)city.transform.Find("Label")).offsetMin = new Vector2(0f, 14f);
             Btn(s, "STENCILS", false, () => ShowStudio(() => ShowHome()), new Vector2(0f, 0.5f), new Vector2(380f, -294f), new Vector2(200f, 72f), 26);
             var missions = Btn(s, "MISSIONS", false, () => ShowMissions(), new Vector2(0f, 0.5f), new Vector2(380f, -92f), new Vector2(200f, 80f), 28);
             int ready = 0;
@@ -123,6 +127,9 @@ namespace BoomYard.UI
             var gear = UIKit.IconButton(s, "Settings", UIKit.Gear, new Color(0.12f, 0.11f, 0.12f, 0.95f), UIKit.Fg, () => { Sfx.I.Tap(); ShowSettings(false); }, 76f);
             UIKit.Place((RectTransform)gear.transform, new Vector2(1f, 1f), new Vector2(-660f, -20f), new Vector2(76f, 76f));   // top bar, clear of the menu column
 
+            // The collection: rare cars and golden gnomes.
+            var coll = UIKit.IconButton(s, "Collection", UIKit.Star, new Color(0.12f, 0.11f, 0.12f, 0.95f), UIKit.Flame, () => { Sfx.I.Tap(); ShowCollection(); }, 76f);
+            UIKit.Place((RectTransform)coll.transform, new Vector2(1f, 1f), new Vector2(-760f, -20f), new Vector2(76f, 76f));
             Wallet(s);
             if (game.DailyAvailable() >= 0)
             {
@@ -579,7 +586,47 @@ namespace BoomYard.UI
             UIKit.Place(ic.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-70f, 10f), new Vector2(90f, 90f));
             ic.rectTransform.pivot = new Vector2(0.5f, 0.5f);
             Text(p, "+" + DailyReward.Coins[day], 64, UIKit.Flame, TextAnchor.MiddleLeft, new Vector2(0.5f, 0.5f), new Vector2(80f, 10f), new Vector2(200f, 80f), true);
-            Btn(p, "CLAIM", true, () => { game.ClaimDaily(); CloseModal(); ShowHome(); }, new Vector2(0.5f, 0f), new Vector2(0f, 70f), new Vector2(300f, 86f), 38);
+            if (Surprise.OnDay(day)) Text(p, "+ A SURPRISE FIREWORK, YOURS TO KEEP", 24, UIKit.Ok, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, -62f), new Vector2(700f, 34f), true);
+            Btn(p, "CLAIM", true, () =>
+            {
+                game.ClaimDaily();
+                CloseModal();
+                ShowHome();
+                var got = SaveService.Data.lastSurprise;
+                if (!string.IsNullOrEmpty(got)) Toast("SURPRISE: " + Catalog.Explosive(got).NameEn.ToUpperInvariant() + " unlocked for good!", 4f);
+            }, new Vector2(0.5f, 0f), new Vector2(0f, 70f), new Vector2(300f, 86f), 38);
+        }
+
+        // ---------- the collection ----------
+
+        /// <summary>Rare cars blown up (and the golden gnomes found), as badges.</summary>
+        void ShowCollection()
+        {
+            ShowLayer(false);
+            var s = NewScreen("Collection");
+            TopBar(s, "COLLECTION", () => ShowHome());
+            var save = SaveService.Data;
+            Text(s, "RARE CARS  " + save.rareCars.Count + " / " + RareCars.All.Length + "    ·    GOLDEN GNOMES  " + save.goldGnomes.Count + " / " + (Levels.All.Length - 1), 26, UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -140f), new Vector2(1400f, 36f), true);
+            for (int i = 0; i < RareCars.All.Length; i++)
+            {
+                var car = RareCars.All[i];
+                bool got = save.rareCars.Contains(car.Id);
+                int col = i % 3, row = i / 3;
+                var card = UIKit.Image(s, car.Id, Card, UIKit.Rounded);
+                UIKit.Place(card.rectTransform, new Vector2(0.5f, 1f), new Vector2((col - 1) * 470f, -200f - row * 250f), new Vector2(440f, 220f));
+                card.rectTransform.pivot = new Vector2(0.5f, 1f);
+                var chip = UIKit.Image(card.transform, "Paint", got ? new Color(car.R, car.G, car.B) : new Color(0.2f, 0.2f, 0.22f), UIKit.Circle);
+                UIKit.Place(chip.rectTransform, new Vector2(0f, 0.5f), new Vector2(30f, 0f), new Vector2(110f, 110f));
+                chip.rectTransform.pivot = new Vector2(0f, 0.5f);
+                var name = UIKit.Label(card.transform, "Name", got ? car.Name.ToUpperInvariant() : "???", 28, got ? UIKit.Fg : UIKit.Muted, TextAnchor.UpperLeft, true);
+                UIKit.Place(name.rectTransform, new Vector2(0f, 1f), new Vector2(165f, -40f), new Vector2(260f, 40f));
+                var hint = UIKit.Label(card.transform, "Hint", got ? "Collected" : "A rare " + Catalog.Object(car.Prop).NameEn.ToLowerInvariant() + ". Spot it, blow it up.", 19, got ? UIKit.Ok : UIKit.Muted, TextAnchor.UpperLeft);
+                UIKit.Place(hint.rectTransform, new Vector2(0f, 1f), new Vector2(165f, -90f), new Vector2(260f, 70f));
+                hint.horizontalOverflow = HorizontalWrapMode.Wrap;
+                var pay = UIKit.Label(card.transform, "Pay", "+" + car.Coins + " coins", 20, UIKit.Flame, TextAnchor.LowerLeft, true);
+                UIKit.Place(pay.rectTransform, new Vector2(0f, 0f), new Vector2(165f, 20f), new Vector2(260f, 30f));
+            }
+            Text(s, "Rare cars turn up now and then in the levels (with a sparkle over them), and two are always somewhere in the big city.", 21, UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), new Vector2(0f, 60f), new Vector2(1400f, 34f));
         }
 
         // ---------- settings ----------

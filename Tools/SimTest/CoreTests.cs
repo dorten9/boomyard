@@ -296,6 +296,27 @@ static class MetaTests
         foreach (var it in Shop.Items)
             check(it.Coins > 0 || Shop.Keepsake(it), "shop item has a price in coins: " + it.Id);
         GraffitiTests(check);
+        // The city's weekly events, jobs, the streak's surprise and rare cars.
+        var seen = new System.Collections.Generic.HashSet<CityEvent>();
+        for (int w = 0; w < 8; w++) seen.Add(CityEvents.For(new System.DateTime(2026, 11, 2).AddDays(7 * w)));
+        check(seen.Count == 4, "every city event comes round within a month");
+        check(CityEvents.For(new System.DateTime(2026, 11, 2)) == CityEvents.For(new System.DateTime(2026, 11, 8)), "the event lasts the week");
+        var avail = new System.Collections.Generic.Dictionary<string, int> { { "trafficlight", 16 }, { "bin", 3 } };
+        var job = Contracts.Next(new System.Random(1), avail);
+        check(job != null && job.Target == "trafficlight" && job.Goal >= 3 && job.Seconds > 0f && job.Reward > 0, "a job for what is standing");
+        bool done = false;
+        for (int i = 0; i < job.Goal; i++) { job.Count("bin"); done = job.Count("trafficlight"); }
+        check(done && job.Complete, "the job is done when the count is reached");
+        var late = Contracts.Next(new System.Random(2), avail);
+        late.Tick(late.Seconds + 1f);
+        check(late.Failed && !late.Count("trafficlight"), "a job runs out of time");
+        check(Contracts.Next(new System.Random(3), new System.Collections.Generic.Dictionary<string, int>()) == null, "no job when nothing is left");
+        check(Surprise.OnDay(2) && !Surprise.OnDay(0), "surprises on some streak days");
+        var all = new System.Collections.Generic.List<string>();
+        foreach (var it in Shop.Items) if (it.Kind == "explosive") all.Add(it.Grants);
+        check(Surprise.Pick(new System.Random(4), all) == null, "no surprise left when everything is owned");
+        check(!all.Contains(Surprise.Pick(new System.Random(5), new System.Collections.Generic.List<string>())) == false, "a surprise is a real item");
+        foreach (var c in RareCars.All) check(Catalog.Object(c.Prop) != null, "rare car is a real car: " + c.Id);
         // Clocks with room to clear, and a bonus goal on every level but the tutorial that its props allow.
         foreach (var l in Levels.All)
         {

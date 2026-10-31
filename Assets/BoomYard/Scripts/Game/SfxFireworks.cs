@@ -58,6 +58,10 @@ namespace BoomYard.Game
             return s;
         }
 
+        /// <summary>A police siren's wail (made the first time a police car comes).</summary>
+        public AudioClip SirenClip { get { if (siren == null) siren = Siren(new System.Random(53)); return siren; } }
+        AudioClip siren;
+
         /// <summary>The time the sound takes to reach the listener (343 m/s).</summary>
         static float Delay(Vector3 pos)
         {
@@ -178,6 +182,32 @@ namespace BoomYard.Game
                 d[i] += whoosh.Run(N(r)) * 0.4f * env;
             }
             return d;
+        }
+
+        /// <summary>
+        /// A police siren's wail: a buzzy horn (a sawtooth's first harmonics through the horn's resonances, driven
+        /// into the amplifier's clipping) rising and falling over four seconds, with a little wobble.
+        /// </summary>
+        internal static AudioClip Siren(System.Random r)
+        {
+            var horn1 = Bq.Peak(1800f, 1.4f, 9f);
+            var horn2 = Bq.Peak(3200f, 2f, 6f);
+            var lp = Bq.Lp(5500f, 0.7f);
+            var hp = Bq.Hp(400f);
+            var wob = new Drift(r, 6f);
+            double phase = 0.0;
+            return Loop(Rate, 4f, (t, i) =>
+            {
+                float u = (t % 4f) / 4f;
+                float sweep = u < 0.5f ? Mathf.SmoothStep(0f, 1f, u * 2f) : Mathf.SmoothStep(1f, 0f, (u - 0.5f) * 2f);
+                float hz = 650f + 700f * sweep + 6f * wob.Next();
+                phase += hz / Rate;
+                float p = (float)(phase - System.Math.Floor(phase));
+                float x = 0f;
+                for (int k = 1; k <= 8; k++) x += Mathf.Sin(2f * Mathf.PI * k * p) / k;
+                x = SoftClip(hp.Run(horn2.Run(horn1.Run(x))) * 1.6f);
+                return lp.Run(x) * 0.5f;
+            }, 0.8f);
         }
 
         /// <summary>A fountain: a roaring hiss of sparks, fluttering, with spits and crackles all through it.</summary>

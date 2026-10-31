@@ -170,6 +170,7 @@ namespace BoomYard.Game
 
         void ToMenu()
         {
+            Physics.gravity = new Vector3(0f, -9.81f, 0f);
             Current = Mode.Menu;
             Paused = false;
             Time.timeScale = 1f;
@@ -192,7 +193,52 @@ namespace BoomYard.Game
         public void StartCity()
         {
             StartLevel(Levels.City());
-            UI.Toast(Loc.T("city.intro"), 6f);
+            CityEvent = CityEvents.For(System.DateTime.Now);
+            Physics.gravity = new Vector3(0f, -9.81f * CityEvents.Gravity(CityEvent), 0f);
+            UI.Toast("THIS WEEK: " + CityEvents.Name(CityEvent) + "\n" + CityEvents.Text(CityEvent), 6f);
+            Contract = null;
+            nextContractAt = Time.time + 8f;
+        }
+
+        /// <summary>This week's twist on the big city (only while in it).</summary>
+        public CityEvent CityEvent { get; private set; }
+        public bool InCity { get { return Current == Mode.Level && Level != null && Level.Show; } }
+        /// <summary>Blasts half as big again in a Big Bangs week.</summary>
+        public float BlastScale { get { return InCity ? CityEvents.BlastScale(CityEvent) : 1f; } }
+        /// <summary>Whatever breaks catches fire in an Inferno week.</summary>
+        public bool Inferno { get { return InCity && CityEvent == CityEvent.Inferno; } }
+
+        /// <summary>The contract on offer in the city, or null between them.</summary>
+        public Contract Contract { get; private set; }
+        float nextContractAt;
+        readonly System.Random contractRng = new System.Random();
+
+        void UpdateContract()
+        {
+            if (Contract == null)
+            {
+                if (Time.time < nextContractAt) return;
+                var left = new Dictionary<string, int>();
+                foreach (var d in Arena.Objects)
+                {
+                    if (d == null || d.Destroyed || d.Def == null) continue;
+                    int n;
+                    left.TryGetValue(d.Def.Id, out n);
+                    left[d.Def.Id] = n + 1;
+                }
+                Contract = Contracts.Next(contractRng, left);
+                if (Contract != null) { UI.Toast("NEW JOB: " + Contract.Text.Substring(0, Contract.Text.LastIndexOf("  ")) + " in " + Mathf.RoundToInt(Contract.Seconds) + " s", 3f); Sfx.I.Confirm(); }
+                else nextContractAt = Time.time + 30f;
+                return;
+            }
+            Contract.Tick(Time.deltaTime);
+            if (Contract.Failed)
+            {
+                UI.Toast("JOB MISSED", 2.5f);
+                Sfx.I.Fail();
+                Contract = null;
+                nextContractAt = Time.time + 6f;
+            }
         }
 
         /// <summary>Leaves the city and banks a share of the wreckage as coins (the results screen).</summary>
@@ -227,6 +273,7 @@ namespace BoomYard.Game
 
         public void StartLevel(LevelDef level)
         {
+            Physics.gravity = new Vector3(0f, -9.81f, 0f);
             var save = SaveService.Data;
             Level = level;
             Current = Mode.Level;
@@ -342,7 +389,7 @@ namespace BoomYard.Game
             if (Paused || Current != Mode.Level) return;
             Chain.Tick(Time.time);
             var st = Round.State;
-            if (Level.Show) { Wind.Update(Time.timeSinceLevelLoad); return; }   // no clock, no targets: just the sky
+            if (Level.Show) { Wind.Update(Time.timeSinceLevelLoad); UpdateContract(); return; }   // no clock, no targets: contracts
             if (st == RoundState.Playing || st == RoundState.Stunned || st == RoundState.Settling)
             {
                 Wind.Update(Round.Elapsed);
@@ -414,6 +461,17 @@ namespace BoomYard.Game
             if (destroyed)
             {
                 Score.ObjectsDestroyed++;
+                if (InCity && Contract != null && Contract.Count(d.Def.Id))
+                {
+                    SaveService.Data.shekels += Contract.Reward;
+                    SaveService.Save();
+                    Sfx.I.Coin();
+                    UI.Toast("JOB DONE!  +" + Loc.Coins(Contract.Reward) + " coins", 3f);
+                    Contract = null;
+                    nextContractAt = Time.time + 5f;
+                }
+                var rare = d.GetComponent<RareTag>();
+                if (rare != null) CollectRare(rare.Car);
                 var missions = SaveService.Data.TodaysMissions();
                 Missions.Count(missions, "destroy", null, 1);
                 Missions.Count(missions, "destroy_id", d.Def.Id, 1);
@@ -618,7 +676,7 @@ namespace BoomYard.Game
                 ChainExtra = Score.ChainExtra, Bonuses = Score.Bonuses, LongestChain = Chain.LongestChain, Destroyed = destroyed, Objects = total,
                 BonusLog = new List<BonusKind>(Score.BonusLog), TipKey = "tip.city",
             };
-            sum.Coins = Progress.CityCoins(Score.Total);
+            sum.Coins = Progress.CityCoins(Score.Total) * CityEvents.CoinFactor(CityEvent);
             save.shekels += sum.Coins;
             save.roundsPlayed++;
             save.totalDestroyed += destroyed;
@@ -747,6 +805,18 @@ namespace BoomYard.Game
             return DailyReward.NextDay(s.dailyClaimDate, s.dailyStreak, System.DateTime.Now);
         }
 
+        /// <summary>A rare car blown up: into the collection (the first time), with its coins.</summary>
+        void CollectRare(RareCar car)
+        {
+            var save = SaveService.Data;
+            if (save.rareCars.Contains(car.Id)) { UI.Toast(car.Name.ToUpperInvariant() + "!", 2f); return; }
+            save.rareCars.Add(car.Id);
+            save.shekels += car.Coins;
+            SaveService.Save();
+            Sfx.I.Star();
+            UI.Toast("RARE CAR: " + car.Name.ToUpperInvariant() + "\nInto the collection,  +" + car.Coins + " coins", 4f);
+        }
+
         public void ClaimDaily()
         {
             int day = DailyAvailable();
@@ -755,6 +825,15 @@ namespace BoomYard.Game
             s.dailyStreak = day;
             s.dailyClaimDate = Daily.Seed(System.DateTime.Now);
             s.shekels += DailyReward.Coins[day];
+            // Some days of the streak also unlock a firework or bang for good.
+            s.lastSurprise = "";
+            if (Surprise.OnDay(day))
+            {
+                var owned = new List<string>();
+                foreach (var slot in s.inventory) if (slot.count > 0) owned.Add(slot.id);
+                var pick = Surprise.Pick(new System.Random(s.dailyClaimDate), owned);
+                if (pick != null) { s.Add(pick, 1); s.lastSurprise = pick; }
+            }
             SaveService.Save();
             Sfx.I.Star();
         }
