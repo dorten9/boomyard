@@ -560,8 +560,8 @@ namespace BoomYard.Game
         public void OnDeath(float seconds)
         {
             Round.Stun(seconds);
-            try { UI.Flash(new Color(0.8f, 0.05f, 0.02f, 0.85f), 1.2f); } catch (System.Exception e) { Debug.LogError("BoomYard: death flash: " + e.Message); }
-            try { UI.Death(seconds); } catch (System.Exception e) { Debug.LogError("BoomYard: death card: " + e.Message); }
+            UI.Flash(new Color(0.8f, 0.05f, 0.02f, 0.85f), 1.2f);
+            UI.Death(seconds);
         }
 
         public void OnKnockdown()
@@ -1044,11 +1044,9 @@ namespace BoomYard.Game
                 StartLevel(51);
                 yield return new WaitForSeconds(1.5f);
                 Player.Teleport(new Vector3(0f, 0f, -7f), 0f, -14f);
-                var tntAt = new Vector3(0f, 0.05f, 3.8f);
-                Debug.Log("BoomYard: demolition: colliders in reach " + Physics.OverlapSphere(tntAt, 10f).Length);
-                LiveExplosive.Spawn(Catalog.Explosive("tnt"), tntAt, Quaternion.identity, 1f, Placement.Placed);
-                yield return new WaitForSeconds(3f);
-                foreach (var t in Arena.Targets) Debug.Log("BoomYard: demolition: " + t.name + " hp " + t.Hp + (t.Destroyed ? " destroyed" : ""));
+                LiveExplosive.Spawn(Catalog.Explosive("tnt"), new Vector3(0f, 0.05f, 3.8f), Quaternion.identity, 1f, Placement.Placed);
+                yield return new WaitForSeconds(4f);
+                foreach (var t in Arena.Targets) Debug.Log("BoomYard: demolition: " + t.name + (t.Destroyed ? " down" : " standing, " + t.Hp.ToString("0") + " hp"));
                 yield break;
             }
             if (mode == "inshop")

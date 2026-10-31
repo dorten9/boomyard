@@ -30,7 +30,7 @@ namespace BoomYard.Game
         public const float KnockdownShare = 0.6f;
 
         static readonly Collider[] hits = new Collider[256];
-        static readonly HashSet<Destructible> seen = new HashSet<Destructible>();
+        static readonly Dictionary<Destructible, float> nearest = new Dictionary<Destructible, float>();
         static readonly HashSet<Rigidbody> pushed = new HashSet<Rigidbody>();
 
         public static void Detonate(Charge c, Destructible source = null)
@@ -45,30 +45,38 @@ namespace BoomYard.Game
             if (StreetLife.I != null) StreetLife.I.OnBlast(c.Position, radius);
 
             int n = Physics.OverlapSphereNonAlloc(c.Position, Mathf.Max(wave, radius * 2f), hits, Layers.WorldMask, QueryTriggerInteraction.Ignore);
-            if (GameController.I != null && GameController.I.Shot != "") Debug.Log("BoomYard: blast at " + c.Position + " r " + radius + " dmg " + c.Damage + " concrete " + c.BreaksConcrete + " colliders " + n);
-            seen.Clear();
             pushed.Clear();
+            nearest.Clear();
+            // A big object is many colliders: it is as close as its nearest one.
             for (int i = 0; i < n; i++)
             {
                 var col = hits[i];
                 var d = col.GetComponentInParent<Destructible>();
-                if (d != null && d != source && !d.Destroyed && seen.Add(d))
-                {
-                    float dist = Vector3.Distance(c.Position, col.ClosestPoint(c.Position));
-                    float amount = 0f;
-                    if (dist <= radius) amount = c.Damage * (1f - 0.7f * dist / radius);
-                    else if (d.IsGlass && dist <= wave) amount = c.Damage * 0.15f * (1f - (dist - radius) / Mathf.Max(0.01f, wave - radius)) + d.Def.Hp * 0.5f;
-                    if (d == c.Container) amount *= 1.5f;
-                    if (GameController.I != null && GameController.I.Shot == "demolition") Debug.Log("BoomYard: blast reaches " + col.name + " of " + d.name + " at " + dist.ToString("0.00") + " m: " + amount.ToString("0"));
-                    if (amount > 0f)
-                        d.Damage(new Hit
-                        {
-                            Amount = amount, Origin = c.Position, Placement = c.Placement, ByObject = c.ByObject,
-                            BreaksConcrete = c.BreaksConcrete, Thermite = c.Thermite, BlastId = c.BlastId,
-                        });
-                }
-
-                var rb = col.attachedRigidbody;
+                if (d == null || d == source || d.Destroyed) continue;
+                float dist = Vector3.Distance(c.Position, col.ClosestPoint(c.Position));
+                float was;
+                if (!nearest.TryGetValue(d, out was) || dist < was) nearest[d] = dist;
+            }
+            // (A copy: damage can set off more blasts, which use the same lists.)
+            var reached = new List<KeyValuePair<Destructible, float>>(nearest);
+            foreach (var kv in reached)
+            {
+                var d = kv.Key;
+                float dist = kv.Value;
+                float amount = 0f;
+                if (dist <= radius) amount = c.Damage * (1f - 0.7f * dist / radius);
+                else if (d.IsGlass && dist <= wave) amount = c.Damage * 0.15f * (1f - (dist - radius) / Mathf.Max(0.01f, wave - radius)) + d.Def.Hp * 0.5f;
+                if (d == c.Container) amount *= 1.5f;
+                if (amount > 0f && !d.Destroyed)
+                    d.Damage(new Hit
+                    {
+                        Amount = amount, Origin = c.Position, Placement = c.Placement, ByObject = c.ByObject,
+                        BreaksConcrete = c.BreaksConcrete, Thermite = c.Thermite, BlastId = c.BlastId,
+                    });
+            }
+            for (int i = 0; i < n; i++)
+            {
+                var rb = hits[i] != null ? hits[i].attachedRigidbody : null;
                 if (rb != null && !rb.isKinematic && pushed.Add(rb))
                 {
                     float dv = Mathf.Min(16f, 1.5f + c.Damage / 40f) * Mathf.Clamp(Mathf.Sqrt(30f / Mathf.Max(0.5f, rb.mass)), 0.05f, 1.2f);
