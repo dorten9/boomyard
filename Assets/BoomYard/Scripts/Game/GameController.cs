@@ -561,8 +561,8 @@ namespace BoomYard.Game
         public void OnDeath(float seconds)
         {
             Round.Stun(seconds);
-            UI.Flash(new Color(0.8f, 0.05f, 0.02f, 0.85f), 1.2f);
-            UI.Death(seconds);
+            try { UI.Flash(new Color(0.8f, 0.05f, 0.02f, 0.85f), 1.2f); } catch (System.Exception e) { Debug.LogError("BoomYard: death flash: " + e.Message); }
+            try { UI.Death(seconds); } catch (System.Exception e) { Debug.LogError("BoomYard: death card: " + e.Message); }
         }
 
         public void OnKnockdown()

@@ -633,7 +633,7 @@ namespace BoomYard.Game
             // Right on top of a big blast: blown up. Back on your feet at the start in DeathSeconds.
             if (!Dead && d < radius * 0.55f && damage >= DeathDamage)
             {
-                Die();
+                try { Die(); } catch (System.Exception e) { Debug.LogError("BoomYard: die: " + e.Message); }
                 game.OnDeath(DeathSeconds);
                 return;
             }

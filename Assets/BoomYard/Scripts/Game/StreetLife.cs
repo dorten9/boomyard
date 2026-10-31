@@ -72,7 +72,7 @@ namespace BoomYard.Game
                 alarm.Trigger();
             }
             if (radius < 0.7f) return;
-            Neighbours(pos, radius);
+            try { Neighbours(pos, radius); } catch (System.Exception e) { Debug.LogError("BoomYard: neighbours: " + e.Message); }
             // The dog next door.
             if (Time.time > dogQuietUntil)
             {
