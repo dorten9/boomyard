@@ -59,6 +59,7 @@ namespace BoomYard.Game
                     if (dist <= radius) amount = c.Damage * (1f - 0.7f * dist / radius);
                     else if (d.IsGlass && dist <= wave) amount = c.Damage * 0.15f * (1f - (dist - radius) / Mathf.Max(0.01f, wave - radius)) + d.Def.Hp * 0.5f;
                     if (d == c.Container) amount *= 1.5f;
+                    if (GameController.I != null && GameController.I.Shot == "demolition") Debug.Log("BoomYard: blast reaches " + col.name + " of " + d.name + " at " + dist.ToString("0.00") + " m: " + amount.ToString("0"));
                     if (amount > 0f)
                         d.Damage(new Hit
                         {
