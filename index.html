@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0c0b0d">
+  <title>BoomYard</title>
+  <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="BoomYard">
+  <link rel="manifest" href="site.webmanifest">
+  <style>
+    html, body { margin: 0; height: 100%; background: #0c0b0d; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; }
+    /* Landscape game: a phone-shaped frame on desktop (19.5:9), full screen on phones. */
+    #frame { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); margin: 0 auto; width: 100%; max-height: 100%; aspect-ratio: 19.5 / 9; box-shadow: 0 0 80px rgba(255, 122, 26, 0.18); }
+    @media (pointer: coarse) { #frame { top: 0; bottom: 0; transform: none; height: 100%; aspect-ratio: auto; box-shadow: none; } }
+    #unity-canvas { width: 100%; height: 100%; display: block; background: #0c0b0d; outline: none; }
+    #loader { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle at 60% 35%, #3a2216, #0c0b0d 70%); font-family: system-ui, -apple-system, sans-serif; color: #ebe6df; }
+    #loader .logo { font-size: 13vmin; font-weight: 900; letter-spacing: -0.02em; line-height: 1; }
+    #loader .tag { margin-top: 1.5vmin; font-size: 3.4vmin; color: #ffb347; }
+    #loader .bar { width: 40%; height: 6px; margin-top: 5vmin; border-radius: 3px; background: #2c282d; overflow: hidden; }
+    #loader .fill { width: 0; height: 100%; background: #ff7a1a; transition: width .2s; }
+  </style>
+</head>
+<body>
+  <div id="frame">
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
+    <div id="loader"><div class="logo">BOOMYARD</div><div class="tag">Light it. Count. Run.</div><div class="bar"><div class="fill" id="fill"></div></div></div>
+  </div>
+  <script>
+    // Ads (Google H5 Games Ads / AdSense). The build pipeline fills in the publisher id
+    // (ca-pub-...) from the ADSENSE_CLIENT secret; while it is empty the game shows test ads.
+    window.BOOMYARD_ADS = { client: "__ADSENSE_CLIENT__", test: "__ADSENSE_TEST__" === "on" };
+    (function () {
+      var c = window.BOOMYARD_ADS.client;
+      if (!c || c.indexOf("__") === 0) return;
+      var s = document.createElement("script");
+      s.async = true;
+      s.crossOrigin = "anonymous";
+      s.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + c;
+      s.setAttribute("data-ad-client", c);
+      s.setAttribute("data-ad-frequency-hint", "120s");
+      if (window.BOOMYARD_ADS.test) s.setAttribute("data-adbreak-test", "on");
+      document.head.appendChild(s);
+      window.adsbygoogle = window.adsbygoogle || [];
+      window.adBreak = window.adConfig = function (o) { window.adsbygoogle.push(o); };
+      window.adConfig({ preloadAdBreaks: "on", sound: "on" });
+    })();
+  </script>
+  <script>
+    // Crash report on screen (phones have no console): the last log lines, shown with the error. Tap to close.
+    var logLines = [];
+    ["log", "warn", "error"].forEach(function (kind) {
+      var original = console[kind];
+      console[kind] = function () {
+        try { logLines.push(Array.prototype.join.call(arguments, " ").trim().slice(0, 200)); if (logLines.length > 40) logLines.shift(); } catch (e) {}
+        return original.apply(console, arguments);
+      };
+    });
+    function showCrash(message) {
+      if (document.getElementById("crash")) return;
+      var box = document.createElement("pre");
+      box.id = "crash";
+      box.style.cssText = "position:fixed;inset:0;margin:0;padding:12px;overflow:auto;z-index:99;background:rgba(0,0,0,.92);" +
+        "color:#ffb36b;font:11px/1.35 monospace;white-space:pre-wrap;-webkit-user-select:text;user-select:text";
+      box.textContent = String(message) + "\n\n" + navigator.userAgent + "\n\n" + logLines.filter(function (l) { return l.indexOf("GL Driver") < 0; }).join("\n");
+      box.onclick = function () { box.remove(); };
+      document.body.appendChild(box);
+    }
+    window.addEventListener("error", function (e) { showCrash(e.message || e); });
+    window.addEventListener("unhandledrejection", function (e) { showCrash(e.reason || e); });
+    window.alert = function (m) { showCrash(m); };
+    var canvas = document.querySelector("#unity-canvas");
+    var config = {
+      dataUrl: "Build/WebGL.data",
+      autoSyncPersistentDataPath: true,   // stencil drawings and pictures are files: keep them in the browser's storage
+      frameworkUrl: "Build/WebGL.framework.js",
+      codeUrl: "Build/WebGL.wasm",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "BoomYard",
+      productName: "BoomYard",
+      productVersion: "1.0",
+      // The web build is the Low profile: cap the resolution for fill rate.
+      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
+    };
+    // Open straight into landscape: on the first touch go full screen and lock the orientation (Android browsers;
+    // the phone apps are landscape-only anyway).
+    function goLandscape() {
+      try {
+        var el = document.documentElement, fs = el.requestFullscreen || el.webkitRequestFullscreen;
+        var lock = function () { if (screen.orientation && screen.orientation.lock) screen.orientation.lock("landscape").catch(function () {}); };
+        if (fs && !document.fullscreenElement) { var p = fs.call(el); if (p && p.then) p.then(lock, lock); else lock(); } else lock();
+      } catch (e) {}
+    }
+    if (matchMedia("(pointer: coarse)").matches) window.addEventListener("pointerdown", goLandscape, { once: true });
+    // Landscape only, always. A phone held upright (or one whose rotation is locked) gets the game turned a quarter
+    // turn to fill the screen sideways, instead of a squeezed portrait view. The game is told, so it turns the
+    // touches back (WebLandscape.cs); Unity reads touches relative to the canvas's box, which is reported unturned.
+    var frame = document.getElementById("frame"), rotated = false;
+    var boxOf = canvas.getBoundingClientRect.bind(canvas);
+    canvas.getBoundingClientRect = function () {
+      if (!rotated) return boxOf();
+      var w = innerHeight, h = innerWidth;
+      return { left: 0, top: 0, right: w, bottom: h, width: w, height: h, x: 0, y: 0 };
+    };
+    function tellGame() {
+      if (window.unityInstance) try { unityInstance.SendMessage("WebLandscape", "SetRotated", rotated ? "1" : "0"); } catch (e) {}
+    }
+    function fit() {
+      rotated = matchMedia("(pointer: coarse)").matches && innerHeight > innerWidth;
+      var st = frame.style;
+      if (rotated) {
+        st.position = "fixed"; st.left = "0"; st.top = "0"; st.right = "auto"; st.bottom = "auto"; st.margin = "0";
+        st.width = innerHeight + "px"; st.height = innerWidth + "px"; st.maxHeight = "none";
+        st.transformOrigin = "top left"; st.transform = "rotate(90deg) translate(0, -100%)";
+      } else {
+        frame.removeAttribute("style");
+      }
+      tellGame();
+    }
+    window.addEventListener("resize", fit);
+    window.addEventListener("orientationchange", function () { setTimeout(fit, 150); });
+    fit();
+    var script = document.createElement("script");
+    script.src = "Build/WebGL.loader.js";
+    script.onload = function () {
+      createUnityInstance(canvas, config, function (p) { document.getElementById("fill").style.width = (100 * p) + "%"; })
+        .then(function (instance) { window.unityInstance = instance; document.getElementById("loader").remove(); tellGame(); })
+        .catch(function (message) { window.unityError = String(message); showCrash(message); });
+    };
+    document.body.appendChild(script);
+  </script>
+</body>
+</html>
