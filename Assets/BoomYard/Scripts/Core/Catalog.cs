@@ -45,7 +45,8 @@ namespace BoomYard.Core
         public float Mass = 0.08f;  // kg, for throwing
         public bool Timer;          // placed, it counts down by itself (no lighter); Fuse is the default delay
         public bool Remote;         // placed, it waits for the detonator button
-        public string Firework;     // a firework: "rocket", "cake", "mortar", "candle" or "fountain" (null for the rest)
+        public string Firework;     // a firework: "rocket" (flies up) or a ground kind FireworkDevice fires; null for the rest
+        public bool Sticky;         // thrown, it sticks to whatever it hits
         public string Note;
     }
 
@@ -110,7 +111,24 @@ namespace BoomYard.Core
             new ExplosiveDef { Id = "cake", NameHe = "עוגת זיקוקים", NameEn = "Firework cake", Family = Family.Push, Fuse = 3f, Damage = 30, Radius = 0.8f, Throwable = false, Mass = 1.2f, Firework = "cake", Note = "Sixteen shells, one after another: rings, crackles, willows." },
             new ExplosiveDef { Id = "mortar", NameHe = "פגז זיקוקים", NameEn = "Mortar shell", Family = Family.Push, Fuse = 3f, Damage = 60, Radius = 1f, Throwable = false, Mass = 0.8f, Firework = "mortar", Note = "One huge shell, high over the rooftops." },
             new ExplosiveDef { Id = "candle", NameHe = "נר רומי", NameEn = "Roman candle", Family = Family.Push, Fuse = 2.5f, Damage = 20, Radius = 0.5f, Throwable = false, Mass = 0.3f, Firework = "candle", Note = "Eight coloured balls, one every half second." },
-            new ExplosiveDef { Id = "fountain", NameHe = "מזרקת זיקוקים", NameEn = "Fountain", Family = Family.Fire, Fuse = 2f, Damage = 20, Radius = 0.6f, Throwable = false, Mass = 0.4f, Firework = "fountain", Note = "Eight seconds of gold sparks; sets light to anything flammable right next to it." },
+            new ExplosiveDef { Id = "fountain", NameHe = "מזרקת זיקוקים", NameEn = "Fountain", Family = Family.Fire, Fuse = 2f, Damage = 20, Radius = 0.6f, Throwable = false, Mass = 0.4f, Firework = "fountain", Note = "A cone you set down and light: it sprays a fountain of gold sparks 3 m high for eight seconds, and sets fire to anything flammable right next to it." },
+            // More fireworks.
+            new ExplosiveDef { Id = "whistler", NameHe = "רקטה שורקת", NameEn = "Whistling rocket", Family = Family.Push, Fuse = 2.5f, Damage = 140, Radius = 1.3f, Mass = 0.1f, Firework = "rocket", Note = "Screams all the way up, then bursts in strobes and crackles." },
+            new ExplosiveDef { Id = "bigrocket", NameHe = "רקטה גדולה", NameEn = "Big rocket", Family = Family.Push, Fuse = 3f, Damage = 300, Radius = 2f, Mass = 0.3f, Firework = "rocket", Note = "A heavy rocket with a shell half as big again." },
+            new ExplosiveDef { Id = "spinner", NameHe = "סביבון", NameEn = "Ground spinner", Family = Family.Fire, Fuse = 2f, Damage = 15, Radius = 0.6f, Throwable = false, Mass = 0.05f, Firework = "spinner", Note = "Whirls across the ground in a ring of sparks, then pops." },
+            new ExplosiveDef { Id = "ufo", NameHe = "צלחת מעופפת", NameEn = "Flying saucer", Family = Family.Push, Fuse = 2f, Damage = 30, Radius = 0.8f, Throwable = false, Mass = 0.05f, Firework = "ufo", Note = "Spins, lifts off in a whistle of sparks and bursts up high." },
+            new ExplosiveDef { Id = "smoke", NameHe = "פצצת עשן", NameEn = "Smoke bomb", Family = Family.Fire, Fuse = 1.5f, Damage = 0, Radius = 0.5f, Mass = 0.1f, Firework = "smoke", Note = "Ten seconds of thick coloured smoke. Harmless, and great in photos." },
+            new ExplosiveDef { Id = "strobepot", NameHe = "סיר הבזקים", NameEn = "Strobe pot", Family = Family.Fire, Fuse = 2f, Damage = 10, Radius = 0.5f, Throwable = false, Mass = 0.2f, Firework = "strobepot", Note = "Six seconds of blinding white flashes on the ground." },
+            new ExplosiveDef { Id = "saturn", NameHe = "סוללת טילים", NameEn = "Saturn battery", Family = Family.Push, Fuse = 3f, Damage = 40, Radius = 1f, Throwable = false, Mass = 0.6f, Firework = "saturn", Note = "Thirty little whistling missiles fanning out, each with a crack." },
+            new ExplosiveDef { Id = "willowcake", NameHe = "עוגת ערבה", NameEn = "Willow cake", Family = Family.Push, Fuse = 3f, Damage = 30, Radius = 0.8f, Throwable = false, Mass = 1.2f, Firework = "willowcake", Note = "Twelve golden willows that hang over the street." },
+            new ExplosiveDef { Id = "finale", NameHe = "עוגת פינאלה", NameEn = "Finale cake", Family = Family.Push, Fuse = 3f, Damage = 60, Radius = 1f, Throwable = false, Mass = 2f, Firework = "finale", Note = "Thirty-six shells in twelve seconds: the end of the show." },
+            new ExplosiveDef { Id = "bigmortar", NameHe = "מרגמה ענקית", NameEn = "Giant mortar", Family = Family.Push, Fuse = 4f, Damage = 120, Radius = 1.4f, Throwable = false, Mass = 2f, Firework = "bigmortar", Note = "The biggest shell there is: it fills the sky." },
+            // More bangs.
+            new ExplosiveDef { Id = "megacracker", NameHe = "מגה נפץ", NameEn = "Mega cracker", Family = Family.Blast, Fuse = 2f, Damage = 250, Radius = 1.6f, Mass = 0.08f, Note = "A Black Cat four times over." },
+            new ExplosiveDef { Id = "bigbang", NameHe = "כדור ביג בנג", NameEn = "Big Bang ball", Family = Family.Blast, Fuse = 3f, Damage = 900, Radius = 2.8f, Rolls = true, Mass = 0.4f, Note = "A heavy ball that rolls where it is thrown, then goes off big." },
+            new ExplosiveDef { Id = "string100", NameHe = "מחרוזת דרקון", NameEn = "Dragon string", Family = Family.Blast, Fuse = 1.5f, Damage = 25, Units = 100, UnitInterval = 0.05f, Radius = 0.6f, Mass = 0.3f, Note = "A hundred crackers in five seconds." },
+            new ExplosiveDef { Id = "sticky", NameHe = "פצצה דביקה", NameEn = "Sticky bomb", Family = Family.Blast, Fuse = 3f, Damage = 700, Radius = 2f, Mass = 0.3f, Sticky = true, Note = "Thrown, it sticks to whatever it hits: a car, a wall, a sign." },
+            new ExplosiveDef { Id = "tnt", NameHe = "חבילת TNT", NameEn = "TNT bundle", Family = Family.Blast, Fuse = 5f, Damage = 3200, Radius = 4f, BreaksConcrete = true, Mass = 1.5f, Note = "Six sticks taped together. Run." },
             new ExplosiveDef { Id = "thermite", NameHe = "Thermite", NameEn = "Thermite", Family = Family.Fire, Fuse = 3f, Damage = 80, Units = 12, UnitInterval = 1f, Radius = 0.5f, Price = 5500, UnlockArena = 6, Throwable = false, Note = "Burns through metal: opens tanks, lights engines." },
         };
 
@@ -171,6 +189,8 @@ namespace BoomYard.Core
             new ObjectDef { Id = "busstop", NameHe = "תחנת אוטובוס", NameEn = "Bus shelter glass", Hp = 10, Value = 4000, Material = Material.Glass, Reaction = Reaction.Shatter, Mass = 40 },
             new ObjectDef { Id = "parkingmeter", NameHe = "מדחן", NameEn = "Parking meter", Hp = 20, Value = 700, Material = Material.Metal, Reaction = Reaction.Launch | Reaction.Contain, Mass = 20 },
             new ObjectDef { Id = "planter", NameHe = "עציץ רחוב", NameEn = "Street planter", Hp = 30, Value = 500, Material = Material.Wood, Reaction = Reaction.Launch | Reaction.Burn, BurnSeconds = 8f, Mass = 60 },
+            new ObjectDef { Id = "tenement", NameHe = "בניין נטוש", NameEn = "Derelict tenement", Hp = 1, Value = 1, Material = Material.Concrete, Reaction = Reaction.Collapse, Mass = 60000 },   // a prop of storeys (Building); each storey is the target
+            new ObjectDef { Id = "storey", NameHe = "קומה", NameEn = "Storey", Hp = 160, Value = 30000, Material = Material.Concrete, Reaction = Reaction.Collapse, Mass = 20000 },
             new ObjectDef { Id = "industrialtank", NameHe = "מיכל תעשייתי 50 קוב", NameEn = "Industrial tank", Hp = 900, Value = 900000, Material = Material.Metal, Reaction = Reaction.Explode, BlastRadius = 15f, BlastDamage = 5000, BlastDelay = 2f, ThermiteOnly = true, Mass = 20000 },
         };
 

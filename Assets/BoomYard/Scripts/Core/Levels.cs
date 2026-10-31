@@ -61,7 +61,7 @@ namespace BoomYard.Core
         }
     }
 
-    /// <summary>The level map: ten levels on Maple Drive, then eight on each of the other streets.</summary>
+    /// <summary>The level map: ten levels on Maple Drive, eight on each of the next five streets, three building demolitions to finish.</summary>
     public static class Levels
     {
         static PropSpot P(string id, float x, float z, float yaw = 0f, int variant = 0) { return new PropSpot(id, x, z, yaw, variant); }
@@ -204,9 +204,17 @@ namespace BoomYard.Core
                 P("pickup", 6.5f, 1f, 178f), P("sedan", -6f, -13.4f, 90f, 2), P("inflatable", -4f, 8f), P("inflatable", -1f, 8.5f), P("inflatable", 2f, 8f), P("giftbox", -2f, 5f), P("giftbox", 0f, 5f, 40f), P("giftbox", 2f, 5f), P("grill", -6f, 6f), P("gascyl", -6.6f, 6.6f)),
             L(50, "Corner Gas", 150f, 8000, Kit("remote", 4, "timer", 2, "dynamite", 2, "keg", 1, "blackcat", 6),
                 P("fuelpump", -3f, 6f), P("fuelpump", 1f, 6f), P("fueltruck", 6.5f, 2f, 180f), P("barrel", -6f, 8f), P("barrel", -5.4f, 8.4f, 0f, 1), P("gascyl", 3f, 9f), P("gascyl", 3.5f, 9.3f), P("newsbox", -8f, 10.5f)).AsBoss(),
+
+            // ---------- Old Quarter: whole buildings to bring down, storey by storey ----------
+            L(51, "Knock It Down", 150f, 5500, Kit("dynamite", 2, "m80", 3, "blackcat", 6),
+                P("tenement", 0f, 7f, 180f, 3), P("crate", -9f, 4f, 20f), P("barrel", 9f, 4f)),
+            L(52, "Two Towers", 160f, 6000, Kit("dynamite", 3, "tnt", 1, "blackcat", 6),
+                P("tenement", -6.5f, 7f, 180f, 3), P("tenement", 6.5f, 7f, 180f, 4), P("barrel", 0f, 3f)),
+            L(53, "The Tower Block", 180f, 9000, Kit("tnt", 2, "dynamite", 3, "remote", 4, "blackcat", 6),
+                P("tenement", 0f, 8f, 180f, 5), P("gascyl", -7f, 4f), P("gascyl", 7f, 4f)).AsBoss(),
         };
 
-        public const int DailyReward = 600;
+        public const int DailyReward = 300;
 
         /// <summary>Seconds back on the clock for every target destroyed.</summary>
         public const float TargetBonusSeconds = 3f;

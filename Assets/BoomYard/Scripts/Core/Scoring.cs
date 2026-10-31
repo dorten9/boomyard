@@ -67,7 +67,7 @@ namespace BoomYard.Core
         /// The game has one currency, coins, and damage is counted in them: every coin that rises from the
         /// wreckage is yours. The values in the catalog are in dollars of damage, at 50 dollars a coin.
         /// </summary>
-        public const int DamagePerCoin = 50;
+        public const int DamagePerCoin = 150;   // a tighter economy (the owner found coins too easy)
 
         public static long CoinsFromDamage(long damage) { return damage <= 0 ? 0 : (damage + DamagePerCoin / 2) / DamagePerCoin; }
     }

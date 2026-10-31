@@ -58,13 +58,37 @@ namespace BoomYard.Game
                 var spot = level.Props[i];
                 var pos = new Vector3(spot.X, spot.Id == "acunit" ? 1.25f : 0f, spot.Z);
                 var d = Props.Spawn(spot.Id, root, pos, spot.Yaw, spot.Variant);
-                if (level.IsTarget(i)) a.Targets.Add(d);
+                var building = d.GetComponentInParent<Building>();
+                if (building != null) a.Targets.AddRange(building.Floors);   // every storey must come down
+                else if (level.IsTarget(i)) a.Targets.Add(d);
                 else a.Spare = d;
             }
             foreach (var d in a.Root.GetComponentsInChildren<Destructible>()) a.Objects.Add(d);
+            MaybeRare(a.Objects, new System.Random(level.Number * 7919 + Daily.Seed(System.DateTime.Now)), RareCars.LevelChance, 1);
             StreetLife.Create(root, new Vector3(-21f, 0f, 6f));   // the dog is next door, behind the fence
             if (level.Number >= 2 && !level.Daily && !SaveService.Data.goldGnomes.Contains(level.Number)) GoldGnome.Hide(root, level);
             return a;
+        }
+
+        /// <summary>
+        /// With <paramref name="chance"/>, up to <paramref name="count"/> cars come in a rare paint job (RareCars),
+        /// ones not yet in the collection first.
+        /// </summary>
+        static void MaybeRare(List<Destructible> objects, System.Random r, float chance, int count)
+        {
+            if (r.NextDouble() >= chance) return;
+            var owned = SaveService.Data.rareCars;
+            var cands = new List<Destructible>();
+            foreach (var d in objects) if (d != null && d.Def != null && RareCars.For(d.Def.Id).Count > 0) cands.Add(d);
+            for (int k = 0; k < count && cands.Count > 0; k++)
+            {
+                var d = cands[r.Next(cands.Count)];
+                cands.Remove(d);
+                var options = RareCars.For(d.Def.Id);
+                var fresh = options.FindAll(c => !owned.Contains(c.Id));
+                var pick = (fresh.Count > 0 ? fresh : options)[r.Next(fresh.Count > 0 ? fresh.Count : options.Count)];
+                RareTag.Apply(d, pick);
+            }
         }
 
         // ---------- ground ----------

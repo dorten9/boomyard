@@ -199,6 +199,20 @@ namespace BoomYard.Game
             return ps;
         }
 
+        /// <summary>A single bright flash (a strobe pot's star).</summary>
+        public static void Flare(Vector3 pos)
+        {
+            var go = new GameObject("Flare");
+            go.transform.position = pos;
+            go.AddComponent<MeshFilter>().sharedMesh = Mats.Quad;
+            var r = go.AddComponent<MeshRenderer>();
+            r.sharedMaterial = Mats.EmberHDR;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            go.transform.localScale = Vector3.one * Random.Range(0.25f, 0.45f);
+            go.AddComponent<Billboard>();
+            Object.Destroy(go, 0.07f);
+        }
+
         /// <summary>A heart in the sky, upright and facing the player.</summary>
         static void Heart(Transform root, Color c, float scale)
         {
@@ -326,6 +340,14 @@ namespace BoomYard.Game
                 case "mortar": yield return Mortar(); break;
                 case "candle": yield return Candle(); break;
                 case "fountain": yield return Fountain(); break;
+                case "spinner": yield return Spinner(); break;
+                case "ufo": yield return Saucer(); break;
+                case "smoke": yield return Smoke(); break;
+                case "strobepot": yield return StrobePot(); break;
+                case "saturn": yield return Saturn(); break;
+                case "willowcake": yield return Battery(12, new[] { ShellType.Willow, ShellType.Kamuro }, 0.8f, 0.55f); break;
+                case "finale": yield return Battery(36, new[] { ShellType.Peony, ShellType.Crackling, ShellType.Chrysanthemum, ShellType.Ring, ShellType.Crossette, ShellType.Dahlia, ShellType.Strobe, ShellType.Palm }, 0.8f, 0.33f); break;
+                case "bigmortar": yield return BigMortar(); break;
             }
             Destroy(gameObject, 0.5f);
         }
@@ -342,6 +364,176 @@ namespace BoomYard.Game
                 Fireworks.Comet(Muzzle, dir * 24f, Random.Range(0.75f, 0.95f), Fireworks.Colours[3], 0.25f, p => Fireworks.Burst(p, type, 0.7f));
                 yield return new WaitForSeconds(Random.Range(0.3f, 0.5f));
             }
+        }
+
+        /// <summary>A battery of <paramref name="shots"/> shells of the given kinds, one every <paramref name="gap"/> s.</summary>
+        IEnumerator Battery(int shots, ShellType[] types, float scale, float gap)
+        {
+            for (int i = 0; i < shots; i++)
+            {
+                var dir = (Vector3.up + new Vector3(Random.Range(-0.22f, 0.22f), 0f, Random.Range(-0.22f, 0.22f))).normalized;
+                var type = types[Random.Range(0, types.Length)];
+                Sfx.I.Launch(Muzzle, 0.6f);
+                Fireworks.Comet(Muzzle, dir * Random.Range(22f, 27f), Random.Range(0.75f, 1f), Fireworks.Colours[3], 0.25f, p => Fireworks.Burst(p, type, scale));
+                yield return new WaitForSeconds(gap * Random.Range(0.8f, 1.2f));
+            }
+        }
+
+        /// <summary>The biggest shell: very high, a burst that fills the sky.</summary>
+        IEnumerator BigMortar()
+        {
+            Sfx.I.Launch(Muzzle, 2.2f);
+            var big = new[] { ShellType.Kamuro, ShellType.Willow, ShellType.Chrysanthemum, ShellType.MultiBreak };
+            var type = big[Random.Range(0, big.Length)];
+            Fireworks.Comet(Muzzle, Vector3.up * 40f, 1.9f, Fireworks.Colours[3], 0.45f, p => Fireworks.Burst(p, type, 2.6f));
+            yield return new WaitForSeconds(0.3f);
+        }
+
+        /// <summary>A ring of sparks whirling across the ground for five seconds, ending in a pop.</summary>
+        IEnumerator Spinner()
+        {
+            var sparks = Sparks(transform, Fireworks.RandomColour(), 300f, 3f);
+            var dir = Random.insideUnitCircle.normalized;
+            for (float t = 0f; t < 5f; t += Time.deltaTime)
+            {
+                transform.Rotate(0f, 1400f * Time.deltaTime, 0f, Space.World);
+                transform.position += new Vector3(dir.x, 0f, dir.y) * Mathf.Sin(t * 1.3f) * 0.3f * Time.deltaTime;
+                yield return null;
+            }
+            sparks.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+            Sfx.I.CandlePop(transform.position);
+            Fireworks.Burst(transform.position + Vector3.up * 0.3f, ShellType.Peony, 0.15f);
+            yield return new WaitForSeconds(0.8f);
+        }
+
+        /// <summary>A flying saucer: spins up on the ground, lifts off to about 12 m in a spiral of sparks, bursts.</summary>
+        IEnumerator Saucer()
+        {
+            var sparks = Sparks(transform, new Color(0.6f, 0.9f, 1f), 260f, 2.5f);
+            float spin = 0f;
+            for (float t = 0f; t < 3.2f; t += Time.deltaTime)
+            {
+                spin = Mathf.Min(1600f, spin + 900f * Time.deltaTime);
+                transform.Rotate(0f, spin * Time.deltaTime, 0f, Space.World);
+                if (t > 0.8f) transform.position += Vector3.up * Mathf.Lerp(2f, 6f, (t - 0.8f) / 2.4f) * Time.deltaTime;
+                yield return null;
+            }
+            sparks.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+            Fireworks.Burst(transform.position, Random.value < 0.5f ? ShellType.Ring : ShellType.Crackling, 0.6f);
+            foreach (var r in GetComponentsInChildren<Renderer>()) if (!(r is ParticleSystemRenderer)) r.enabled = false;
+            yield return new WaitForSeconds(0.8f);
+        }
+
+        /// <summary>Ten seconds of thick coloured smoke, billowing up and drifting.</summary>
+        IEnumerator Smoke()
+        {
+            var colours = new[] { new Color(0.95f, 0.3f, 0.25f), new Color(0.3f, 0.6f, 1f), new Color(0.4f, 0.9f, 0.4f), new Color(1f, 0.85f, 0.25f), new Color(0.85f, 0.4f, 0.95f) };
+            var c = colours[Random.Range(0, colours.Length)];
+            var go = new GameObject("Smoke");
+            go.transform.SetParent(transform, false);
+            go.transform.rotation = Quaternion.Euler(-90f, 0f, 0f);
+            var ps = go.AddComponent<ParticleSystem>();
+            var main = ps.main;
+            main.loop = true;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(3f, 5f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(1f, 2.2f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.6f, 1.2f);
+            main.startColor = new Color(c.r, c.g, c.b, 0.85f);
+            main.gravityModifier = -0.05f;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = 600;
+            var em = ps.emission;
+            em.rateOverTime = 45f;
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 20f;
+            shape.radius = 0.05f;
+            var size = ps.sizeOverLifetime;
+            size.enabled = true;
+            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.5f, 1f, 4f));
+            var col = ps.colorOverLifetime;
+            col.enabled = true;
+            var g = new Gradient();
+            g.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) }, new[] { new GradientAlphaKey(0.9f, 0f), new GradientAlphaKey(0.6f, 0.5f), new GradientAlphaKey(0f, 1f) });
+            col.color = g;
+            var noise = ps.noise;
+            noise.enabled = true;
+            noise.strength = 0.6f;
+            noise.frequency = 0.4f;
+            var r = go.GetComponent<ParticleSystemRenderer>();
+            r.sharedMaterial = Mats.Smoke;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            ps.Play();
+            var hiss = Sfx.I.FountainLoop(go.transform);
+            hiss.volume *= 0.35f;
+            hiss.pitch = 0.6f;
+            yield return new WaitForSeconds(10f);
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+            hiss.Stop();
+            go.transform.SetParent(null, true);
+            Destroy(go, 6f);
+        }
+
+        /// <summary>Six seconds of white flashes popping on the ground.</summary>
+        IEnumerator StrobePot()
+        {
+            var light = gameObject.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = Color.white;
+            light.range = 12f;
+            for (float t = 0f; t < 6f; t += 0.09f)
+            {
+                bool on = Random.value < 0.45f;
+                light.intensity = on ? 4f : 0f;
+                if (on) Fireworks.Flare(transform.position + Vector3.up * Random.Range(0.3f, 1.4f) + Random.insideUnitSphere * 0.4f);
+                yield return new WaitForSeconds(0.09f);
+            }
+            Destroy(light);
+        }
+
+        /// <summary>Thirty little missiles fanning out in a quick sweep, each cracking where it ends.</summary>
+        IEnumerator Saturn()
+        {
+            var right = transform.right;
+            for (int i = 0; i < 30; i++)
+            {
+                float sweep = Mathf.Sin(i * 0.4f) * 0.6f;
+                var dir = (Vector3.up * 1.2f + right * sweep + Random.insideUnitSphere * 0.1f).normalized;
+                Sfx.I.CandlePop(Muzzle);
+                Fireworks.Comet(Muzzle, dir * 20f, Random.Range(0.6f, 0.9f), Fireworks.RandomColour(), 0.18f, p => Fireworks.Burst(p, ShellType.Crackling, 0.2f));
+                yield return new WaitForSeconds(0.12f);
+            }
+        }
+
+        /// <summary>A looping spray of sparks round an object (spinners and saucers).</summary>
+        static ParticleSystem Sparks(Transform parent, Color c, float rate, float speed)
+        {
+            var go = new GameObject("Sparks");
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = Vector3.up * 0.01f;
+            var ps = go.AddComponent<ParticleSystem>();
+            var main = ps.main;
+            main.loop = true;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.3f, 0.7f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(speed * 0.5f, speed);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.02f, 0.05f);
+            main.startColor = c * 2.5f;
+            main.gravityModifier = 0.6f;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = 800;
+            var em = ps.emission;
+            em.rateOverTime = Quality.Tier == QualityTier.Low ? rate * 0.6f : rate;
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Circle;
+            shape.radius = 0.05f;
+            var r = go.GetComponent<ParticleSystemRenderer>();
+            r.sharedMaterial = Mats.ParticleAdd;
+            r.renderMode = ParticleSystemRenderMode.Stretch;
+            r.velocityScale = 0.04f;
+            r.lengthScale = 1.5f;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            ps.Play();
+            return ps;
         }
 
         /// <summary>One big shell, high up: the biggest burst there is.</summary>

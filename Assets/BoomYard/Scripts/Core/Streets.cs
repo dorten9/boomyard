@@ -56,6 +56,10 @@ namespace BoomYard.Core
                 Houses = HouseKind.Bungalow, Fence = FenceKind.Picket, HolidayLights = true, KerbCars = true, Trees = 12, SunYaw = -16f, FirstLevel = 43, LastLevel = 50,
                 Walls = new[] { C(0.86f, 0.9f, 0.92f), C(0.94f, 0.9f, 0.82f), C(0.8f, 0.86f, 0.78f), C(0.92f, 0.86f, 0.86f) },
                 Roof = C(0.45f, 0.24f, 0.2f), Trim = C(0.97f, 0.97f, 0.95f) },
+            new StreetDef { Id = "old", Name = "Old Quarter", Blurb = "Derelict tenements, due for demolition. Bring dynamite.",
+                Houses = HouseKind.Terrace, Fence = FenceKind.ChainLink, Gravel = true, KerbCars = true, Trees = 4, SunYaw = 10f, FirstLevel = 51, LastLevel = 53,
+                Walls = new[] { C(0.55f, 0.38f, 0.3f), C(0.5f, 0.34f, 0.28f), C(0.6f, 0.45f, 0.36f) },
+                Roof = C(0.3f, 0.28f, 0.28f), Trim = C(0.75f, 0.72f, 0.66f) },
         };
 
         public static StreetDef Get(string id)

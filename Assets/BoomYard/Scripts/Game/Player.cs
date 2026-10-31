@@ -285,7 +285,32 @@ namespace BoomYard.Game
             float k = fall * (1f - rise);
             head.localPosition = new Vector3(0f, Mathf.Lerp(EyeHeight, 0.28f, k), 0f);
             head.localRotation = Quaternion.Euler(Mathf.Lerp(pitch, -10f, k) + Mathf.Sin(t * 9f) * 4f * k, Mathf.Sin(t * 5f) * 25f * k, Mathf.Lerp(0f, 72f, k));
-            if (downLeft <= 0f) downLeft = 0f;
+            if (downLeft <= 0f)
+            {
+                downLeft = 0f;
+                if (Dead) Respawn();
+            }
+        }
+
+        /// <summary>A blast this strong (an M-80 and up) right next to the player is deadly.</summary>
+        public const float DeathDamage = 300f, DeathSeconds = 4f;
+        public bool Dead { get; private set; }
+
+        /// <summary>Blown up: down on the ground for <see cref="DeathSeconds"/>, the item in the hand lost.</summary>
+        public void Die()
+        {
+            Dead = true;
+            if (HeldDef != null) DropHeld();
+            if (Spray.I != null && Spray.I.Painting) Spray.I.Release();
+            KnockDown(DeathSeconds);
+        }
+
+        void Respawn()
+        {
+            Dead = false;
+            var game = GameController.I;
+            if (game != null && game.Arena != null) Teleport(game.Arena.Spawn, game.Arena.SpawnYaw, 4f);
+            head.localPosition = new Vector3(0f, EyeHeight, 0f);
         }
 
         public void KnockDown(float seconds)
@@ -486,7 +511,7 @@ namespace BoomYard.Game
 #endif
             rb.angularVelocity = Random.insideUnitSphere * 6f;
             live.Airborne = true;
-            if (HeldLit && HeldDef.Id == "rocket")
+            if (HeldLit && HeldDef.Firework == "rocket")
             {
                 // A lit rocket flies where you aim it, under power.
                 rb.angularVelocity = Vector3.zero;
@@ -605,6 +630,13 @@ namespace BoomYard.Game
             if (game != null && k > 0.35f && radius >= 2f) game.HitStop(0.05f + 0.05f * k);
             if (k > 0.3f) Haptics.Buzz();
             if (game == null || !game.Round.CanAct && game.Round.State != RoundState.Stunned) return;
+            // Right on top of a big blast: blown up. Back on your feet at the start in DeathSeconds.
+            if (!Dead && d < radius * 0.55f && damage >= DeathDamage)
+            {
+                Die();
+                game.OnDeath(DeathSeconds);
+                return;
+            }
             if (d < radius * Blast.KnockdownShare)
             {
                 KnockDown(RoundModel.StunSeconds);

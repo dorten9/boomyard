@@ -10,7 +10,7 @@ namespace BoomYard.Game
     /// barks, lights come on in the houses one after another, and things that fly get their flight measured.
     /// One per level, created by ArenaBuilder.
     /// </summary>
-    public sealed class StreetLife : MonoBehaviour
+    public sealed partial class StreetLife : MonoBehaviour
     {
         public static StreetLife I { get; private set; }
 
@@ -72,6 +72,7 @@ namespace BoomYard.Game
                 alarm.Trigger();
             }
             if (radius < 0.7f) return;
+            Neighbours(pos, radius);
             // The dog next door.
             if (Time.time > dogQuietUntil)
             {

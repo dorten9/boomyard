@@ -26,7 +26,8 @@ namespace BoomYard.UI
         Image chainBadge, windArrow, joyBase, joyKnob, catchRing, powerFill, tutCard, targetsPill, hudCoin;
         RectTransform fuseBar, fusePointer, powerBar, markers;
         RectTransform lightBtn, throwBtn, placeBtn, boomBtn, sprayBtn, strip;
-        Text boomCaption, lightCaption, placeCaption, sprayCaption;
+        Text boomCaption, lightCaption, placeCaption, sprayCaption, jobText;
+        Image jobPill;
         Image lightIcon, sprayRing, sprayMarker;
         string stripKey = "";
         float wreckedAt;
@@ -97,7 +98,7 @@ namespace BoomYard.UI
             toast.rectTransform.pivot = new Vector2(0.5f, 0.5f);
             toast.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.85f);
 
-            var fx = UIKit.Stretch(UIKit.Rect(root, "Fx"));
+            var fx = UIKit.Stretch(UIKit.Rect(root, "ScreenFlash"));   // not "Fx": that name is the world effects' root
             flash = UIKit.Image(fx, "Flash", new Color(1f, 1f, 1f, 0f));
             UIKit.Stretch(flash.rectTransform);
         }
@@ -192,6 +193,12 @@ namespace BoomYard.UI
             targetsPill.rectTransform.pivot = new Vector2(0.5f, 1f);
             targets = UIKit.Label(targetsPill.transform, "Text", "", 24, new Color(0.07f, 0.04f, 0.02f), TextAnchor.MiddleCenter, true);
             UIKit.Stretch(targets.rectTransform);
+            // The city's current job, under the wreck count.
+            jobPill = UIKit.Image(hud, "Job", new Color(0.03f, 0.03f, 0.035f, 0.75f), UIKit.Pill);
+            UIKit.Place(jobPill.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -148f), new Vector2(560f, 40f));
+            jobPill.rectTransform.pivot = new Vector2(0.5f, 1f);
+            jobText = UIKit.Label(jobPill.transform, "Text", "", 21, UIKit.Flame, TextAnchor.MiddleCenter, true);
+            UIKit.Stretch(jobText.rectTransform);
 
             // Top right: the coins this round's wreckage is worth, and the chain multiplier.
             damage = UIKit.Label(hud, "Damage", Loc.Money(0), 40, UIKit.Fg, TextAnchor.UpperRight, true);
@@ -223,6 +230,13 @@ namespace BoomYard.UI
             UIKit.Place(bag.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(38f, 38f));
             bag.rectTransform.pivot = new Vector2(0.5f, 0.5f);
             controls.ShopButton = shopBtn.rectTransform;
+            // Photo: the view as it is, without the HUD, into the gallery.
+            var photoBtn = UIKit.Image(hud, "Photo", new Color(0.03f, 0.03f, 0.035f, 0.6f), UIKit.Circle);
+            UIKit.Place(photoBtn.rectTransform, new Vector2(0f, 1f), new Vector2(530f, -20f), new Vector2(70f, 70f));
+            var cam = UIKit.Image(photoBtn.transform, "Camera", UIKit.Fg, UIKit.CameraIcon);
+            UIKit.Place(cam.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(40f, 40f));
+            cam.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            controls.Taps.Add(new KeyValuePair<RectTransform, System.Action>(photoBtn.rectTransform, TakePhoto));
             controls.OpenShop = () => game.OpenShopInLevel();
             var windRing = UIKit.Image(hud, "Wind", new Color(1f, 1f, 1f, 0.25f), UIKit.Ring);
             UIKit.Place(windRing.rectTransform, new Vector2(0f, 1f), new Vector2(124f, -24f), new Vector2(60f, 60f));
@@ -389,6 +403,34 @@ namespace BoomYard.UI
             Toast(text, 4.5f);
         }
 
+        /// <summary>A photo of the view (no HUD) into the gallery, with a flash.</summary>
+        void TakePhoto()
+        {
+            if (Player.I == null) return;
+            var tex = Gallery.Shoot(Player.I.Cam);
+            Gallery.Save(tex);
+            Destroy(tex);
+            Flash(new Color(1f, 1f, 1f, 0.7f), 0.25f);
+            Sfx.I.Tap();
+            Toast("Photo saved: STENCILS, then PHOTOS", 2.5f);
+        }
+
+        /// <summary>The death card: blown up, and a countdown to getting back up.</summary>
+        public void Death(float seconds)
+        {
+            deathLeft = seconds;
+            if (deathText == null)
+            {
+                deathText = UIKit.Label(safe, "Death", "", 60, UIKit.Fg, TextAnchor.MiddleCenter, true);
+                UIKit.Place(deathText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 40f), new Vector2(1400f, 200f));
+                deathText.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+                deathText.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.9f);
+            }
+            deathText.gameObject.SetActive(true);
+        }
+        Text deathText;
+        float deathLeft;
+
         /// <summary>"+3s" by the clock when a target goes down.</summary>
         public void TimeBonus(float seconds)
         {
@@ -433,6 +475,12 @@ namespace BoomYard.UI
         {
             float dt = Time.unscaledDeltaTime;
             toastLeft -= dt;
+            if (deathText != null && deathText.gameObject.activeSelf)
+            {
+                deathLeft -= Time.deltaTime;
+                deathText.text = "BLOWN UP!\n<size=34>Back on your feet in " + Mathf.Max(1, Mathf.CeilToInt(deathLeft)) + "</size>";
+                if (deathLeft <= 0f || game.Current != GameController.Mode.Level) deathText.gameObject.SetActive(false);
+            }
             if (timeBonus != null)
             {
                 timeBonusLeft -= dt;
@@ -498,6 +546,9 @@ namespace BoomYard.UI
                 }
                 targets.text = "WRECKED  " + wrecked + " / " + g.Arena.Objects.Count;
             }
+            var job = g.InCity ? g.Contract : null;
+            jobPill.gameObject.SetActive(job != null);
+            if (job != null) jobText.text = "JOB:  " + job.Text + "   " + Loc.Time(job.Left) + "   +" + job.Reward;
             UpdateSpray(player);
             // The coin sits just left of the number, however wide it is.
             hudCoin.rectTransform.anchoredPosition = new Vector2(-40f - damage.preferredWidth - 30f, -26f);
@@ -592,7 +643,7 @@ namespace BoomYard.UI
             if (key == stripKey) return;
             stripKey = key;
             for (int i = strip.childCount - 1; i >= 0; i--) Destroy(strip.GetChild(i).gameObject);
-            controls.Taps.Clear();
+            controls.Taps.RemoveAll(t => t.Key == null || t.Key.IsChildOf(strip));
             float x = 0f;
             foreach (var c in colours)
             {

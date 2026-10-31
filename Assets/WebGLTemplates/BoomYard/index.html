@@ -31,6 +31,26 @@
     <div id="loader"><div class="logo">BOOMYARD</div><div class="tag">Light it. Count. Run.</div><div class="bar"><div class="fill" id="fill"></div></div></div>
   </div>
   <script>
+    // Ads (Google H5 Games Ads / AdSense). The build pipeline fills in the publisher id
+    // (ca-pub-...) from the ADSENSE_CLIENT secret; while it is empty the game shows test ads.
+    window.BOOMYARD_ADS = { client: "__ADSENSE_CLIENT__", test: "__ADSENSE_TEST__" === "on" };
+    (function () {
+      var c = window.BOOMYARD_ADS.client;
+      if (!c || c.indexOf("__") === 0) return;
+      var s = document.createElement("script");
+      s.async = true;
+      s.crossOrigin = "anonymous";
+      s.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + c;
+      s.setAttribute("data-ad-client", c);
+      s.setAttribute("data-ad-frequency-hint", "120s");
+      if (window.BOOMYARD_ADS.test) s.setAttribute("data-adbreak-test", "on");
+      document.head.appendChild(s);
+      window.adsbygoogle = window.adsbygoogle || [];
+      window.adBreak = window.adConfig = function (o) { window.adsbygoogle.push(o); };
+      window.adConfig({ preloadAdBreaks: "on", sound: "on" });
+    })();
+  </script>
+  <script>
     // Crash report on screen (phones have no console): the last log lines, shown with the error. Tap to close.
     var logLines = [];
     ["log", "warn", "error"].forEach(function (kind) {

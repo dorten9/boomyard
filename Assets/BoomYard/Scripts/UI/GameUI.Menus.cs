@@ -114,7 +114,11 @@ namespace BoomYard.UI
             UIKit.Place(dsub.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 8f), new Vector2(400f, 26f));
             dsub.rectTransform.pivot = new Vector2(0.5f, 0f);
             ((RectTransform)daily.transform.Find("Label")).offsetMin = new Vector2(0f, 18f);
-            Btn(s, "BIG CITY", false, () => game.StartCity(), new Vector2(0f, 0.5f), new Vector2(170f, -294f), new Vector2(200f, 72f), 26);
+            var city = Btn(s, "BIG CITY", false, () => game.StartCity(), new Vector2(0f, 0.5f), new Vector2(170f, -294f), new Vector2(200f, 72f), 24);
+            var week = UIKit.Label(city.transform, "Week", CityEvents.Name(CityEvents.For(System.DateTime.Now)), 15, UIKit.Flame, TextAnchor.LowerCenter, true);
+            UIKit.Place(week.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 5f), new Vector2(200f, 20f));
+            week.rectTransform.pivot = new Vector2(0.5f, 0f);
+            ((RectTransform)city.transform.Find("Label")).offsetMin = new Vector2(0f, 14f);
             Btn(s, "STENCILS", false, () => ShowStudio(() => ShowHome()), new Vector2(0f, 0.5f), new Vector2(380f, -294f), new Vector2(200f, 72f), 26);
             var missions = Btn(s, "MISSIONS", false, () => ShowMissions(), new Vector2(0f, 0.5f), new Vector2(380f, -92f), new Vector2(200f, 80f), 28);
             int ready = 0;
@@ -123,6 +127,9 @@ namespace BoomYard.UI
             var gear = UIKit.IconButton(s, "Settings", UIKit.Gear, new Color(0.12f, 0.11f, 0.12f, 0.95f), UIKit.Fg, () => { Sfx.I.Tap(); ShowSettings(false); }, 76f);
             UIKit.Place((RectTransform)gear.transform, new Vector2(1f, 1f), new Vector2(-660f, -20f), new Vector2(76f, 76f));   // top bar, clear of the menu column
 
+            // The collection: rare cars and golden gnomes.
+            var coll = UIKit.IconButton(s, "Collection", UIKit.Star, new Color(0.12f, 0.11f, 0.12f, 0.95f), UIKit.Flame, () => { Sfx.I.Tap(); ShowCollection(); }, 76f);
+            UIKit.Place((RectTransform)coll.transform, new Vector2(1f, 1f), new Vector2(-760f, -20f), new Vector2(76f, 76f));
             Wallet(s);
             if (game.DailyAvailable() >= 0)
             {
@@ -437,7 +444,30 @@ namespace BoomYard.UI
             var note = UIKit.Label(content, "Note", web ? "Coin packs are sold in the iPhone and Android apps, through the App Store and Google Play. The web version shows them for a preview."
                 : Purchases.Status == Purchases.State.Connecting ? "Connecting to the store..." : "Payments go through " + (Application.platform == RuntimePlatform.IPhonePlayer ? "the App Store" : "Google Play") + ". Coins arrive as soon as the store confirms.", 20, UIKit.Muted, TextAnchor.UpperLeft);
             UIKit.Place(note.rectTransform, new Vector2(0f, 1f), new Vector2(0f, -ch - 26f), new Vector2(1500f, 30f));
-            content.sizeDelta = new Vector2(0f, ch + 70f);
+            // Free coins for a video, a few times a day.
+            int left = game.AdCoinsLeftToday();
+            var free = UIKit.Image(content, "FreeCoins", Card, UIKit.Rounded);
+            free.rectTransform.anchorMin = free.rectTransform.anchorMax = new Vector2(0f, 1f);
+            free.rectTransform.pivot = new Vector2(0f, 1f);
+            free.rectTransform.anchoredPosition = new Vector2(0f, -ch - 80f);
+            free.rectTransform.sizeDelta = new Vector2(1500f, 130f);
+            var ft = UIKit.Label(free.transform, "Text", "FREE COINS  ·  watch a short video for " + GameController.AdCoins + " coins (" + left + " left today)", 26, UIKit.Fg, TextAnchor.MiddleLeft, true);
+            UIKit.Place(ft.rectTransform, new Vector2(0f, 0.5f), new Vector2(30f, 0f), new Vector2(1000f, 60f));
+            ft.rectTransform.pivot = new Vector2(0f, 0.5f);
+            var fb = UIKit.Button(free.transform, "Watch", left > 0 ? "WATCH" : "TOMORROW", left > 0 ? new Color(0.2f, 0.62f, 0.38f) : new Color(0.2f, 0.19f, 0.2f), left > 0 ? Color.white : UIKit.Muted, () =>
+            {
+                if (game.AdCoinsLeftToday() <= 0) return;
+                Sfx.I.Tap();
+                Ads.I.ShowRewarded("shop_free_coins", ok =>
+                {
+                    if (!ok) { Toast("No video right now. Try again soon."); return; }
+                    game.GrantAdCoins(GameController.AdCoins, true);
+                    ShowShop(shopInLevel);
+                });
+            }, 28);
+            UIKit.Place((RectTransform)fb.transform, new Vector2(1f, 0.5f), new Vector2(-30f, 0f), new Vector2(260f, 80f));
+            ((RectTransform)fb.transform).pivot = new Vector2(1f, 0.5f);
+            content.sizeDelta = new Vector2(0f, ch + 240f);
         }
 
         static Color StyleColor(ShopItem item)
@@ -455,6 +485,7 @@ namespace BoomYard.UI
             if (item.Kind == "explosive")
             {
                 var e = Catalog.Explosive(item.Grants);
+                if (e.Firework != null || e.Sticky || e.Units > 1) return e.Note;
                 return "Fuse " + Fuse.TotalBurn(e).ToString("0.#") + " s · Power " + (e.Damage * e.Units).ToString("#,0") + " · Radius " + e.Radius.ToString("0.#") + " m";
             }
             if (item.Kind == "lighter")
@@ -555,7 +586,47 @@ namespace BoomYard.UI
             UIKit.Place(ic.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-70f, 10f), new Vector2(90f, 90f));
             ic.rectTransform.pivot = new Vector2(0.5f, 0.5f);
             Text(p, "+" + DailyReward.Coins[day], 64, UIKit.Flame, TextAnchor.MiddleLeft, new Vector2(0.5f, 0.5f), new Vector2(80f, 10f), new Vector2(200f, 80f), true);
-            Btn(p, "CLAIM", true, () => { game.ClaimDaily(); CloseModal(); ShowHome(); }, new Vector2(0.5f, 0f), new Vector2(0f, 70f), new Vector2(300f, 86f), 38);
+            if (Surprise.OnDay(day)) Text(p, "+ A SURPRISE FIREWORK, YOURS TO KEEP", 24, UIKit.Ok, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, -62f), new Vector2(700f, 34f), true);
+            Btn(p, "CLAIM", true, () =>
+            {
+                game.ClaimDaily();
+                CloseModal();
+                ShowHome();
+                var got = SaveService.Data.lastSurprise;
+                if (!string.IsNullOrEmpty(got)) Toast("SURPRISE: " + Catalog.Explosive(got).NameEn.ToUpperInvariant() + " unlocked for good!", 4f);
+            }, new Vector2(0.5f, 0f), new Vector2(0f, 70f), new Vector2(300f, 86f), 38);
+        }
+
+        // ---------- the collection ----------
+
+        /// <summary>Rare cars blown up (and the golden gnomes found), as badges.</summary>
+        void ShowCollection()
+        {
+            ShowLayer(false);
+            var s = NewScreen("Collection");
+            TopBar(s, "COLLECTION", () => ShowHome());
+            var save = SaveService.Data;
+            Text(s, "RARE CARS  " + save.rareCars.Count + " / " + RareCars.All.Length + "    ·    GOLDEN GNOMES  " + save.goldGnomes.Count + " / " + (Levels.All.Length - 1), 26, UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -140f), new Vector2(1400f, 36f), true);
+            for (int i = 0; i < RareCars.All.Length; i++)
+            {
+                var car = RareCars.All[i];
+                bool got = save.rareCars.Contains(car.Id);
+                int col = i % 3, row = i / 3;
+                var card = UIKit.Image(s, car.Id, Card, UIKit.Rounded);
+                UIKit.Place(card.rectTransform, new Vector2(0.5f, 1f), new Vector2((col - 1) * 470f, -200f - row * 250f), new Vector2(440f, 220f));
+                card.rectTransform.pivot = new Vector2(0.5f, 1f);
+                var chip = UIKit.Image(card.transform, "Paint", got ? new Color(car.R, car.G, car.B) : new Color(0.2f, 0.2f, 0.22f), UIKit.Circle);
+                UIKit.Place(chip.rectTransform, new Vector2(0f, 0.5f), new Vector2(30f, 0f), new Vector2(110f, 110f));
+                chip.rectTransform.pivot = new Vector2(0f, 0.5f);
+                var name = UIKit.Label(card.transform, "Name", got ? car.Name.ToUpperInvariant() : "???", 28, got ? UIKit.Fg : UIKit.Muted, TextAnchor.UpperLeft, true);
+                UIKit.Place(name.rectTransform, new Vector2(0f, 1f), new Vector2(165f, -40f), new Vector2(260f, 40f));
+                var hint = UIKit.Label(card.transform, "Hint", got ? "Collected" : "A rare " + Catalog.Object(car.Prop).NameEn.ToLowerInvariant() + ". Spot it, blow it up.", 19, got ? UIKit.Ok : UIKit.Muted, TextAnchor.UpperLeft);
+                UIKit.Place(hint.rectTransform, new Vector2(0f, 1f), new Vector2(165f, -90f), new Vector2(260f, 70f));
+                hint.horizontalOverflow = HorizontalWrapMode.Wrap;
+                var pay = UIKit.Label(card.transform, "Pay", "+" + car.Coins + " coins", 20, UIKit.Flame, TextAnchor.LowerLeft, true);
+                UIKit.Place(pay.rectTransform, new Vector2(0f, 0f), new Vector2(165f, 20f), new Vector2(260f, 30f));
+            }
+            Text(s, "Rare cars turn up now and then in the levels (with a sparkle over them), and two are always somewhere in the big city.", 21, UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), new Vector2(0f, 60f), new Vector2(1400f, 34f));
         }
 
         // ---------- settings ----------
@@ -727,6 +798,8 @@ namespace BoomYard.UI
                 Btn(s, "BACK TO THE CITY", true, () => game.StartCity(), new Vector2(0.5f, 0f), new Vector2(0f, 100f), new Vector2(440f, 100f), 38);
                 Btn(s, "SHOP", false, () => ShowShop(), new Vector2(0.5f, 0f), new Vector2(-360f, 100f), new Vector2(220f, 86f), 30);
                 Btn(s, "HOME", false, () => game.GoHome(), new Vector2(0.5f, 0f), new Vector2(360f, 100f), new Vector2(220f, 86f), 30);
+                DoubleCoinsAd(s, r);
+                ReplayButton(s);
                 Wallet(s);
                 return;
             }
@@ -744,9 +817,11 @@ namespace BoomYard.UI
                 if (r.Record && r.PreviousBest > 0) Text(s, "NEW WRECKAGE RECORD", 26, UIKit.Ember, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, -162f), new Vector2(800f, 34f), true);
                 Text(s, Loc.T(r.TipKey), 22, UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), new Vector2(0f, 190f), new Vector2(1300f, 34f));
                 bool last = r.Level.Daily || r.Level.Number >= Levels.All.Length;
-                Btn(s, last ? "MAP" : "NEXT LEVEL", true, () => { if (last) game.GoMap(); else game.NextLevel(); }, new Vector2(0.5f, 0f), new Vector2(0f, 100f), new Vector2(380f, 100f), 42);
-                Btn(s, "RETRY", false, () => game.Restart(), new Vector2(0.5f, 0f), new Vector2(-330f, 100f), new Vector2(220f, 86f), 30);
-                Btn(s, "MAP", false, () => game.GoMap(), new Vector2(0.5f, 0f), new Vector2(330f, 100f), new Vector2(220f, 86f), 30);
+                Btn(s, last ? "MAP" : "NEXT LEVEL", true, () => Ads.I.BetweenLevels(() => { if (last) game.GoMap(); else game.NextLevel(); }), new Vector2(0.5f, 0f), new Vector2(0f, 100f), new Vector2(380f, 100f), 42);
+                Btn(s, "RETRY", false, () => Ads.I.BetweenLevels(game.Restart), new Vector2(0.5f, 0f), new Vector2(-330f, 100f), new Vector2(220f, 86f), 30);
+                Btn(s, "MAP", false, () => Ads.I.BetweenLevels(game.GoMap), new Vector2(0.5f, 0f), new Vector2(330f, 100f), new Vector2(220f, 86f), 30);
+                DoubleCoinsAd(s, r);
+                ReplayButton(s);
             }
             else
             {
@@ -755,11 +830,75 @@ namespace BoomYard.UI
                 Text(s, r.FailReason == "spare" ? "The " + (game.Arena.Spare != null ? game.Arena.Spare.Name.ToLowerInvariant() : "one you had to keep") + " had to survive" : r.TargetsLeft + " of " + r.Targets + " targets still standing", 36, UIKit.Fg, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, 70f), new Vector2(1200f, 50f));
                 Text(s, "You keep the wreckage:  +" + Loc.Coins(r.Coins) + " coins", 28, UIKit.Muted, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(1200f, 40f));
                 Text(s, Loc.T(r.TipKey), 24, UIKit.Flame, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, -60f), new Vector2(1300f, 40f));
-                Btn(s, "TRY AGAIN", true, () => game.Restart(), new Vector2(0.5f, 0f), new Vector2(0f, 110f), new Vector2(380f, 100f), 42);
+                Btn(s, "TRY AGAIN", true, () => Ads.I.BetweenLevels(game.Restart), new Vector2(0.5f, 0f), new Vector2(0f, 110f), new Vector2(380f, 100f), 42);
                 Btn(s, "SHOP", false, () => ShowShop(), new Vector2(0.5f, 0f), new Vector2(-330f, 110f), new Vector2(220f, 86f), 30);
-                Btn(s, "MAP", false, () => game.GoMap(), new Vector2(0.5f, 0f), new Vector2(330f, 110f), new Vector2(220f, 86f), 30);
+                Btn(s, "MAP", false, () => Ads.I.BetweenLevels(game.GoMap), new Vector2(0.5f, 0f), new Vector2(330f, 110f), new Vector2(220f, 86f), 30);
+                // A video for a second go with more time.
+                AdButton(s, "RETRY +30 s", "WATCH A VIDEO", "retry_time", () => game.RetryWithTime(30f));
+                ReplayButton(s);
             }
             Wallet(s);
+        }
+
+        /// <summary>"x2 coins" for a video on a results screen, once per screen.</summary>
+        void DoubleCoinsAd(RectTransform s, RoundSummary r)
+        {
+            if (r.Coins <= 0) return;
+            Button b = null;
+            b = AdButton(s, "x2 COINS  +" + Loc.Coins(r.Coins), "WATCH A VIDEO", "double_coins", () =>
+            {
+                game.GrantAdCoins((int)r.Coins, false);
+                Toast("+" + Loc.Coins(r.Coins) + " coins");
+                if (b != null) b.gameObject.SetActive(false);
+                Wallet(s);
+            });
+        }
+
+        /// <summary>A green button that plays a rewarded video, then <paramref name="reward"/> if it was watched.</summary>
+        Button AdButton(RectTransform parent, string label, string sub, string placement, Action reward)
+        {
+            var b = UIKit.Button(parent, "AdButton", label, new Color(0.2f, 0.62f, 0.38f), Color.white, () =>
+            {
+                Sfx.I.Tap();
+                Ads.I.ShowRewarded(placement, ok => { if (ok) reward(); else Toast("No video right now. Try again soon."); });
+            }, 26);
+            var rt = (RectTransform)b.transform;
+            UIKit.Place(rt, new Vector2(1f, 0f), new Vector2(-200f, 100f), new Vector2(330f, 92f));
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            ((RectTransform)b.transform.Find("Label")).offsetMin = new Vector2(0f, 22f);
+            var t = UIKit.Label(b.transform, "Sub", sub, 17, new Color(1f, 1f, 1f, 0.8f), TextAnchor.LowerCenter, true);
+            UIKit.Place(t.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 8f), new Vector2(330f, 24f));
+            t.rectTransform.pivot = new Vector2(0.5f, 0f);
+            return b;
+        }
+
+        /// <summary>A stand-in ad (until an ad network is connected): a labelled card with a countdown.</summary>
+        public void ShowTestAd(bool rewarded, Action<bool> done)
+        {
+            var root = UIKit.Stretch(UIKit.Rect(this.root, "TestAd"));
+            var dim = UIKit.Image(root, "Dim", new Color(0.05f, 0.05f, 0.08f, 0.97f));
+            UIKit.Stretch(dim.rectTransform);
+            dim.raycastTarget = true;
+            Text(root, "AD  ·  TEST", 30, new Color(1f, 1f, 1f, 0.5f), TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(800f, 40f), true);
+            Text(root, (rewarded ? "REWARDED VIDEO" : "AD BREAK") + "\n\nReal ads will play here once the ad network is connected.", 40, Color.white, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, 60f), new Vector2(1200f, 260f), true);
+            var count = Text(root, "", 46, UIKit.Flame, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), new Vector2(0f, 230f), new Vector2(600f, 60f), true);
+            var close = Btn(root, rewarded ? "CLAIM REWARD" : "CLOSE", true, () => { Destroy(root.gameObject); AudioListener.pause = false; done(true); }, new Vector2(0.5f, 0f), new Vector2(0f, 120f), new Vector2(420f, 96f), 36);
+            close.gameObject.SetActive(false);
+            root.SetAsLastSibling();
+            AudioListener.pause = true;
+            StartCoroutine(AdCountdown(rewarded ? 5f : 3f, count, close.gameObject));
+        }
+
+        System.Collections.IEnumerator AdCountdown(float seconds, Text label, GameObject close)
+        {
+            for (float t = seconds; t > 0f; t -= Time.unscaledDeltaTime)
+            {
+                if (label == null) yield break;
+                label.text = Mathf.CeilToInt(t).ToString();
+                yield return null;
+            }
+            if (label != null) label.text = "";
+            if (close != null) close.SetActive(true);
         }
 
         void Stat(RectTransform s, int i, string label, string value)

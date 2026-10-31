@@ -71,6 +71,7 @@ namespace BoomYard.Game
             var save = SaveService.Load();
             Stencils.MigrateOldSave(save);
             Purchases.Init();
+            Ads.Create();
             Purchases.Granted += pack => { Sfx.I.Coin(); if (UI != null) UI.Toast("+" + Loc.Coins(pack.Coins) + " coins. Thank you!", 3f); };
             Loc.Init("en");
             var tier = save.settings.quality >= 0 ? (QualityTier)save.settings.quality : Quality.Detect();
@@ -82,6 +83,7 @@ namespace BoomYard.Game
             Mark("sound ready");
             gameObject.AddComponent<FireGrid>();
             Spray.Create(gameObject);
+            Replay.Create(gameObject);
             ImagePicker.Create();
             Rendering.Create(Quality.Tier);
             Mark("rendering ready");
@@ -106,6 +108,7 @@ namespace BoomYard.Game
             Tutorial = gameObject.AddComponent<Tutorial>();
 
             UI = GameUI.Create(this);
+            Ads.I.TestAd = UI.ShowTestAd;
             Mark("ui built");
             Shot = ShotMode();
             GoHome();
@@ -121,8 +124,8 @@ namespace BoomYard.Game
             foreach (var live in LiveExplosive.Active.ToArray()) if (live != null) Destroy(live.gameObject);
             FireGrid.I.Clear();
             Spray.I.Clear();
-            var fx = GameObject.Find("Fx");
-            if (fx != null) Destroy(fx);
+            Replay.I.Clear();
+            Fx.Clear();
             Arena = ArenaBuilder.Build(Level, Quality.Tier);
             if (Rendering.I != null) Rendering.I.RefreshReflections();
         }
@@ -168,6 +171,7 @@ namespace BoomYard.Game
 
         void ToMenu()
         {
+            Physics.gravity = new Vector3(0f, -9.81f, 0f);
             Current = Mode.Menu;
             Paused = false;
             Time.timeScale = 1f;
@@ -190,7 +194,52 @@ namespace BoomYard.Game
         public void StartCity()
         {
             StartLevel(Levels.City());
-            UI.Toast(Loc.T("city.intro"), 6f);
+            CityEvent = CityEvents.For(System.DateTime.Now);
+            Physics.gravity = new Vector3(0f, -9.81f * CityEvents.Gravity(CityEvent), 0f);
+            UI.Toast("THIS WEEK: " + CityEvents.Name(CityEvent) + "\n" + CityEvents.Text(CityEvent), 6f);
+            Contract = null;
+            nextContractAt = Time.time + 8f;
+        }
+
+        /// <summary>This week's twist on the big city (only while in it).</summary>
+        public CityEvent CityEvent { get; private set; }
+        public bool InCity { get { return Current == Mode.Level && Level != null && Level.Show; } }
+        /// <summary>Blasts half as big again in a Big Bangs week.</summary>
+        public float BlastScale { get { return InCity ? CityEvents.BlastScale(CityEvent) : 1f; } }
+        /// <summary>Whatever breaks catches fire in an Inferno week.</summary>
+        public bool Inferno { get { return InCity && CityEvent == CityEvent.Inferno; } }
+
+        /// <summary>The contract on offer in the city, or null between them.</summary>
+        public Contract Contract { get; private set; }
+        float nextContractAt;
+        readonly System.Random contractRng = new System.Random();
+
+        void UpdateContract()
+        {
+            if (Contract == null)
+            {
+                if (Time.time < nextContractAt) return;
+                var left = new Dictionary<string, int>();
+                foreach (var d in Arena.Objects)
+                {
+                    if (d == null || d.Destroyed || d.Def == null) continue;
+                    int n;
+                    left.TryGetValue(d.Def.Id, out n);
+                    left[d.Def.Id] = n + 1;
+                }
+                Contract = Contracts.Next(contractRng, left);
+                if (Contract != null) { UI.Toast("NEW JOB: " + Contract.Text.Substring(0, Contract.Text.LastIndexOf("  ")) + " in " + Mathf.RoundToInt(Contract.Seconds) + " s", 3f); Sfx.I.Confirm(); }
+                else nextContractAt = Time.time + 30f;
+                return;
+            }
+            Contract.Tick(Time.deltaTime);
+            if (Contract.Failed)
+            {
+                UI.Toast("JOB MISSED", 2.5f);
+                Sfx.I.Fail();
+                Contract = null;
+                nextContractAt = Time.time + 6f;
+            }
         }
 
         /// <summary>Leaves the city and banks a share of the wreckage as coins (the results screen).</summary>
@@ -225,6 +274,7 @@ namespace BoomYard.Game
 
         public void StartLevel(LevelDef level)
         {
+            Physics.gravity = new Vector3(0f, -9.81f, 0f);
             var save = SaveService.Data;
             Level = level;
             Current = Mode.Level;
@@ -247,7 +297,9 @@ namespace BoomYard.Game
             if (Raining) rain = Fx.Rain(Player.Cam.transform);
             Round = new RoundModel();
             Round.Changed += OnRoundState;
-            Round.Start(Level.Time + (save.Has("watch") ? 10f : 0f));
+            Round.Start(Level.Time + (save.Has("watch") ? 10f : 0f) + bonusTime);
+            if (bonusTime > 0f) UI.Toast("+" + Mathf.RoundToInt(bonusTime) + " SECONDS ON THE CLOCK", 3f);
+            bonusTime = 0f;
             UI.ShowHud();
             if (Level.Tutorial && !save.tutorialDone) Tutorial.Begin(this);
             else if (Level.Rule != LevelRule.None || Goals.For(Level) != GoalKind.None) UI.RuleCard(Level, Arena.Spare);
@@ -296,6 +348,36 @@ namespace BoomYard.Game
 
         public void Restart() { if (Level.Show) StartCity(); else if (Level.Daily) StartDaily(); else StartLevel(Level.Number); }
 
+        /// <summary>Extra seconds on the next start of a level (the retry a video pays for).</summary>
+        float bonusTime;
+
+        /// <summary>Retry with <paramref name="seconds"/> more on the clock.</summary>
+        public void RetryWithTime(float seconds) { bonusTime = seconds; Restart(); }
+
+        public const int AdCoins = 150, AdsPerDay = 3;
+
+        /// <summary>Free coins for a video, a few times a day.</summary>
+        public int AdCoinsLeftToday()
+        {
+            var s = SaveService.Data;
+            int today = Daily.Seed(System.DateTime.Now);
+            return s.adDate == today ? Mathf.Max(0, AdsPerDay - s.adsToday) : AdsPerDay;
+        }
+
+        public void GrantAdCoins(int coins, bool daily)
+        {
+            var s = SaveService.Data;
+            if (daily)
+            {
+                int today = Daily.Seed(System.DateTime.Now);
+                if (s.adDate != today) { s.adDate = today; s.adsToday = 0; }
+                s.adsToday++;
+            }
+            s.shekels += coins;
+            SaveService.Save();
+            Sfx.I.Coin();
+        }
+
         public void NextLevel() { StartLevel(Mathf.Min(Level.Number + 1, Levels.All.Length)); }
 
         // ---------- the round ----------
@@ -308,7 +390,7 @@ namespace BoomYard.Game
             if (Paused || Current != Mode.Level) return;
             Chain.Tick(Time.time);
             var st = Round.State;
-            if (Level.Show) { Wind.Update(Time.timeSinceLevelLoad); return; }   // no clock, no targets: just the sky
+            if (Level.Show) { Wind.Update(Time.timeSinceLevelLoad); UpdateContract(); return; }   // no clock, no targets: contracts
             if (st == RoundState.Playing || st == RoundState.Stunned || st == RoundState.Settling)
             {
                 Wind.Update(Round.Elapsed);
@@ -375,11 +457,23 @@ namespace BoomYard.Game
             if (st != RoundState.Playing && st != RoundState.Stunned && st != RoundState.Settling) return;
             float mult = destroyed ? Chain.OnDestroyed(Time.time, hit.ByObject) : Chain.MultiplierFor(hit.ByObject);
             long v = Score.AddDamage(d.Def.Value, fraction, d.Def.Material, hit.Placement, mult);
+            Replay.I.Notice(v);
             if (destroyed && hit.ByObject && Chain.Links >= 3 && Chain.Links % 3 == 0) SlowMo(0.3f, 0.9f);
             if (destroyed && hit.ByObject && Chain.Links == ScoreCalculator.DominoLinks) Bonus(BonusKind.Domino);
             if (destroyed)
             {
                 Score.ObjectsDestroyed++;
+                if (InCity && Contract != null && Contract.Count(d.Def.Id))
+                {
+                    SaveService.Data.shekels += Contract.Reward;
+                    SaveService.Save();
+                    Sfx.I.Coin();
+                    UI.Toast("JOB DONE!  +" + Loc.Coins(Contract.Reward) + " coins", 3f);
+                    Contract = null;
+                    nextContractAt = Time.time + 5f;
+                }
+                var rare = d.GetComponent<RareTag>();
+                if (rare != null) CollectRare(rare.Car);
                 var missions = SaveService.Data.TodaysMissions();
                 Missions.Count(missions, "destroy", null, 1);
                 Missions.Count(missions, "destroy_id", d.Def.Id, 1);
@@ -460,6 +554,14 @@ namespace BoomYard.Game
             Round.Stun(RoundModel.HandBurnStun);
             UI.Flash(Color.white, 1.4f);
             Sfx.I.Ring();
+        }
+
+        /// <summary>The player was blown up: four seconds out (the clock keeps running), then back at the start.</summary>
+        public void OnDeath(float seconds)
+        {
+            Round.Stun(seconds);
+            UI.Flash(new Color(0.8f, 0.05f, 0.02f, 0.85f), 1.2f);
+            UI.Death(seconds);
         }
 
         public void OnKnockdown()
@@ -576,7 +678,7 @@ namespace BoomYard.Game
                 ChainExtra = Score.ChainExtra, Bonuses = Score.Bonuses, LongestChain = Chain.LongestChain, Destroyed = destroyed, Objects = total,
                 BonusLog = new List<BonusKind>(Score.BonusLog), TipKey = "tip.city",
             };
-            sum.Coins = Progress.CityCoins(Score.Total);
+            sum.Coins = Progress.CityCoins(Score.Total) * CityEvents.CoinFactor(CityEvent);
             save.shekels += sum.Coins;
             save.roundsPlayed++;
             save.totalDestroyed += destroyed;
@@ -705,6 +807,18 @@ namespace BoomYard.Game
             return DailyReward.NextDay(s.dailyClaimDate, s.dailyStreak, System.DateTime.Now);
         }
 
+        /// <summary>A rare car blown up: into the collection (the first time), with its coins.</summary>
+        void CollectRare(RareCar car)
+        {
+            var save = SaveService.Data;
+            if (save.rareCars.Contains(car.Id)) { UI.Toast(car.Name.ToUpperInvariant() + "!", 2f); return; }
+            save.rareCars.Add(car.Id);
+            save.shekels += car.Coins;
+            SaveService.Save();
+            Sfx.I.Star();
+            UI.Toast("RARE CAR: " + car.Name.ToUpperInvariant() + "\nInto the collection,  +" + car.Coins + " coins", 4f);
+        }
+
         public void ClaimDaily()
         {
             int day = DailyAvailable();
@@ -713,6 +827,15 @@ namespace BoomYard.Game
             s.dailyStreak = day;
             s.dailyClaimDate = Daily.Seed(System.DateTime.Now);
             s.shekels += DailyReward.Coins[day];
+            // Some days of the streak also unlock a firework or bang for good.
+            s.lastSurprise = "";
+            if (Surprise.OnDay(day))
+            {
+                var owned = new List<string>();
+                foreach (var slot in s.inventory) if (slot.count > 0) owned.Add(slot.id);
+                var pick = Surprise.Pick(new System.Random(s.dailyClaimDate), owned);
+                if (pick != null) { s.Add(pick, 1); s.lastSurprise = pick; }
+            }
             SaveService.Save();
             Sfx.I.Star();
         }
@@ -894,6 +1017,38 @@ namespace BoomYard.Game
                 Player.Teleport(new Vector3(4.6f, 0f, -1.2f), 40f, 14f);
                 yield break;
             }
+            if (mode == "fireworks2")
+            {
+                // The new fireworks in a row on the plaza road.
+                StartCity();
+                yield return new WaitForSeconds(1.5f);
+                Player.Teleport(new Vector3(0f, 0.16f, -30.5f), 0f, -22f);
+                string[] kinds = { "spinner", "ufo", "smoke", "strobepot", "saturn", "finale", "whistler", "bigmortar" };
+                for (int i = 0; i < kinds.Length; i++)
+                    LiveExplosive.SpawnUnlit(Catalog.Explosive(kinds[i]), new Vector3(-8f + i * 2.2f, 0.05f, -21f), Quaternion.identity, Placement.Placed);
+                yield return new WaitForSeconds(1f);
+                LaunchShow();
+                yield break;
+            }
+            if (mode == "death")
+            {
+                // A dynamite stick at the player's feet: blown up, back at the start four seconds later.
+                StartLevel(4);
+                yield return new WaitForSeconds(1.5f);
+                LiveExplosive.Spawn(Catalog.Explosive("dynamite"), Player.transform.position + Player.transform.forward * 0.6f + Vector3.up * 0.05f, Quaternion.identity, 0.3f, Placement.Placed);
+                yield break;
+            }
+            if (mode == "demolition")
+            {
+                // Level 51's tenement: a TNT bundle at the foot of it, the camera back far enough to see it fall.
+                StartLevel(51);
+                yield return new WaitForSeconds(1.5f);
+                Player.Teleport(new Vector3(0f, 0f, -7f), 0f, -14f);
+                LiveExplosive.Spawn(Catalog.Explosive("tnt"), new Vector3(0f, 0.05f, 3.8f), Quaternion.identity, 1f, Placement.Placed);
+                yield return new WaitForSeconds(4f);
+                foreach (var t in Arena.Targets) Debug.Log("BoomYard: demolition: " + t.name + (t.Destroyed ? " down" : " standing, " + t.Hp.ToString("0") + " hp"));
+                yield break;
+            }
             if (mode == "inshop")
             {
                 StartCity();
@@ -918,7 +1073,7 @@ namespace BoomYard.Game
                 // A timer charge and two remote charges round the van; the remotes go when the timer does.
                 StartLevel(4);
                 yield return new WaitForSeconds(1.5f);
-                var timer = LiveExplosive.Spawn(Catalog.Explosive("timer"), new Vector3(3.5f, 0.05f, 3f), Quaternion.identity, 4f, Placement.Placed);
+                LiveExplosive.Spawn(Catalog.Explosive("timer"), new Vector3(3.5f, 0.05f, 3f), Quaternion.identity, 4f, Placement.Placed);
                 var remote = Catalog.Explosive("remote");
                 LiveExplosive.SpawnUnlit(remote, new Vector3(-4f, 0.05f, 8f), Quaternion.identity, Placement.Placed);
                 LiveExplosive.SpawnUnlit(remote, new Vector3(-3.4f, 0.05f, 8.2f), Quaternion.identity, Placement.Placed);

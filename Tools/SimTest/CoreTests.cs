@@ -52,8 +52,8 @@ static class CoreTests
         Check(ScoreCalculator.Stars(yard, 59999) == 2, "2 stars under the threshold");
         Check(ScoreCalculator.Stars(yard, 60000) == 3, "3 stars at the threshold");
         Check(ScoreCalculator.Stars(yard, 1000) == 0, "no stars");
-        Near(ScoreCalculator.CoinsFromDamage(200000), 4000, "a coin per $50 of damage");
-        Near(ScoreCalculator.CoinsFromDamage(74), 1, "coins round to the nearest");
+        Near(ScoreCalculator.CoinsFromDamage(150000), 1000, "a coin per $150 of damage");
+        Near(ScoreCalculator.CoinsFromDamage(76), 1, "coins round to the nearest");
     }
 
     static void Chains()
@@ -182,7 +182,7 @@ static class CoreTests
 
     static void CatalogChecks()
     {
-        Check(Catalog.Explosives.Length == 20, "20 explosives (with the timer and remote charges and the ground fireworks)");
+        Check(Catalog.Explosives.Length == 35, "35 explosives and fireworks");
         Check(Catalog.Objects.Length >= 28, "28+ objects");
         Check(Catalog.Arenas.Length == 6, "6 arenas");
         foreach (var o in Catalog.Objects)
@@ -296,6 +296,27 @@ static class MetaTests
         foreach (var it in Shop.Items)
             check(it.Coins > 0 || Shop.Keepsake(it), "shop item has a price in coins: " + it.Id);
         GraffitiTests(check);
+        // The city's weekly events, jobs, the streak's surprise and rare cars.
+        var seen = new System.Collections.Generic.HashSet<CityEvent>();
+        for (int w = 0; w < 8; w++) seen.Add(CityEvents.For(new System.DateTime(2026, 11, 2).AddDays(7 * w)));
+        check(seen.Count == 4, "every city event comes round within a month");
+        check(CityEvents.For(new System.DateTime(2026, 11, 2)) == CityEvents.For(new System.DateTime(2026, 11, 8)), "the event lasts the week");
+        var avail = new System.Collections.Generic.Dictionary<string, int> { { "trafficlight", 16 }, { "bin", 3 } };
+        var job = Contracts.Next(new System.Random(1), avail);
+        check(job != null && job.Target == "trafficlight" && job.Goal >= 3 && job.Seconds > 0f && job.Reward > 0, "a job for what is standing");
+        bool done = false;
+        for (int i = 0; i < job.Goal; i++) { job.Count("bin"); done = job.Count("trafficlight"); }
+        check(done && job.Complete, "the job is done when the count is reached");
+        var late = Contracts.Next(new System.Random(2), avail);
+        late.Tick(late.Seconds + 1f);
+        check(late.Failed && !late.Count("trafficlight"), "a job runs out of time");
+        check(Contracts.Next(new System.Random(3), new System.Collections.Generic.Dictionary<string, int>()) == null, "no job when nothing is left");
+        check(Surprise.OnDay(2) && !Surprise.OnDay(0), "surprises on some streak days");
+        var all = new System.Collections.Generic.List<string>();
+        foreach (var it in Shop.Items) if (it.Kind == "explosive") all.Add(it.Grants);
+        check(Surprise.Pick(new System.Random(4), all) == null, "no surprise left when everything is owned");
+        check(!all.Contains(Surprise.Pick(new System.Random(5), new System.Collections.Generic.List<string>())) == false, "a surprise is a real item");
+        foreach (var c in RareCars.All) check(Catalog.Object(c.Prop) != null, "rare car is a real car: " + c.Id);
         // Clocks with room to clear, and a bonus goal on every level but the tutorial that its props allow.
         foreach (var l in Levels.All)
         {
@@ -322,7 +343,7 @@ static class MetaTests
         check(round.TimeLeft == 63f, "a target down gives seconds back");
         var city = Levels.City();
         check(city.Show && city.Props.Length == 0 && city.Kit.Length >= 3, "the big city: no targets, a kit to start");
-        check(Progress.CityCoins(50 * 400) == 100, "the city pays a quarter of the wreckage");
+        check(Progress.CityCoins(150 * 600) == 100, "the city pays a sixth of the wreckage");
 
         var a = Missions.ForDay(20261024);
         var b = Missions.ForDay(20261024);
@@ -339,8 +360,8 @@ static class MetaTests
         check(DailyReward.NextDay(20261023, 2, new System.DateTime(2026, 10, 24)) == 3, "streak continues");
         check(DailyReward.NextDay(20261024, 2, new System.DateTime(2026, 10, 24)) == -1, "claimed today");
         check(DailyReward.NextDay(20261020, 4, new System.DateTime(2026, 10, 24)) == 0, "missed day restarts");
-        check(Progress.LevelCoins(lvl, true, true, 3, 100000) == 2000 + lvl.Reward + 120, "level coins: wreckage, reward, stars");
-        check(Progress.LevelCoins(lvl, false, false, 0, 100000) == 2000, "a failed round keeps the wreckage coins");
+        check(Progress.LevelCoins(lvl, true, true, 3, 150000) == 1000 + lvl.Reward * Progress.RewardShare / 100 + 75, "level coins: wreckage, part of the reward, stars");
+        check(Progress.LevelCoins(lvl, false, false, 0, 150000) == 1000, "a failed round keeps the wreckage coins");
 
         foreach (var side in new[] { 1f, -1f })
         {
@@ -356,7 +377,7 @@ static class MetaTests
             check(bones == 14, "four fingers of three bones and a thumb of two");
         }
 
-        check(Levels.All.Length == 50, "50 levels");
+        check(Levels.All.Length == 53, "53 levels");
         foreach (var l in Levels.All)
         {
             check(Streets.ForLevel(l.Number).FirstLevel <= l.Number && l.Number <= Streets.ForLevel(l.Number).LastLevel, "level " + l.Number + " is on a street");

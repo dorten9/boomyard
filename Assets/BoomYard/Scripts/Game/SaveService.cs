@@ -49,6 +49,9 @@ namespace BoomYard.Game
         public float bestGnome;           // longest gnome flight, metres
         public List<int> goldGnomes = new List<int>();   // levels whose golden gnome was found
         public List<int> goalsDone = new List<int>();    // levels whose bonus goal was met (paid once)
+        public int adDate, adsToday;                     // free-coin videos watched today (Daily.Seed date)
+        public List<string> rareCars = new List<string>(); // rare cars blown up (RareCars ids)
+        public string lastSurprise = "";                 // the last daily surprise firework (for the reward screen)
         public string glove = "", lighterSkin = "";     // style (looks only)
         public int purchases;                             // coin packs bought for real money
         public int challengeDate;                         // the daily challenge: day played (Daily.Seed), best and whether cleared

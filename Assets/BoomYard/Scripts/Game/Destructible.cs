@@ -118,6 +118,7 @@ namespace BoomYard.Game
             if ((reaction & Reaction.Douse) != 0) FireGrid.I.Douse(center, Def.BlastRadius);
             if ((reaction & Reaction.Explode) != 0) StartCoroutine(Secondary());
             else if ((reaction & Reaction.Burn) != 0) Ignite(Def.BurnSeconds);
+            else if (GameController.I != null && GameController.I.Inferno) Ignite(6f);   // an Inferno week in the city
             else Fx.Smolder(transform, FirePoint, FireSize * 0.7f);
         }
 
@@ -281,6 +282,40 @@ namespace BoomYard.Game
             if (target == null || target.gameObject == gameObject) return;
             float energy = 0.5f * Mathf.Min(rb.mass, 400f) * v * v;
             target.Damage(new Hit { Amount = energy / 50f, Origin = transform.position, ByObject = true });
+        }
+    }
+
+    /// <summary>Marks a car in a rare paint job (RareCars): blown up, it goes in the collection.</summary>
+    public sealed class RareTag : MonoBehaviour
+    {
+        public Core.RareCar Car;
+
+        /// <summary>Repaints <paramref name="d"/> in the rare car's colours and adds a sparkle so it is spotted.</summary>
+        public static void Apply(Destructible d, Core.RareCar car)
+        {
+            var paint = Mats.Surface("paint", new Color(car.R, car.G, car.B), car.Metal, car.Smooth);
+            foreach (var r in d.GetComponentsInChildren<Renderer>())
+                if (r.sharedMaterial != null && r.sharedMaterial.name == "paint") r.sharedMaterial = paint;
+            d.gameObject.AddComponent<RareTag>().Car = car;
+            var glint = new GameObject("Glint");
+            glint.transform.SetParent(d.transform, false);
+            glint.transform.localPosition = Vector3.up * 1.8f;
+            var ps = glint.AddComponent<ParticleSystem>();
+            var main = ps.main;
+            main.loop = true;
+            main.startLifetime = 0.8f;
+            main.startSpeed = 0.3f;
+            main.startSize = new ParticleSystem.MinMaxCurve(0.08f, 0.18f);
+            main.startColor = new Color(1f, 0.9f, 0.5f) * 2f;
+            var em = ps.emission;
+            em.rateOverTime = 6f;
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(2f, 0.6f, 4f);
+            var pr = glint.GetComponent<ParticleSystemRenderer>();
+            pr.sharedMaterial = Mats.EmberHDR;
+            pr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            ps.Play();
         }
     }
 }
